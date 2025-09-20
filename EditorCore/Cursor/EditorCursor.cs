@@ -10,9 +10,9 @@ namespace EditorCore.Cursor
 {
     public class EditorCursor
     {
-        public List<EditorSelection> Selections { get; private set; }
+        public List<EditorSelection> Selections { get; internal set; }
 
-        public EditorFile File { get; private set; }
+        public EditorFile File { get; internal set; }
 
         public EditorCursor(EditorFile file)
         {

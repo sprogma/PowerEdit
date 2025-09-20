@@ -9,8 +9,8 @@ namespace EditorCore.Server
 {
     public class EditorServer
     {
-        public ICommandProvider CommandProvider { get; private set; }
-        public List<File.EditorFile> Files { get; private set; }
+        public ICommandProvider CommandProvider { get; internal set; }
+        public List<File.EditorFile> Files { get; internal set; }
 
         public EditorServer(ICommandProvider commandProvider)
         {

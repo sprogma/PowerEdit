@@ -12,9 +12,9 @@ namespace EditorCore.File
 {
     public class EditorFile
     {
-        public Rope.Rope<char> Text { get; private set; }
-        public Server.EditorServer Server { get; private set; }
-        public List<Cursor.EditorCursor> Cursors { get; private set; }
+        public Rope.Rope<char> Text { get; internal set; }
+        public Server.EditorServer Server { get; internal set; }
+        public List<Cursor.EditorCursor> Cursors { get; internal set; }
 
         public EditorFile(Server.EditorServer server, string filename)
         {
@@ -37,12 +37,51 @@ namespace EditorCore.File
 
         public void InsertString(long position, Rope.Rope<char> data)
         {
+            long length = data.Length;
             Text = Text.InsertRange(position, data);
+            /* move all cursors */
+            foreach (var cursor in Cursors)
+            {
+                foreach (var selection in cursor.Selections)
+                {
+                    if (selection.Begin >= position)
+                    {
+                        selection.Begin += length;
+                    }
+                    if (selection.End >= position)
+                    {
+                        selection.End += length;
+                    }
+                }
+            }
         }
 
         public void DeleteString(long position, long count)
         {
             Text = Text.RemoveRange(position, count);
+            /* move all cursors */
+            foreach (var cursor in Cursors)
+            {
+                foreach (var selection in cursor.Selections)
+                {
+                    if (selection.Begin >= position + count)
+                    {
+                        selection.Begin -= count;
+                    }
+                    else if (selection.Begin >= position)
+                    {
+                        selection.Begin = position;
+                    }
+                    if (selection.End >= position + count)
+                    {
+                        selection.End -= count;
+                    }
+                    else if (selection.End >= position)
+                    {
+                        selection.End = position;
+                    }
+                }
+            }
         }
 
         /* declarations for simplicity */

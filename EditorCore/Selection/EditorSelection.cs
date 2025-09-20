@@ -11,11 +11,11 @@ namespace EditorCore.Selection
 {
     public class EditorSelection
     {
-        public long Begin { get; private set; }
+        public long Begin { get; internal set; }
 
-        public long End { get; private set; }
+        public long End { get; internal set; }
 
-        public EditorCursor Cursor { get; private set; }
+        public EditorCursor Cursor { get; internal set; }
 
         public EditorSelection(EditorCursor cursor)
         {
@@ -50,6 +50,11 @@ namespace EditorCore.Selection
         }
 
         /* declarations for simplicity */
+
+        public void InsertText(string text)
+        {
+            Cursor.File.InsertString(Begin, text);
+        }
 
         public long Length { get { Debug.Assert(End >= Begin); return End - Begin; } } 
 

@@ -158,6 +158,22 @@ namespace SDL2Interface
                         {
                             cursor?.Selections.ForEach(x => { x.SetPosition(x.Begin - 1); });
                         }
+                        if (e.Keyboard.Keysym.Scancode == Scancode.Backspace)
+                        {
+                            cursor?.Selections.ForEach(x => { x.Cursor.File.DeleteString(x.Begin - 1, 1); });
+                        }
+                        if (e.Keyboard.Keysym.Scancode == Scancode.A)
+                        {
+                            cursor?.Selections.ForEach(x => { x.InsertText("a"); });
+                        }
+                        if (e.Keyboard.Keysym.Scancode == Scancode.B)
+                        {
+                            cursor?.Selections.ForEach(x => { x.InsertText("b"); });
+                        }
+                        if (e.Keyboard.Keysym.Scancode == Scancode.C)
+                        {
+                            cursor?.Selections.ForEach(x => { x.InsertText("c"); });
+                        }
                         break;
                 }
             }
