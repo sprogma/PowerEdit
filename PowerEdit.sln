@@ -7,7 +7,9 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EditorCore", "EditorCore\Ed
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SDL2Interface", "SDL2Interface\SDL2Interface.csproj", "{81C068E1-82B9-4238-9F14-0E7DF95C1A53}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CoreInterface", "CoreInterface\CoreInterface.csproj", "{909BD724-6FCD-436A-AA27-A7FD57F01FB7}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PowershellProvider", "CoreInterface\PowershellProvider.csproj", "{909BD724-6FCD-436A-AA27-A7FD57F01FB7}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CommandProviderInterface", "CommandProviderInterface\CommandProviderInterface.csproj", "{1C4CDE7B-8726-4D79-8C1F-2E8C1853AC6A}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -27,6 +29,10 @@ Global
 		{909BD724-6FCD-436A-AA27-A7FD57F01FB7}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{909BD724-6FCD-436A-AA27-A7FD57F01FB7}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{909BD724-6FCD-436A-AA27-A7FD57F01FB7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1C4CDE7B-8726-4D79-8C1F-2E8C1853AC6A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1C4CDE7B-8726-4D79-8C1F-2E8C1853AC6A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1C4CDE7B-8726-4D79-8C1F-2E8C1853AC6A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1C4CDE7B-8726-4D79-8C1F-2E8C1853AC6A}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

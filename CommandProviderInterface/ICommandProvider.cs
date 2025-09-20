@@ -4,11 +4,10 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-
-namespace CoreInterface
+namespace CommandProviderInterface
 {
-    public interface IEditorServer
+    public interface ICommandProvider
     {
-        public void Hello();
+        public Rope.Rope<char> Execute(Rope.Rope<char> args);
     }
 }

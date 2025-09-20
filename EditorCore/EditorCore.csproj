@@ -10,7 +10,11 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\CoreInterface\CoreInterface.csproj" />
+    <PackageReference Include="FlatlinerDOA.Rope" Version="1.4.38" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CommandProviderInterface\CommandProviderInterface.csproj" />
   </ItemGroup>
 
 </Project>
