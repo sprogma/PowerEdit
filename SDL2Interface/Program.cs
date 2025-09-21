@@ -14,6 +14,8 @@ namespace SDL2Interface
         int W, H;
         Window window;
         Renderer renderer;
+        int fontStep;
+        int fontLineStep;
         Font font;
         Rect[] asciiMapRectangles;
         Texture asciiMap;
@@ -28,7 +30,7 @@ namespace SDL2Interface
                 throw new Exception("File not found");
             }
             cursor = file?.CreateCursor();
-            cursor?.Selections.Add(new EditorSelection(cursor, 0));
+            cursor?.Selections.Add(new EditorSelection(cursor, 1, 4));
 
 
             if (SDL.Init(SdlInitFlags.Everything) != 0)
@@ -70,7 +72,10 @@ namespace SDL2Interface
                 asciiMapRectangles[i].Width = w;
                 asciiMapRectangles[i].Height = h;
                 x += w;
+                fontStep = Math.Max(fontStep, w);
+                fontLineStep = Math.Max(fontLineStep, h);
             }
+            fontLineStep += 3;
             /* render glyphs */
             SDL.CreateRGBSurface(0, x, asciiMapRectangles[127].Height, 32, 0xff, 0xff00, 0xff0000, 0xff000000, out PSurface textMap);
             x = 0;
@@ -96,11 +101,25 @@ namespace SDL2Interface
             foreach (char c in line)
             {
                 /* render glyph */
-                Rect r = asciiMapRectangles[(byte)c];
-                r.X = x; 
-                r.Y = y;
-                SDL.RenderCopy(renderer, asciiMap, ref asciiMapRectangles[(byte)c], ref r);
-                x += r.Width;
+                if (c < ' ' && c != '\n')
+                {
+                    Rect r = asciiMapRectangles[(byte)c];
+                    r.X = x;
+                    r.Y = y;
+                    r.Width = fontStep;
+                    r.Height = fontLineStep;
+                    SDL.SetRenderDrawColor(renderer, 255, 255, 255, 255);
+                    SDL.RenderDrawRect(renderer, ref r);
+                    x += fontStep;
+                }
+                else
+                {
+                    Rect r = asciiMapRectangles[(byte)c];
+                    r.X = x; 
+                    r.Y = y;
+                    SDL.RenderCopy(renderer, asciiMap, ref asciiMapRectangles[(byte)c], ref r);
+                    x += fontStep;
+                }
             }
         }
 
@@ -114,12 +133,12 @@ namespace SDL2Interface
             /* draw text */
             if (file != null)
             {
-                for (int i = 0; i < H / 50; ++i)
+                for (int i = 0; i < H / fontLineStep; ++i)
                 {
                     Rope.Rope<char>? s = file.GetLine(i);
                     if (s != null)
                     {
-                        DrawTextLine(5, i * 50, s.Value);
+                        DrawTextLine(5, i * fontLineStep, s.Value);
                     }
                 }
 
@@ -129,9 +148,17 @@ namespace SDL2Interface
                     SDL.SetRenderDrawColor(renderer, 255, 255, 255, 255);
                     foreach (var selection in cursor.Selections)
                     {
-                        (long line, long offset) = file.GetPositionOffsets(selection.Begin);
-                        Rect r = new((int)offset * 20, (int)line * 50, 5, 50);
-                        SDL.RenderFillRect(renderer, ref r);
+                        {
+                            (long line, long offset) = file.GetPositionOffsets(selection.End);
+                            Rect r = new((int)offset * fontStep, (int)line * fontLineStep, 5, fontLineStep);
+                            SDL.RenderFillRect(renderer, ref r);
+                        }
+                        for (long p = selection.Min; p < selection.Max; ++p)
+                        {
+                            (long line, long offset) = file.GetPositionOffsets(p);
+                            Rect r = new((int)offset * fontStep, (int)line * fontLineStep + fontLineStep - 5, fontStep, 5);
+                            SDL.RenderFillRect(renderer, ref r);
+                        }
                     }
                 }
             }
@@ -152,11 +179,19 @@ namespace SDL2Interface
                     case EventType.KeyDown:
                         if (e.Keyboard.Keysym.Scancode == Scancode.Right)
                         {
-                            cursor?.Selections.ForEach(x => { x.SetPosition(x.Begin + 1); });
+                            cursor?.Selections.ForEach(x => { x.MoveHorisontal(1); });
                         }
                         if (e.Keyboard.Keysym.Scancode == Scancode.Left)
                         {
-                            cursor?.Selections.ForEach(x => { x.SetPosition(x.Begin - 1); });
+                            cursor?.Selections.ForEach(x => { x.MoveHorisontal(-1); });
+                        }
+                        if (e.Keyboard.Keysym.Scancode == Scancode.Down)
+                        {
+                            cursor?.Selections.ForEach(x => { x.MoveVertical(1); });
+                        }
+                        if (e.Keyboard.Keysym.Scancode == Scancode.Up)
+                        {
+                            cursor?.Selections.ForEach(x => { x.MoveVertical(-1); });
                         }
                         if (e.Keyboard.Keysym.Scancode == Scancode.Backspace)
                         {
