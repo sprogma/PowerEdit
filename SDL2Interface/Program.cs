@@ -197,17 +197,14 @@ namespace SDL2Interface
                         {
                             cursor?.Selections.ForEach(x => { x.Cursor.File.DeleteString(x.Begin - 1, 1); });
                         }
-                        if (e.Keyboard.Keysym.Scancode == Scancode.A)
+                        if (e.Keyboard.Keysym.Scancode >= Scancode.A &&
+                            e.Keyboard.Keysym.Scancode <= Scancode.Z)
                         {
-                            cursor?.Selections.ForEach(x => { x.InsertText("a"); });
+                            cursor?.Selections.ForEach(x => x.InsertText(new string((char)('a' + e.Keyboard.Keysym.Scancode - Scancode.A), 1)));
                         }
-                        if (e.Keyboard.Keysym.Scancode == Scancode.B)
+                        if (e.Keyboard.Keysym.Scancode == Scancode.Return)
                         {
-                            cursor?.Selections.ForEach(x => { x.InsertText("b"); });
-                        }
-                        if (e.Keyboard.Keysym.Scancode == Scancode.C)
-                        {
-                            cursor?.Selections.ForEach(x => { x.InsertText("c"); });
+                            cursor?.Selections.ForEach(x => x.InsertText("\n"));
                         }
                         break;
                 }
