@@ -1,6 +1,7 @@
 ﻿using EditorCore.Selection;
 using SDL_Sharp;
 using SDL_Sharp.Ttf;
+using System.Runtime.InteropServices;
 using System.Text;
 
 namespace SDL2Interface
@@ -110,16 +111,26 @@ namespace SDL2Interface
                     r.Height = fontLineStep;
                     SDL.SetRenderDrawColor(renderer, 255, 255, 255, 255);
                     SDL.RenderDrawRect(renderer, ref r);
-                    x += fontStep;
+                }
+                else if (c < 128)
+                {
+                    Rect r = asciiMapRectangles[(byte)c];
+                    r.X = x;
+                    r.Y = y;
+                    SDL.RenderCopy(renderer, asciiMap, ref asciiMapRectangles[(byte)c], ref r);
                 }
                 else
                 {
-                    Rect r = asciiMapRectangles[(byte)c];
-                    r.X = x; 
-                    r.Y = y;
-                    SDL.RenderCopy(renderer, asciiMap, ref asciiMapRectangles[(byte)c], ref r);
-                    x += fontStep;
+                    TTF.SizeText(font, new string(c, 1), out int w, out int h);
+                    TTF.RenderText_Blended(font, new string(c, 1), new Color(255, 255, 255, 255), out PSurface glythMap);
+                    Texture temp = SDL.CreateTextureFromSurface(renderer, glythMap);
+                    Rect src = new(0, 0, w, h);
+                    Rect dest = new(x, y, w, h);
+                    SDL.RenderCopy(renderer, temp, ref src, ref dest);
+                    SDL.FreeSurface(glythMap);
+                    SDL.DestroyTexture(temp);
                 }
+                x += fontStep;
             }
         }
 
@@ -167,6 +178,13 @@ namespace SDL2Interface
             SDL.RenderPresent(renderer);
         }
 
+        private unsafe string GetTextInputValue(TextInputEvent e) {
+            byte* p = e.Text;
+            int len = 0;
+            while (p[len] != 0) len++;
+            return Encoding.UTF8.GetString(p, len);
+        }
+
         private void HandleEvents()
         {
             while (SDL.PollEvent(out Event e) != 0)
@@ -176,31 +194,59 @@ namespace SDL2Interface
                     case EventType.Quit:
                         Environment.Exit(1);
                         break;
+                    case EventType.TextInput:
+                        string s = GetTextInputValue(e.Text);
+                        /* clear all selection */
+                        cursor?.Selections.ForEach(x => x.Cursor.File.DeleteString(x.Min, x.TextLength));
+                        cursor?.Selections.ForEach(x => x.InsertText(s));
+                        break;
                     case EventType.KeyDown:
+                        if (e.Keyboard.Keysym.Scancode == Scancode.S && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0)
+                        {
+                            file.Save(@"D:\a.c");
+                        }
                         if (e.Keyboard.Keysym.Scancode == Scancode.Right)
                         {
-                            cursor?.Selections.ForEach(x => { x.MoveHorisontal(1); });
+                            cursor?.Selections.ForEach(x => { x.MoveHorisontal(1, ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Shift) != 0); });
                         }
                         if (e.Keyboard.Keysym.Scancode == Scancode.Left)
                         {
-                            cursor?.Selections.ForEach(x => { x.MoveHorisontal(-1); });
+                            cursor?.Selections.ForEach(x => { x.MoveHorisontal(-1, ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Shift) != 0); });
                         }
                         if (e.Keyboard.Keysym.Scancode == Scancode.Down)
                         {
-                            cursor?.Selections.ForEach(x => { x.MoveVertical(1); });
+                            cursor?.Selections.ForEach(x => { x.MoveVertical(1, ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Shift) != 0); });
                         }
                         if (e.Keyboard.Keysym.Scancode == Scancode.Up)
                         {
-                            cursor?.Selections.ForEach(x => { x.MoveVertical(-1); });
+                            cursor?.Selections.ForEach(x => { x.MoveVertical(-1, ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Shift) != 0); });
+                        }
+                        if (e.Keyboard.Keysym.Scancode == Scancode.Tab)
+                        {
+                            cursor?.Selections.ForEach(x =>
+                            {
+                                if (x.TextLength > 0)
+                                {
+                                }
+                                else
+                                {
+                                    x.InsertText("    ");
+                                }
+                            });
                         }
                         if (e.Keyboard.Keysym.Scancode == Scancode.Backspace)
                         {
-                            cursor?.Selections.ForEach(x => { x.Cursor.File.DeleteString(x.Begin - 1, 1); });
-                        }
-                        if (e.Keyboard.Keysym.Scancode >= Scancode.A &&
-                            e.Keyboard.Keysym.Scancode <= Scancode.Z)
-                        {
-                            cursor?.Selections.ForEach(x => x.InsertText(new string((char)('a' + e.Keyboard.Keysym.Scancode - Scancode.A), 1)));
+                            cursor?.Selections.ForEach(x =>
+                            {
+                                if (x.TextLength == 0)
+                                {
+                                    x.Cursor.File.DeleteString(x.End - 1, 1);
+                                }
+                                else
+                                {
+                                    x.Cursor.File.DeleteString(x.Min, x.TextLength);
+                                }
+                            });
                         }
                         if (e.Keyboard.Keysym.Scancode == Scancode.Return)
                         {
@@ -217,7 +263,8 @@ namespace SDL2Interface
             {
                 Draw();
                 HandleEvents();
-                Thread.Sleep(100);
+                /* comment out to fastest performance */
+                Thread.Sleep(10);
             }
         }
     }

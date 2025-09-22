@@ -73,7 +73,7 @@ namespace EditorCore.Selection
 
         public void InsertText(string text)
         {
-            Cursor.File.InsertString(Begin, text);
+            Cursor.File.InsertString(End, text);
             UpdateFromLineOffset();
         }
 
