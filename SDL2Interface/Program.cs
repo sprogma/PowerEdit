@@ -30,7 +30,7 @@ namespace SDL2Interface
             {
                 throw new Exception("File not found");
             }
-            cursor = file?.CreateCursor();
+            cursor = file.Buffer?.CreateCursor();
             cursor?.Selections.Add(new EditorSelection(cursor, 1, 4));
 
 
@@ -146,7 +146,7 @@ namespace SDL2Interface
             {
                 for (int i = 0; i < H / fontLineStep; ++i)
                 {
-                    Rope.Rope<char>? s = file.GetLine(i);
+                    Rope.Rope<char>? s = file.Buffer.GetLine(i);
                     if (s != null)
                     {
                         DrawTextLine(5, i * fontLineStep, s.Value);
@@ -160,13 +160,13 @@ namespace SDL2Interface
                     foreach (var selection in cursor.Selections)
                     {
                         {
-                            (long line, long offset) = file.GetPositionOffsets(selection.End);
+                            (long line, long offset) = file.Buffer.GetPositionOffsets(selection.End);
                             Rect r = new((int)offset * fontStep, (int)line * fontLineStep, 5, fontLineStep);
                             SDL.RenderFillRect(renderer, ref r);
                         }
                         for (long p = selection.Min; p < selection.Max; ++p)
                         {
-                            (long line, long offset) = file.GetPositionOffsets(p);
+                            (long line, long offset) = file.Buffer.GetPositionOffsets(p);
                             Rect r = new((int)offset * fontStep, (int)line * fontLineStep + fontLineStep - 5, fontStep, 5);
                             SDL.RenderFillRect(renderer, ref r);
                         }
@@ -197,13 +197,13 @@ namespace SDL2Interface
                     case EventType.TextInput:
                         string s = GetTextInputValue(e.Text);
                         /* clear all selection */
-                        cursor?.Selections.ForEach(x => x.Cursor.File.DeleteString(x.Min, x.TextLength));
+                        cursor?.Selections.ForEach(x => x.Cursor.Buffer.DeleteString(x.Min, x.TextLength));
                         cursor?.Selections.ForEach(x => x.InsertText(s));
                         break;
                     case EventType.KeyDown:
                         if (e.Keyboard.Keysym.Scancode == Scancode.S && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0)
                         {
-                            file.Save(@"D:\a.c");
+                            file?.Save(@"D:\a.c");
                         }
                         if (e.Keyboard.Keysym.Scancode == Scancode.Right)
                         {
@@ -240,11 +240,11 @@ namespace SDL2Interface
                             {
                                 if (x.TextLength == 0)
                                 {
-                                    x.Cursor.File.DeleteString(x.End - 1, 1);
+                                    x.Cursor.Buffer.DeleteString(x.End - 1, 1);
                                 }
                                 else
                                 {
-                                    x.Cursor.File.DeleteString(x.Min, x.TextLength);
+                                    x.Cursor.Buffer.DeleteString(x.Min, x.TextLength);
                                 }
                             });
                         }

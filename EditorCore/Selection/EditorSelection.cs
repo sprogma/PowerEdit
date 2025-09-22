@@ -22,7 +22,7 @@ namespace EditorCore.Selection
 
         private void UpdateFromLineOffset()
         {
-            long last_newline = Cursor.File.Text.LastIndexOf("\n", End - 1);
+            long last_newline = Cursor.Buffer.Text.LastIndexOf("\n", End - 1);
             FromLineOffset = End - last_newline - 1;
         }
 
@@ -73,7 +73,7 @@ namespace EditorCore.Selection
 
         public void InsertText(string text)
         {
-            Cursor.File.InsertString(End, text);
+            Cursor.Buffer.InsertString(End, text);
             UpdateFromLineOffset();
         }
 
@@ -84,9 +84,9 @@ namespace EditorCore.Selection
             {
                 End = 0;
             }
-            if (End > Cursor.File.Text.Length)
+            if (End > Cursor.Buffer.Text.Length)
             {
-                End = Cursor.File.Text.Length;
+                End = Cursor.Buffer.Text.Length;
             }
             if (!withSelect)
             {
@@ -102,14 +102,14 @@ namespace EditorCore.Selection
                 offset = -offset;
                 for (long i = 0; i < offset; i++)
                 {
-                    long endOfPrevLine = Cursor.File.Text.LastIndexOf('\n', (int)(End - 1));
+                    long endOfPrevLine = Cursor.Buffer.Text.LastIndexOf('\n', (int)(End - 1));
                     if (endOfPrevLine == -1)
                     {
                         /* uncomment to jump to begin of file */
                         // End = 0;
                         goto update_begin_pointer;
                     }
-                    long endOfBeforePrevLine = Cursor.File.Text.LastIndexOf('\n', (int)(endOfPrevLine - 1));
+                    long endOfBeforePrevLine = Cursor.Buffer.Text.LastIndexOf('\n', (int)(endOfPrevLine - 1));
                     End = Math.Min(endOfPrevLine, endOfBeforePrevLine + 1 + FromLineOffset);
                 }
             }
@@ -117,17 +117,17 @@ namespace EditorCore.Selection
             {
                 for (long i = 0; i < offset; i++)
                 {
-                    long nextLine = Cursor.File.Text.IndexOf('\n', (int)End);
+                    long nextLine = Cursor.Buffer.Text.IndexOf('\n', (int)End);
                     if (nextLine == -1)
                     {
                         /* uncomment to jump to end of file */
                         // End = Cursor.File.Text.Length;
                         goto update_begin_pointer;
                     }
-                    long afterNextLine = Cursor.File.Text.IndexOf('\n', (int)(nextLine + 1));
+                    long afterNextLine = Cursor.Buffer.Text.IndexOf('\n', (int)(nextLine + 1));
                     if (afterNextLine == -1)
                     {
-                        afterNextLine = Cursor.File.Text.Length;
+                        afterNextLine = Cursor.Buffer.Text.Length;
                     }
                     End = Math.Min(nextLine + 1 + FromLineOffset, afterNextLine);
                 }
@@ -147,6 +147,6 @@ namespace EditorCore.Selection
 
         public long TextLength => Max - Min;
 
-        public Rope.Rope<char>? Text => (TextLength == 0 ? null : Cursor?.File?.Text.Slice(Min, TextLength));
+        public Rope.Rope<char>? Text => (TextLength == 0 ? null : Cursor?.Buffer?.Text.Slice(Min, TextLength));
     }
 }

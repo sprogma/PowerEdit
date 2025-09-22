@@ -1,4 +1,5 @@
-﻿using EditorCore.File;
+﻿using EditorCore.Buffer;
+using EditorCore.File;
 using EditorCore.Selection;
 using System;
 using System.Collections.Generic;
@@ -12,11 +13,11 @@ namespace EditorCore.Cursor
     {
         public List<EditorSelection> Selections { get; internal set; }
 
-        public EditorFile File { get; internal set; }
+        public EditorBuffer Buffer { get; internal set; }
 
-        public EditorCursor(EditorFile file)
+        public EditorCursor(EditorBuffer buffer)
         {
-            File = file;
+            Buffer = buffer;
             Selections = [];
         }
 
