@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Rope;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -8,6 +9,6 @@ namespace CommandProviderInterface
 {
     public interface ICommandProvider
     {
-        public Rope.Rope<char> Execute(Rope.Rope<char> args);
+        public IEnumerable<Rope<char>> Execute(string command, Rope<char>[] args);
     }
 }

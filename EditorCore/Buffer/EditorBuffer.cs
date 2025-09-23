@@ -57,6 +57,15 @@ namespace EditorCore.Buffer
 
         public void DeleteString(long position, long count)
         {
+            if (position + count <= 0)
+            {
+                return;
+            }
+            if (position < 0)
+            {
+                count += position;
+                position = 0;
+            }
             Text = Text.RemoveRange(position, count);
             /* move all cursors */
             foreach (var cursor in Cursors)

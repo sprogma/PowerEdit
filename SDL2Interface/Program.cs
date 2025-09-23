@@ -15,11 +15,9 @@ namespace SDL2Interface
         int W, H;
         Window window;
         Renderer renderer;
-        int fontStep;
-        int fontLineStep;
-        Font font;
-        Rect[] asciiMapRectangles;
-        Texture asciiMap;
+        TextBufferRenderer textRenderer;
+        int FontStep => textRenderer.fontStep;
+        int FontLineStep => textRenderer.fontLineStep;
 
         public SDL2Interface()
         {
@@ -32,6 +30,7 @@ namespace SDL2Interface
             }
             cursor = file.Buffer?.CreateCursor();
             cursor?.Selections.Add(new EditorSelection(cursor, 1, 4));
+            cursor?.Selections.Add(new EditorSelection(cursor, 6, 8));
 
 
             if (SDL.Init(SdlInitFlags.Everything) != 0)
@@ -48,90 +47,7 @@ namespace SDL2Interface
             }
             SDL.GetWindowSize(window, out W, out H);
 
-            CreateAsciiMap();
-        }
-
-        private void CreateAsciiMap()
-        {
-            asciiMapRectangles = new Rect[128];
-            font = TTF.OpenFont(@"D:\cs\PowerEdit\sans.ttf", 32);
-            if (font.IsNull)
-            {
-                throw new Exception("Font is not loaded");
-            }
-            /* generate rectangles */
-            int x = 0;
-            for (int i = 32; i < 128; ++i)
-            {
-                string st = ((char)i).ToString();
-                if (TTF.SizeText(font, st, out int w, out int h) != 0)
-                {
-                    throw new Exception("SizeText exception");
-                }
-                asciiMapRectangles[i].X = x;
-                asciiMapRectangles[i].Y = 0 ;
-                asciiMapRectangles[i].Width = w;
-                asciiMapRectangles[i].Height = h;
-                x += w;
-                fontStep = Math.Max(fontStep, w);
-                fontLineStep = Math.Max(fontLineStep, h);
-            }
-            fontLineStep += 3;
-            /* render glyphs */
-            SDL.CreateRGBSurface(0, x, asciiMapRectangles[127].Height, 32, 0xff, 0xff00, 0xff0000, 0xff000000, out PSurface textMap);
-            x = 0;
-            for (int i = 32; i < 128; ++i)
-            {
-                string st = ((char)i).ToString();
-                if (TTF.SizeText(font, st, out int w, out int h) != 0)
-                {
-                    throw new Exception("SizeText exception");
-                }
-                TTF.RenderText_Blended(font, st, new Color(255, 255, 255, 255), out PSurface glythMap);
-                Rect r = new(0, 0, asciiMapRectangles[i].Width, asciiMapRectangles[i].Height);
-                SDL.BlitSurface(glythMap, ref r, textMap, ref asciiMapRectangles[i]);
-                SDL.FreeSurface(glythMap);
-                x += w;
-            }
-            asciiMap = SDL.CreateTextureFromSurface(renderer, textMap);
-            SDL.FreeSurface(textMap);
-        }
-
-        private void DrawTextLine(int x, int y, Rope.Rope<char> line)
-        {
-            foreach (char c in line)
-            {
-                /* render glyph */
-                if (c < ' ' && c != '\n')
-                {
-                    Rect r = asciiMapRectangles[(byte)c];
-                    r.X = x;
-                    r.Y = y;
-                    r.Width = fontStep;
-                    r.Height = fontLineStep;
-                    SDL.SetRenderDrawColor(renderer, 255, 255, 255, 255);
-                    SDL.RenderDrawRect(renderer, ref r);
-                }
-                else if (c < 128)
-                {
-                    Rect r = asciiMapRectangles[(byte)c];
-                    r.X = x;
-                    r.Y = y;
-                    SDL.RenderCopy(renderer, asciiMap, ref asciiMapRectangles[(byte)c], ref r);
-                }
-                else
-                {
-                    TTF.SizeText(font, new string(c, 1), out int w, out int h);
-                    TTF.RenderText_Blended(font, new string(c, 1), new Color(255, 255, 255, 255), out PSurface glythMap);
-                    Texture temp = SDL.CreateTextureFromSurface(renderer, glythMap);
-                    Rect src = new(0, 0, w, h);
-                    Rect dest = new(x, y, w, h);
-                    SDL.RenderCopy(renderer, temp, ref src, ref dest);
-                    SDL.FreeSurface(glythMap);
-                    SDL.DestroyTexture(temp);
-                }
-                x += fontStep;
-            }
+            textRenderer = new TextBufferRenderer(renderer);
         }
 
         private void Draw()
@@ -144,12 +60,12 @@ namespace SDL2Interface
             /* draw text */
             if (file != null)
             {
-                for (int i = 0; i < H / fontLineStep; ++i)
+                for (int i = 0; i < H / FontLineStep; ++i)
                 {
                     Rope.Rope<char>? s = file.Buffer.GetLine(i);
                     if (s != null)
                     {
-                        DrawTextLine(5, i * fontLineStep, s.Value);
+                        textRenderer.DrawTextLine(5, i * FontLineStep, s.Value);
                     }
                 }
 
@@ -161,13 +77,13 @@ namespace SDL2Interface
                     {
                         {
                             (long line, long offset) = file.Buffer.GetPositionOffsets(selection.End);
-                            Rect r = new((int)offset * fontStep, (int)line * fontLineStep, 5, fontLineStep);
+                            Rect r = new((int)offset * FontStep, (int)line * FontLineStep, 5, FontLineStep);
                             SDL.RenderFillRect(renderer, ref r);
                         }
                         for (long p = selection.Min; p < selection.Max; ++p)
                         {
                             (long line, long offset) = file.Buffer.GetPositionOffsets(p);
-                            Rect r = new((int)offset * fontStep, (int)line * fontLineStep + fontLineStep - 5, fontStep, 5);
+                            Rect r = new((int)offset * FontStep, (int)line * FontLineStep + FontLineStep - 5, FontStep, 5);
                             SDL.RenderFillRect(renderer, ref r);
                         }
                     }
@@ -204,6 +120,15 @@ namespace SDL2Interface
                         if (e.Keyboard.Keysym.Scancode == Scancode.S && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0)
                         {
                             file?.Save(@"D:\a.c");
+                        }
+                        if (e.Keyboard.Keysym.Scancode == Scancode.E && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0)
+                        {
+                            /* v.1 - open powerWindow */
+                            if (cursor != null)
+                            {
+                                PowerWindow win = new(window, renderer, textRenderer, cursor);
+                                win.Run();
+                            }
                         }
                         if (e.Keyboard.Keysym.Scancode == Scancode.Right)
                         {

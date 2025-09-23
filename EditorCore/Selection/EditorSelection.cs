@@ -77,6 +77,12 @@ namespace EditorCore.Selection
             UpdateFromLineOffset();
         }
 
+        public void InsertText(Rope.Rope<char> text)
+        {
+            Cursor.Buffer.InsertString(End, text);
+            UpdateFromLineOffset();
+        }
+
         public void MoveHorisontal(long offset, bool withSelect = false)
         {
             End += offset;

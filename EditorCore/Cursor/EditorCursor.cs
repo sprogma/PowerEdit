@@ -4,6 +4,7 @@ using EditorCore.Selection;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection.Metadata.Ecma335;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -15,15 +16,44 @@ namespace EditorCore.Cursor
 
         public EditorBuffer Buffer { get; internal set; }
 
-        public EditorCursor(EditorBuffer buffer)
+        internal EditorCursor(EditorBuffer buffer)
         {
             Buffer = buffer;
             Selections = [];
         }
 
-        public void Execute(string command)
+        public void ApplyCommand(string command)
         {
-            throw new NotImplementedException();
+            Rope.Rope<char>[] args = Selections.Select(x => x.Text).OfType<Rope.Rope<char>>().ToArray();
+            Selections.ForEach(x => Buffer.DeleteString(x.Min, x.TextLength));
+            var result = Buffer.Server.CommandProvider.Execute(command, args).ToArray();
+            Console.WriteLine($"get result: {string.Join(' ', result.Select(x => x.ToString()))}");
+            int id = 0;
+            if (result.Length == Selections.Count)
+            {
+                foreach (var item in result)
+                {
+                    Selections[id].Begin = Selections[id].End;
+                    long begin = Selections[id].End;
+                    Selections[id].InsertText(item);
+                    /* select entered text */
+                    Selections[id].SetPosition(begin, Selections[id].End);
+                    id++;
+                }
+            }
+            else
+            {
+                long begin = Selections[^1].End;
+                Selections = [];
+                foreach (var item in result)
+                {
+                    var s = new EditorSelection(this, begin);
+                    s.InsertText(item);
+                    s.SetPosition(begin, s.End);
+                    begin = s.End;
+                    Selections.Add(s);
+                }
+            }
         }
 
         /* declarations for simplicity */
