@@ -130,6 +130,16 @@ namespace SDL2Interface
                                 win.Run();
                             }
                         }
+                        if (e.Keyboard.Keysym.Scancode == Scancode.C && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Alt) != 0)
+                        {
+                            if (cursor != null)
+                            {
+                                if (cursor.Selections.Count > 1)
+                                {
+                                    cursor.Selections = [cursor.Selections[0]];
+                                }
+                            }
+                        }
                         if (e.Keyboard.Keysym.Scancode == Scancode.Right)
                         {
                             cursor?.Selections.ForEach(x => { x.MoveHorisontal(1, ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Shift) != 0); });

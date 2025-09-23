@@ -4,6 +4,8 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Management.Automation;
+using System.Management.Automation.Runspaces;
+using System.ServiceModel.Syndication;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -11,25 +13,35 @@ namespace PowershellProvider
 {
     public class PowershellProvider : CommandProviderInterface.ICommandProvider
     {
-        internal PowerShell ps;
+        internal Runspace runSpace;
 
         public PowershellProvider()
         {
-            ps = PowerShell.Create();
+            runSpace = RunspaceFactory.CreateRunspace();
+            runSpace.Open();
         }
 
-        public IEnumerable<Rope<char>> Execute(string command, Rope<char>[] args)
+        ~PowershellProvider()
         {
-            ps.AddScript(command);
+            runSpace.Close();
+            runSpace.Dispose();
+        }
 
-            Collection<PSObject> results = ps.Invoke(args);
-            Console.WriteLine($"GET: {results}");
-            foreach (var item in results.Select(x => x.ToString()))
+        public IEnumerable<string>? Execute(string command, string[] args)
+        {
+            Pipeline pipeline = runSpace.CreatePipeline();
+            pipeline.Commands.AddScript(command);
+            Collection<PSObject> results;
+            try
             {
-                Console.WriteLine($"item: {item}");
+                results = pipeline.Invoke(args);
             }
-
-            return results.Select(x => x.ToString()).Select(x => (Rope<char>)x);
+            catch (Exception ex)
+            {
+                Console.WriteLine($"ERROR: {ex}");
+                return null;
+            }
+            return results.Select(x => x.ToString());
         }
     }
 }

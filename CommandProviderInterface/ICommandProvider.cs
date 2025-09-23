@@ -9,6 +9,6 @@ namespace CommandProviderInterface
 {
     public interface ICommandProvider
     {
-        public IEnumerable<Rope<char>> Execute(string command, Rope<char>[] args);
+        public IEnumerable<string>? Execute(string command, string[] args);
     }
 }

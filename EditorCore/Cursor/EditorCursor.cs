@@ -12,7 +12,7 @@ namespace EditorCore.Cursor
 {
     public class EditorCursor
     {
-        public List<EditorSelection> Selections { get; internal set; }
+        public List<EditorSelection> Selections { get; set; }
 
         public EditorBuffer Buffer { get; internal set; }
 
@@ -24,9 +24,22 @@ namespace EditorCore.Cursor
 
         public void ApplyCommand(string command)
         {
-            Rope.Rope<char>[] args = Selections.Select(x => x.Text).OfType<Rope.Rope<char>>().ToArray();
-            Selections.ForEach(x => Buffer.DeleteString(x.Min, x.TextLength));
-            var result = Buffer.Server.CommandProvider.Execute(command, args).ToArray();
+            Rope.Rope<char>[] args;
+            if (Selections.Count == 0 || Selections.All(x => x.TextLength == 0))
+            {
+                args = [Buffer.Text];
+                Buffer.Text = "";
+            }
+            else
+            {
+                args = Selections.Select(x => x.Text).OfType<Rope.Rope<char>>().ToArray();
+                Selections.ForEach(x => Buffer.DeleteString(x.Min, x.TextLength));
+            }
+            var result = Buffer.Server.CommandProvider.Execute(command, args.Select(x => x.ToString()).ToArray())?.ToArray();
+            if (result == null)
+            {
+                return;
+            }
             Console.WriteLine($"get result: {string.Join(' ', result.Select(x => x.ToString()))}");
             int id = 0;
             if (result.Length == Selections.Count)

@@ -119,7 +119,7 @@ namespace SDL2Interface
                             running = false;
                             return;
                         }
-                        if (e.Keyboard.Keysym.Scancode == Scancode.CapsLock)
+                        if (e.Keyboard.Keysym.Scancode == Scancode.Return && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0)
                         {
                             Apply();
                             running = false;
