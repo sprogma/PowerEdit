@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection.Metadata.Ecma335;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace EditorCore.Cursor
@@ -24,26 +25,26 @@ namespace EditorCore.Cursor
 
         public void ApplyCommand(string type, string command)
         {
-            Rope.Rope<char>[] args;
-            bool used_all_text = false;
-            if (Selections.Count == 0 || Selections.All(x => x.TextLength == 0))
-            {
-                args = [Buffer.Text];
-                used_all_text = true;
-            }
-            else
-            {
-                args = Selections.Select(x => x.Text).OfType<Rope.Rope<char>>().ToArray();
-            }
-            var result = Buffer.Server.CommandProvider.Execute(command, args.Select(x => x.ToString()).ToArray())?.ToArray();
-            if (result == null)
-            {
-                return;
-            }
-            Console.WriteLine($"get result: {string.Join(' ', result.Select(x => x.ToString()))}");
             switch (type)
             {
                 case "edit":
+                    Rope.Rope<char>[] args;
+                    bool used_all_text = false;
+                    if (Selections.Count == 0 || Selections.All(x => x.TextLength == 0))
+                    {
+                        args = [Buffer.Text];
+                        used_all_text = true;
+                    }
+                    else
+                    {
+                        args = Selections.Select(x => x.Text).OfType<Rope.Rope<char>>().ToArray();
+                    }
+                    var result = Buffer.Server.CommandProvider.Execute(command, args.Select(x => x.ToString()).ToArray())?.ToArray();
+                    if (result == null)
+                    {
+                        return;
+                    }
+                    Console.WriteLine($"get result: {string.Join(' ', result.Select(x => x.ToString()))}");
                     if (used_all_text)
                     {
                         Buffer.DeleteString(0, Buffer.Text.Length);
@@ -82,7 +83,12 @@ namespace EditorCore.Cursor
                     }
                     break;
                 case "find":
-                    throw new NotImplementedException();
+                    Selections.Clear();
+                    foreach (Match x in Regex.Matches(Buffer.Text.ToString(), command))
+                    {
+                        Selections.Add(new EditorSelection(this, x.Index, x.Index + x.Length));
+                    }
+                    break;
             }
         }
 
