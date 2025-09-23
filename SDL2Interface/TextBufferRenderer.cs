@@ -21,7 +21,7 @@ namespace SDL2Interface
         {
             renderer = input_renderer;
             asciiMapRectangles = new Rect[128];
-            font = TTF.OpenFont(@"D:\cs\PowerEdit\sans.ttf", 32);
+            font = TTF.OpenFont(@"D:\cs\PowerEdit\CascadiaMono.ttf", 32);
             if (font.IsNull)
             {
                 throw new Exception("Font is not loaded");
