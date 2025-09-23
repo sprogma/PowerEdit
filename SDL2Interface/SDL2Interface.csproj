@@ -18,7 +18,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\CommandProviderInterface\CommandProviderInterface.csproj" />
-    <ProjectReference Include="..\CoreInterface\PowershellProvider.csproj" />
+    <ProjectReference Include="..\CoreInterface\PowershellCommandProvider.csproj" />
     <ProjectReference Include="..\EditorCore\EditorCore.csproj" />
   </ItemGroup>
 

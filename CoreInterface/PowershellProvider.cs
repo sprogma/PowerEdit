@@ -9,7 +9,7 @@ using System.ServiceModel.Syndication;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace PowershellProvider
+namespace PowershellCommandProvider
 {
     public class PowershellProvider : CommandProviderInterface.ICommandProvider
     {

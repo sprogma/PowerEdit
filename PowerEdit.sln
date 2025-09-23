@@ -1,13 +1,13 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
-VisualStudioVersion = 17.14.36408.4 d17.14
+VisualStudioVersion = 17.14.36408.4
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EditorCore", "EditorCore\EditorCore.csproj", "{A371DFE7-F62D-46F6-B829-FDB4E59E84B3}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SDL2Interface", "SDL2Interface\SDL2Interface.csproj", "{81C068E1-82B9-4238-9F14-0E7DF95C1A53}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PowershellProvider", "CoreInterface\PowershellProvider.csproj", "{909BD724-6FCD-436A-AA27-A7FD57F01FB7}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PowershellCommandProvider", "CoreInterface\PowershellCommandProvider.csproj", "{909BD724-6FCD-436A-AA27-A7FD57F01FB7}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CommandProviderInterface", "CommandProviderInterface\CommandProviderInterface.csproj", "{1C4CDE7B-8726-4D79-8C1F-2E8C1853AC6A}"
 EndProject

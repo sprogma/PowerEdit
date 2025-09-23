@@ -93,6 +93,12 @@ namespace EditorCore.Buffer
         }
 
         /* declarations for simplicity */
+        public void SetText(string data)
+        {
+            DeleteString(0, Text.Length);
+            InsertString(0, data);
+        }
+
         public Rope.Rope<char>? GetLine(long line)
         {
             if (line < 0)
