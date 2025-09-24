@@ -83,10 +83,25 @@ namespace EditorCore.Cursor
                     }
                     break;
                 case "find":
-                    Selections.Clear();
-                    foreach (Match x in Regex.Matches(Buffer.Text.ToString(), command))
+                    List<(long, string)> textFields = [];
+                    foreach (EditorSelection selection in Selections)
                     {
-                        Selections.Add(new EditorSelection(this, x.Index, x.Index + x.Length));
+                        if (selection.TextLength > 0)
+                        {
+                            textFields.Add((selection.Min, selection.Text.ToString()));
+                        }
+                    }
+                    if (textFields.Count == 0)
+                    {
+                        textFields.Add((0, Buffer.Text.ToString()));
+                    }
+                    Selections.Clear();
+                    foreach (var (index, value) in textFields)
+                    {
+                        foreach (Match x in Regex.Matches(value, command))
+                        {
+                            Selections.Add(new EditorSelection(this, index + x.Index, index + x.Index + x.Length));
+                        }
                     }
                     break;
             }

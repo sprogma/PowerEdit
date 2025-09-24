@@ -68,7 +68,7 @@ namespace EditorCore.Selection
         /* declarations for simplicity */
         public static implicit operator string?(EditorSelection selection)
         {
-            return selection.Text?.ToString();
+            return selection.Text.ToString();
         }
 
         public void InsertText(string text)
@@ -153,6 +153,6 @@ namespace EditorCore.Selection
 
         public long TextLength => Max - Min;
 
-        public Rope.Rope<char>? Text => (TextLength == 0 ? null : Cursor?.Buffer?.Text.Slice(Min, TextLength));
+        public Rope.Rope<char> Text => (TextLength == 0 ? "" : Cursor.Buffer.Text.Slice(Min, TextLength));
     }
 }
