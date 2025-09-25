@@ -1,4 +1,5 @@
 ﻿using EditorCore.Buffer;
+using RegexTokenizer;
 using SDL_Sharp;
 using System;
 using System.Collections.Generic;
@@ -25,7 +26,7 @@ namespace SDL2Interface
             right_position.X += left_position.Width;
             editor.position = left_position;
             this.editor = editor;
-            this.preview = new(new EditorBuffer(editor.buffer.Server, "processing ..."), right_position);
+            this.preview = new(new EditorBuffer(editor.buffer.Server, "processing ...", editor.cursor.Buffer.Tokenizer), right_position);
             this.lastDrawTime = DateTime.UtcNow;
             Console.WriteLine("Created");
         }

@@ -13,6 +13,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CommandProviderInterface", 
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PythonCommandProvider", "PythonCommandProvider\PythonCommandProvider.csproj", "{40CEEDEA-2D33-4EC8-91DA-372CC0248065}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RegexTokenizer", "RegexTokenizer\RegexTokenizer.csproj", "{5863A886-0A56-4D6D-BEEC-B5BB1FE31FA9}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -39,6 +41,10 @@ Global
 		{40CEEDEA-2D33-4EC8-91DA-372CC0248065}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{40CEEDEA-2D33-4EC8-91DA-372CC0248065}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{40CEEDEA-2D33-4EC8-91DA-372CC0248065}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5863A886-0A56-4D6D-BEEC-B5BB1FE31FA9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5863A886-0A56-4D6D-BEEC-B5BB1FE31FA9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5863A886-0A56-4D6D-BEEC-B5BB1FE31FA9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5863A886-0A56-4D6D-BEEC-B5BB1FE31FA9}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -1,4 +1,5 @@
-﻿using SDL_Sharp;
+﻿using RegexTokenizer;
+using SDL_Sharp;
 using SDL_Sharp.Ttf;
 using System;
 using System.Collections.Generic;
@@ -16,9 +17,11 @@ namespace SDL2Interface
         internal Font font;
         internal Rect[] asciiMapRectangles;
         internal Texture asciiMap;
+        internal ColorTheme colorTheme;
 
-        public TextBufferRenderer(Renderer input_renderer)
+        public TextBufferRenderer(Renderer input_renderer, ColorTheme color_theme)
         {
+            colorTheme = color_theme;
             renderer = input_renderer;
             asciiMapRectangles = new Rect[128];
             font = TTF.OpenFont(@"D:\cs\PowerEdit\CascadiaMono.ttf", 32);
@@ -68,10 +71,27 @@ namespace SDL2Interface
             SDL.FreeSurface(textMap);
         }
 
-        public void DrawTextLine(int x, int y, Rope.Rope<char> line)
+        public long DrawTextLine(int x, int y, Rope.Rope<char> line, long position, List<Token> tokens, long lastToken)
         {
             foreach (char c in line)
             {
+                Token? currentToken = null;
+                while (lastToken < tokens.Count && tokens[(int)lastToken].end < position)
+                {
+                    lastToken++;
+                }
+                if (lastToken < tokens.Count && tokens[(int)lastToken].begin <= position)
+                {
+                    currentToken = tokens[(int)lastToken];
+                }
+
+
+                Color color = new(255, 255, 255, 255);
+                if (currentToken != null)
+                {
+                    color = ColorTheme.GetColor(currentToken.Value.type); 
+                }
+
                 /* render glyph */
                 if (c < ' ' && c != '\n')
                 {
@@ -80,7 +100,7 @@ namespace SDL2Interface
                     r.Y = y;
                     r.Width = fontStep;
                     r.Height = fontLineStep;
-                    SDL.SetRenderDrawColor(renderer, 255, 255, 255, 255);
+                    SDL.SetRenderDrawColor(renderer, color.R, color.G, color.B, color.A);
                     SDL.RenderDrawRect(renderer, ref r);
                 }
                 else if (c < 128)
@@ -88,12 +108,13 @@ namespace SDL2Interface
                     Rect r = asciiMapRectangles[(byte)c];
                     r.X = x;
                     r.Y = y;
+                    SDL.SetTextureColorMod(asciiMap, color.R, color.G, color.B);
                     SDL.RenderCopy(renderer, asciiMap, ref asciiMapRectangles[(byte)c], ref r);
                 }
                 else
                 {
                     TTF.SizeText(font, new string(c, 1), out int w, out int h);
-                    TTF.RenderText_Blended(font, new string(c, 1), new Color(255, 255, 255, 255), out PSurface glythMap);
+                    TTF.RenderText_Blended(font, new string(c, 1), color, out PSurface glythMap);
                     Texture temp = SDL.CreateTextureFromSurface(renderer, glythMap);
                     if (temp.IsNull)
                     {
@@ -106,7 +127,9 @@ namespace SDL2Interface
                     SDL.DestroyTexture(temp);
                 }
                 x += fontStep;
+                position++;
             }
+            return lastToken;
         }
     }
 }

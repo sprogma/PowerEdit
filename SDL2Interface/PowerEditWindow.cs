@@ -21,7 +21,8 @@ namespace SDL2Interface
             return buffer.Server.CommandProvider.Execute(buffer.Text.ToString(), usingCursor.SelectionsText.ToArray());
         }
 
-        public PowerEditWindow(EditorServer server, EditorCursor usingCursor, Rect position) : base(new EditorBuffer(server), position)
+        public PowerEditWindow(EditorServer server, EditorCursor usingCursor, Rect position) : 
+                               base(new EditorBuffer(server, server.CommandProvider.Tokenizer), position)
         {
             (long begin, long end, string text) = server.CommandProvider.ExampleScript;
             buffer.SetText(text);

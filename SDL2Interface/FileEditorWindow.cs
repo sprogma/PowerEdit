@@ -1,5 +1,6 @@
 ﻿using EditorCore.Buffer;
 using EditorCore.File;
+using RegexTokenizer;
 using SDL_Sharp;
 using System;
 using System.Collections.Generic;

@@ -36,7 +36,7 @@ namespace SDL2Interface
             }
             SDL.GetWindowSize(BaseWindow.window, out BaseWindow.W, out BaseWindow.H);
 
-            BaseWindow.textRenderer = new TextBufferRenderer(BaseWindow.renderer);
+            BaseWindow.textRenderer = new TextBufferRenderer(BaseWindow.renderer, new ColorTheme());
 
             /* create application instance */
 

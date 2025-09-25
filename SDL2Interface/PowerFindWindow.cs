@@ -16,7 +16,8 @@ namespace SDL2Interface
         public EditorCursor usingCursor;
 
 
-        public PowerFindWindow(EditorServer server, EditorCursor usingCursor, Rect position) : base(new EditorBuffer(server), position)
+        public PowerFindWindow(EditorServer server, EditorCursor usingCursor, Rect position) : 
+                               base(new EditorBuffer(server, usingCursor.Buffer.Tokenizer), position)
         {
             buffer.SetText("");
             this.usingCursor = usingCursor;

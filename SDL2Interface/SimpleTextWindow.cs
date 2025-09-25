@@ -4,6 +4,7 @@ using EditorCore.Selection;
 using SDL_Sharp;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.Eventing.Reader;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -24,13 +25,15 @@ namespace SDL2Interface
             SDL.SetRenderDrawColor(renderer, 0, 0, 0, 0);
             SDL.RenderFillRect(renderer, ref position);
 
+            long lastToken = 0;
+
             /* draw text */
             for (int i = 0; i < H / textRenderer.fontLineStep; ++i)
             {
-                Rope.Rope<char>? s = buffer.GetLine(i);
+                (long index, Rope.Rope<char>? s) = buffer.GetLine(i);
                 if (s != null)
                 {
-                    textRenderer.DrawTextLine(position.X + 5, position.Y + i * textRenderer.fontLineStep, s.Value);
+                    lastToken = textRenderer.DrawTextLine(position.X + 5, position.Y + i * textRenderer.fontLineStep, s.Value, index, buffer.Tokens, lastToken);
                 }
             }
         }

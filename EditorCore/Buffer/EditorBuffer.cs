@@ -1,7 +1,9 @@
-﻿using System;
+﻿using RegexTokenizer;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -12,16 +14,22 @@ namespace EditorCore.Buffer
         public Rope.Rope<char> Text { get; internal set; }
         public Server.EditorServer Server { get; internal set; }
         public List<Cursor.EditorCursor> Cursors { get; internal set; }
+        public BaseTokenizer Tokenizer { get; internal set; }
+        public List<Token> Tokens { get; internal set; }
 
-        public EditorBuffer(Server.EditorServer server)
+        public EditorBuffer(Server.EditorServer server, BaseTokenizer tokenizer)
         {
+            Tokens = [];
+            Tokenizer = tokenizer;
             Text = "";
             Cursors = [];
             Server = server;
         }
 
-        public EditorBuffer(Server.EditorServer server, Rope.Rope<char> content)
+        public EditorBuffer(Server.EditorServer server, Rope.Rope<char> content, BaseTokenizer tokenizer)
         {
+            Tokens = [];
+            Tokenizer = tokenizer;
             Text = content;
             Cursors = [];
             Server = server;
@@ -32,6 +40,12 @@ namespace EditorCore.Buffer
             Cursor.EditorCursor new_cursor = new Cursor.EditorCursor(this);
             Cursors.Add(new_cursor);
             return new_cursor;
+        }
+
+        public void OnUpdate()
+        {
+            Tokens = Tokenizer.ParseContent(Text);
+            Console.WriteLine("Updated");
         }
 
         public long InsertString(long position, Rope.Rope<char> data)
@@ -53,6 +67,7 @@ namespace EditorCore.Buffer
                     }
                 }
             }
+            OnUpdate();
             return position + length;
         }
 
@@ -91,6 +106,7 @@ namespace EditorCore.Buffer
                     }
                 }
             }
+            OnUpdate();
         }
 
         /* declarations for simplicity */
@@ -101,11 +117,11 @@ namespace EditorCore.Buffer
             return res;
         }
 
-        public Rope.Rope<char>? GetLine(long line)
+        public (long, Rope.Rope<char>?) GetLine(long line)
         {
             if (line < 0)
             {
-                return null;
+                return (0, null);
             }
 
             long index = 0;
@@ -114,7 +130,7 @@ namespace EditorCore.Buffer
                 index = Text.IndexOf('\n', index);
                 if (index == -1)
                 {
-                    return null;
+                    return (0, null);
                 }
                 index++;
             }
@@ -122,9 +138,9 @@ namespace EditorCore.Buffer
             long end = Text.IndexOf('\n', index);
             if (end == -1)
             {
-                return Text.Slice(index);
+                return (index, Text.Slice(index));
             }
-            return Text.Slice(index, end - index + 1);
+            return (index, Text.Slice(index, end - index + 1));
         }
         public (long, long) GetPositionOffsets(long position)
         {

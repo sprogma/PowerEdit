@@ -1,4 +1,5 @@
 ﻿using EditorCore.Buffer;
+using RegexTokenizer;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -18,7 +19,9 @@ namespace EditorCore.File
 
         public EditorFile(Server.EditorServer server, string filename)
         {
-            Buffer = new EditorBuffer(server, System.IO.File.ReadAllText(filename));
+            Buffer = new EditorBuffer(server, 
+                                      System.IO.File.ReadAllText(filename), 
+                                      BaseTokenizer.CreateTokenizer(Path.GetExtension(filename).Substring(1) ?? ""));
             Server = server;
         }
 

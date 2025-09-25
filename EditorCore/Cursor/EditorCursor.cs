@@ -1,6 +1,7 @@
 ﻿using EditorCore.Buffer;
 using EditorCore.File;
 using EditorCore.Selection;
+using RegexTokenizer;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -14,8 +15,8 @@ namespace EditorCore.Cursor
     public class EditorCursor
     {
         public List<EditorSelection> Selections { get; set; }
-
         public EditorBuffer Buffer { get; internal set; }
+        List<Token> Tokens => Buffer.Tokens;
 
         internal EditorCursor(EditorBuffer buffer)
         {
