@@ -76,14 +76,16 @@ namespace EditorCore.Cursor
                             }
                             long begin = Selections[^1].End;
                             Selections = [];
+                            List<EditorSelection> newSelections = [];
                             foreach (var item in result)
                             {
                                 var s = new EditorSelection(this, begin);
-                                s.InsertText(item);
-                                s.SetPosition(begin, s.End);
-                                begin = s.End;
-                                Selections.Add(s);
+                                long endPosition = s.InsertText(item);
+                                s.SetPosition(begin, endPosition);
+                                begin = endPosition;
+                                newSelections.Add(s);
                             }
+                            Selections.AddRange(newSelections);
                         }
                     }
                     break;

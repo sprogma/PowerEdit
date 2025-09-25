@@ -43,7 +43,7 @@ namespace PowershellCommandProvider
                 Console.WriteLine($"ERROR: {ex}");
                 return (null, ex.ToString());
             }
-            return (results.Select(x => x.ToString()), null);
+            return (results.Where(x => x != null).Select(x => x.ToString()), null);
         }
     }
 }

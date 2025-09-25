@@ -71,16 +71,18 @@ namespace EditorCore.Selection
             return selection.Text.ToString();
         }
 
-        public void InsertText(string text)
+        public long InsertText(string text)
         {
-            Cursor.Buffer.InsertString(End, text);
+            long res = Cursor.Buffer.InsertString(End, text);
             UpdateFromLineOffset();
+            return res;
         }
 
-        public void InsertText(Rope.Rope<char> text)
+        public long InsertText(Rope.Rope<char> text)
         {
-            Cursor.Buffer.InsertString(End, text);
+            long res = Cursor.Buffer.InsertString(End, text);
             UpdateFromLineOffset();
+            return res;
         }
 
         public void MoveHorisontal(long offset, bool withSelect = false)

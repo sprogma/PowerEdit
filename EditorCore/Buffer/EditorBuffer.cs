@@ -34,7 +34,7 @@ namespace EditorCore.Buffer
             return new_cursor;
         }
 
-        public void InsertString(long position, Rope.Rope<char> data)
+        public long InsertString(long position, Rope.Rope<char> data)
         {
             long length = data.Length;
             Text = Text.InsertRange(position, data);
@@ -53,6 +53,7 @@ namespace EditorCore.Buffer
                     }
                 }
             }
+            return position + length;
         }
 
         public void DeleteString(long position, long count)
@@ -93,10 +94,11 @@ namespace EditorCore.Buffer
         }
 
         /* declarations for simplicity */
-        public void SetText(string data)
+        public long SetText(string data)
         {
             DeleteString(0, Text.Length);
-            InsertString(0, data);
+            long res = InsertString(0, data);
+            return res;
         }
 
         public Rope.Rope<char>? GetLine(long line)
