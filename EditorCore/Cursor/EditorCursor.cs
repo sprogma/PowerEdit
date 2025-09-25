@@ -39,7 +39,8 @@ namespace EditorCore.Cursor
                     {
                         args = Selections.Select(x => x.Text).OfType<Rope.Rope<char>>().ToArray();
                     }
-                    var result = Buffer.Server.CommandProvider.Execute(command, args.Select(x => x.ToString()).ToArray())?.ToArray();
+                    (var enumerable_result, string? error_string) = Buffer.Server.CommandProvider.Execute(command, args.Select(x => x.ToString()).ToArray());
+                    var result = enumerable_result?.ToArray();
                     if (result == null)
                     {
                         return;
@@ -112,5 +113,7 @@ namespace EditorCore.Cursor
         }
 
         /* declarations for simplicity */
+
+        public IEnumerable<string> SelectionsText => Selections.Select(x => x.Text.ToString());
     }
 }

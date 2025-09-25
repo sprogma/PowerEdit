@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 
 namespace SDL2Interface
 {
-    internal class PowerFindWindow : BaseTextWindow
+    internal class PowerFindWindow : BaseInputTextWindow
     {
         public EditorCursor usingCursor;
 

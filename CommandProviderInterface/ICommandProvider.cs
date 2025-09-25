@@ -11,6 +11,6 @@ namespace CommandProviderInterface
     {
         public (long, long, string) ExampleScript { get; }
 
-        public IEnumerable<string>? Execute(string command, string[] args);
+        public (IEnumerable<string>?, string?) Execute(string command, string[] args);
     }
 }

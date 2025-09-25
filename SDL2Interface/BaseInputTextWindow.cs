@@ -10,32 +10,19 @@ using System.Threading.Tasks;
 
 namespace SDL2Interface
 {
-    internal abstract class BaseTextWindow : BaseWindow
+    internal abstract class BaseInputTextWindow : SimpleTextWindow
     {
-        internal EditorBuffer buffer;
         internal EditorCursor cursor;
 
-        protected BaseTextWindow(EditorBuffer buffer, Rect position) : base(position)
+        protected BaseInputTextWindow(EditorBuffer buffer, Rect position) : base(buffer, position)
         {
-            this.buffer = buffer;
             this.cursor = buffer.CreateCursor();
             this.cursor.Selections.Add(new EditorSelection(this.cursor, 0));
         }
 
         public override void DrawElements()
         {
-            SDL.SetRenderDrawColor(renderer, 0, 0, 0, 0);
-            SDL.RenderClear(renderer);
-
-            /* draw text */
-            for (int i = 0; i < H / textRenderer.fontLineStep; ++i)
-            {
-                Rope.Rope<char>? s = buffer.GetLine(i);
-                if (s != null)
-                {
-                    textRenderer.DrawTextLine(5, i * textRenderer.fontLineStep, s.Value);
-                }
-            }
+            base.DrawElements();
 
             /* draw cursor */
             SDL.SetRenderDrawColor(renderer, 255, 255, 255, 255);
@@ -83,7 +70,8 @@ namespace SDL2Interface
                         /* v.1 - open powerWindow */
                         if (cursor != null)
                         {
-                            Program.OpenWindow(new PowerEditWindow(cursor.Buffer.Server, cursor, position));
+                            var win = new PowerEditWindow(cursor.Buffer.Server, cursor, position);
+                            Program.OpenWindow(new PowerEditPreviewWindow(position, win));
                             return false;
                         }
                     }

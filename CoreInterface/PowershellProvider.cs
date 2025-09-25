@@ -29,7 +29,7 @@ namespace PowershellCommandProvider
             runSpace.Dispose();
         }
 
-        public IEnumerable<string>? Execute(string command, string[] args)
+        public (IEnumerable<string>?, string?) Execute(string command, string[] args)
         {
             Pipeline pipeline = runSpace.CreatePipeline();
             pipeline.Commands.AddScript(command);
@@ -41,9 +41,9 @@ namespace PowershellCommandProvider
             catch (Exception ex)
             {
                 Console.WriteLine($"ERROR: {ex}");
-                return null;
+                return (null, ex.ToString());
             }
-            return results.Select(x => x.ToString());
+            return (results.Select(x => x.ToString()), null);
         }
     }
 }

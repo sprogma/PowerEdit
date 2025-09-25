@@ -12,10 +12,14 @@ using System.Threading.Tasks;
 
 namespace SDL2Interface
 {
-    internal class PowerEditWindow: BaseTextWindow
+    internal class PowerEditWindow: BaseInputTextWindow
     {
         public EditorCursor usingCursor;
 
+        public (IEnumerable<string>?, string?) CurrentResult()
+        {
+            return buffer.Server.CommandProvider.Execute(buffer.Text.ToString(), usingCursor.SelectionsText.ToArray());
+        }
 
         public PowerEditWindow(EditorServer server, EditorCursor usingCursor, Rect position) : base(new EditorBuffer(server), position)
         {
@@ -25,7 +29,7 @@ namespace SDL2Interface
             this.usingCursor = usingCursor;
         }
 
-        private void Apply()
+        internal void Apply()
         {
             usingCursor.ApplyCommand("edit", buffer.Text.ToString());
         }

@@ -41,8 +41,8 @@ namespace SDL2Interface
             /* create application instance */
 
             {
-                PowershellProvider provider = new();
-                //PythonProvider provider = new();
+                //PowershellProvider provider = new();
+                PythonProvider provider = new();
                 EditorServer server = new(provider);
                 EditorFile file = new(server, @"D:\a.c");
                 windows.Add(new FileEditorWindow(file, new Rect(0, 0, BaseWindow.W, BaseWindow.H)));
@@ -55,6 +55,7 @@ namespace SDL2Interface
                     win.Draw();
                 }
                 SDL.RenderPresent(BaseWindow.renderer);
+                Thread.Sleep(10);
                 while (SDL.PollEvent(out Event evt) != 0)
                 {
                     foreach (var win in windows.Reverse<BaseWindow>())

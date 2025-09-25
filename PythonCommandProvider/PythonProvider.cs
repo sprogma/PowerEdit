@@ -15,12 +15,14 @@ namespace PythonCommandProvider
         ~PythonProvider()
         { }
 
-        public IEnumerable<string>? Execute(string command, string[] args)
+        public (IEnumerable<string>?, string?) Execute(string command, string[] args)
         {
             string inputData = "import json\n" +
                                "o = d = [" + string.Join(',', args.Select(x => JsonSerializer.Serialize(x))) + "]\n";
             string inputCode = $"{inputData}\n{command}\n" +
                                "print(json.dumps(list(map(str, o))))";
+
+            string? error = null;
             string? output = null;
 
             Console.WriteLine(inputCode);
@@ -45,7 +47,7 @@ namespace PythonCommandProvider
                     process.StandardInput.Close();
 
                     output = process.StandardOutput.ReadToEnd().Replace("\r", null);
-                    string error = process.StandardError.ReadToEnd().Replace("\r", null);
+                    error = process.StandardError.ReadToEnd().Replace("\r", null);
 
                     process.WaitForExit();
 
@@ -63,12 +65,21 @@ namespace PythonCommandProvider
 
             if (output == null)
             {
-                return null;
+                return (null, error);
             }
 
-            string[]? resultArray = JsonSerializer.Deserialize<string[]>(output);
+            string[]? resultArray;
 
-            return resultArray;
+            try
+            {
+                resultArray = JsonSerializer.Deserialize<string[]>(output);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.ToString());
+                return (null, error + "\n" + ex.ToString());
+            }
+            return (resultArray, null);
         }
     }
 }
