@@ -69,6 +69,10 @@ namespace EditorCore.Cursor
                         }
                         else
                         {
+                            if (Selections.Count == 0)
+                            {
+                                Selections.Add(new EditorSelection(this, 0));
+                            }
                             long begin = Selections[^1].End;
                             Selections = [];
                             foreach (var item in result)
