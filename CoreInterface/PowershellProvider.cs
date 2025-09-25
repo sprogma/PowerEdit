@@ -13,6 +13,8 @@ namespace PowershellCommandProvider
 {
     public class PowershellProvider : CommandProviderInterface.ICommandProvider
     {
+        public (long, long, string) ExampleScript => (13, 15, "$input | % { $_ }");
+
         internal Runspace runSpace;
 
         public PowershellProvider()

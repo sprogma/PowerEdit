@@ -20,6 +20,7 @@
     <ProjectReference Include="..\CommandProviderInterface\CommandProviderInterface.csproj" />
     <ProjectReference Include="..\CoreInterface\PowershellCommandProvider.csproj" />
     <ProjectReference Include="..\EditorCore\EditorCore.csproj" />
+    <ProjectReference Include="..\PythonCommandProvider\PythonCommandProvider.csproj" />
   </ItemGroup>
 
 </Project>

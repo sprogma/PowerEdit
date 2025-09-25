@@ -7,6 +7,7 @@ using SDL_Sharp;
 using SDL_Sharp.Ttf;
 using System.Runtime.InteropServices;
 using System.Text;
+using PythonCommandProvider;
 
 namespace SDL2Interface
 {
@@ -41,6 +42,7 @@ namespace SDL2Interface
 
             {
                 PowershellProvider provider = new();
+                //PythonProvider provider = new();
                 EditorServer server = new(provider);
                 EditorFile file = new(server, @"D:\a.c");
                 windows.Add(new FileEditorWindow(file, new Rect(0, 0, BaseWindow.W, BaseWindow.H)));

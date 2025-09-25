@@ -19,7 +19,9 @@ namespace SDL2Interface
 
         public PowerEditWindow(EditorServer server, EditorCursor usingCursor, Rect position) : base(new EditorBuffer(server), position)
         {
-            buffer.SetText("$input | %{}");
+            (long begin, long end, string text) = server.CommandProvider.ExampleScript;
+            buffer.SetText(text);
+            cursor.Selections[0].SetPosition(begin, end);
             this.usingCursor = usingCursor;
         }
 

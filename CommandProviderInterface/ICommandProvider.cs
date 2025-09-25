@@ -9,6 +9,8 @@ namespace CommandProviderInterface
 {
     public interface ICommandProvider
     {
+        public (long, long, string) ExampleScript { get; }
+
         public IEnumerable<string>? Execute(string command, string[] args);
     }
 }

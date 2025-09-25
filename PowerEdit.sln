@@ -11,6 +11,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PowershellCommandProvider",
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CommandProviderInterface", "CommandProviderInterface\CommandProviderInterface.csproj", "{1C4CDE7B-8726-4D79-8C1F-2E8C1853AC6A}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PythonCommandProvider", "PythonCommandProvider\PythonCommandProvider.csproj", "{40CEEDEA-2D33-4EC8-91DA-372CC0248065}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -33,6 +35,10 @@ Global
 		{1C4CDE7B-8726-4D79-8C1F-2E8C1853AC6A}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{1C4CDE7B-8726-4D79-8C1F-2E8C1853AC6A}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{1C4CDE7B-8726-4D79-8C1F-2E8C1853AC6A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{40CEEDEA-2D33-4EC8-91DA-372CC0248065}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{40CEEDEA-2D33-4EC8-91DA-372CC0248065}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{40CEEDEA-2D33-4EC8-91DA-372CC0248065}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{40CEEDEA-2D33-4EC8-91DA-372CC0248065}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
