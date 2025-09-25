@@ -39,7 +39,7 @@ namespace SDL2Interface
 
                 Thread thread = new Thread(() =>
                 {
-                    (var res, string error_string) = editor.CurrentResult();
+                    (var res, string? error_string) = editor.CurrentResult();
                     if (res == null)
                     {
                         preview.buffer.SetText($"-> Error:\n{error_string}");
