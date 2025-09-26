@@ -97,6 +97,7 @@ namespace RegexTokenizer
 
 
             /* 2. parse all rest lines using regular expressions */
+            List<Token> regexResult = [];
             pos = 0;
             while (pos < content.Length)
             {
@@ -109,50 +110,79 @@ namespace RegexTokenizer
                 Rope<char> lineSlice = content.Slice(pos, end - pos);
                 string line = lineSlice.ToString();
 
-                Console.WriteLine(line);
-
                 MatchCollection res = OtherComponentsRegex().Matches(line);
                 foreach (Match m in res)
                 {
-                    Console.WriteLine($"{m} {pos + m.Index} {pos + m.Index + m.Length}");
                     if (m.Groups["key"].Success)
                     {
-                        Console.WriteLine($"key: {m.Groups["key"]}");
-                        result.Add(new Token(TokenType.Keyword, pos + m.Index, pos + m.Index + m.Length - 1));
+                        regexResult.Add(new Token(TokenType.Keyword, pos + m.Index, pos + m.Index + m.Length - 1));
                     }
                     if (m.Groups["type"].Success)
                     {
-                        Console.WriteLine($"type: {m.Groups["type"]}");
-                        result.Add(new Token(TokenType.Class, pos + m.Index, pos + m.Index + m.Length - 1));
+                        regexResult.Add(new Token(TokenType.Class, pos + m.Index, pos + m.Index + m.Length - 1));
                     }
                     if (m.Groups["func"].Success)
                     {
-                        Console.WriteLine($"func: {m.Groups["func"]}");
-                        result.Add(new Token(TokenType.Function, pos + m.Index, pos + m.Index + m.Length - 1));
+                        regexResult.Add(new Token(TokenType.Function, pos + m.Index, pos + m.Index + m.Length - 1));
                     }
                     if (m.Groups["var"].Success)
                     {
-                        Console.WriteLine($"var: {m.Groups["var"]}");
-                        result.Add(new Token(TokenType.Variable, pos + m.Index, pos + m.Index + m.Length - 1));
+                        if (m.Value.EndsWith("_t"))
+                        {   
+                            regexResult.Add(new Token(TokenType.Class, pos + m.Index, pos + m.Index + m.Length - 1));
+                        }
+                        else
+                        {
+                            regexResult.Add(new Token(TokenType.Variable, pos + m.Index, pos + m.Index + m.Length - 1));
+                        }
                     }
                     if (m.Groups["float"].Success)
                     {
-                        Console.WriteLine($"float: {m.Groups["float"]}");
-                        result.Add(new Token(TokenType.FloatLiteral, pos + m.Index, pos + m.Index + m.Length - 1));
+                        regexResult.Add(new Token(TokenType.FloatLiteral, pos + m.Index, pos + m.Index + m.Length - 1));
                     }
                     if (m.Groups["int"].Success)
                     {
-                        Console.WriteLine($"int: {m.Groups["int"]}");
-                        result.Add(new Token(TokenType.IntegerLiteral, pos + m.Index, pos + m.Index + m.Length - 1));
+                        regexResult.Add(new Token(TokenType.IntegerLiteral, pos + m.Index, pos + m.Index + m.Length - 1));
                     }
                     if (m.Groups["operator"].Success)
                     {
-                        Console.WriteLine($"operator: {m.Groups["operator"]}");
-                        result.Add(new Token(TokenType.Operator, pos + m.Index, pos + m.Index + m.Length - 1));
+                        regexResult.Add(new Token(TokenType.Operator, pos + m.Index, pos + m.Index + m.Length - 1));
                     }
                 }
 
                 pos = end;
+            }
+
+            {
+                long lastResult = 0;
+                long regexPos = 0;
+
+                List<Token> filtered = [];
+
+                while (lastResult < result.Count && regexPos < regexResult.Count)
+                {
+                    if (regexResult[(int)regexPos].begin > result[(int)lastResult].end)
+                    {
+                        lastResult++;
+                    }
+                    /* assert (regexResult[(int)regexPos].begin < result[(int)lastResult].end) */
+                    else if (regexResult[(int)regexPos].end < result[(int)lastResult].begin)
+                    {
+                        filtered.Add(regexResult[(int)regexPos]);
+                        regexPos++;
+                    }
+                    else
+                    {
+                        regexPos++;
+                    }
+                }
+                while (regexPos < regexResult.Count)
+                {
+                    filtered.Add(regexResult[(int)regexPos]);
+                    regexPos++;
+                }
+
+                result.AddRange(filtered);
             }
 
             result.Sort((x, y) => x.begin.CompareTo(y.begin));
@@ -163,7 +193,7 @@ namespace RegexTokenizer
         [GeneratedRegex(@"^R""([^(]*)\(")]
         private static partial Regex RStringRegex();
 
-        [GeneratedRegex(@"(?<key>\b(for|while|do|goto|return|continue|break|typedef|struct|sizeof)\b)|(?<func>\b(\w|[_$])(\w|\d|[_$])*(?=\s*\())|(?<type>((?<=struct\s+)(\w|[_$])(\w|\d|[_$])*\b|\b([_$\w-[0-9]])(\w|\d|[_$])*(?=\s+[_$\w-[0-9]])))|(?<var>\b[_$\w-[0-9]](\w|[_$])*\b)|(?<float>(\d*\.\d+|\d+\.\d*)([eE][+\-]\d+)?([lL]|[fF])?)|(?<int>(0[xX]?)?\d+([zZ]|[uU][lL][lL]|[uU][lL]|[uU]|([lL]?)([lL]?)([uU]?))?)|(?<operator>[!,.\-+*/?;:|&~<=>(){}\[\]])")]
+        [GeneratedRegex(@"(?<key>\b(define|include|pragma|if|else|for|while|do|goto|return|continue|break|typedef|struct|sizeof|volatile|__volatile__|asm|__asm__|inline|__inline__|register|__register__|restrict|static|extern|const)\b)|(?<func>\b(\w|[_$])(\w|\d|[_$])*(?=\s*\())|(?<type>((?<=\bstruct\s+)(\w|[_$])(\w|\d|[_$])*\b|\b([_$\w-[0-9]])(\w|\d|[_$])*(?=\s+[_$\w-[0-9]])))|(?<var>\b[_$\w-[0-9]](\w|[_$])*\b)|(?<float>(\d*\.\d+|\d+\.\d*)([eE][+\-]\d+)?([lL]|[fF])?)|(?<int>(0[xX]?)?\d+([zZ]|[uU][lL][lL]|[uU][lL]|[uU]|([lL]?)([lL]?)([uU]?))?)|(?<operator>[#!,.\-+*/?;:|&~<=>(){}\[\]])")]
 
         private static partial Regex OtherComponentsRegex();
     }

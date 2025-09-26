@@ -19,6 +19,7 @@ namespace RegexTokenizer
         FloatLiteral,
         Variable,
         Costant,
+        Macro,
         Function,
         Class,
         Keyword,

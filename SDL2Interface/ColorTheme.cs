@@ -24,6 +24,7 @@ namespace SDL2Interface
                 TokenType.FloatLiteral => new Color(0, 255, 255, 255),
                 TokenType.Variable => new Color(0, 128, 255, 255),
                 TokenType.Costant => new Color(0, 128, 255, 255),
+                TokenType.Macro => new Color(255, 128, 128, 255),
                 TokenType.Function => new Color(0, 128, 128, 255),
                 TokenType.Class => new Color(0, 255, 128, 255),
                 TokenType.Keyword => new Color(255, 0, 0, 255),
