@@ -66,6 +66,12 @@ namespace EditorCore.Selection
         }
 
         /* declarations for simplicity */
+
+        public long BeginLine => Cursor.Buffer.GetPositionOffsets(Begin).Item1;
+        public long EndLine => Cursor.Buffer.GetPositionOffsets(End).Item1;
+        public long MinLine => Cursor.Buffer.GetPositionOffsets(Min).Item1;
+        public long MaxLine => Cursor.Buffer.GetPositionOffsets(Max).Item1;
+
         public static implicit operator string?(EditorSelection selection)
         {
             return selection.Text.ToString();
@@ -83,6 +89,127 @@ namespace EditorCore.Selection
             long res = Cursor.Buffer.InsertString(End, text);
             UpdateFromLineOffset();
             return res;
+        }
+
+        public void MoveToLineBegin(bool withSelect = false)
+        {
+            var res = Cursor.Buffer.GetLine(EndLine);
+            if (res.Item2 == null)
+            {
+                return;
+            }
+            string str = res.Item2.Value.ToString();
+            long textBegin = res.Item1;
+            if (!string.IsNullOrEmpty(str))
+            {
+                textBegin = res.Item1 + str.TakeWhile(char.IsWhiteSpace).Count();
+            }
+            if (End == textBegin)
+            {
+                End = res.Item1;
+            }
+            else
+            {
+                End = textBegin;
+            }
+            if (End < 0)
+            {
+                End = 0;
+            }
+            if (End > Cursor.Buffer.Text.Length)
+            {
+                End = Cursor.Buffer.Text.Length;
+            }
+            if (!withSelect)
+            {
+                Begin = End;
+            }
+            UpdateFromLineOffset();
+        }
+
+        public void MoveToLineEnd(bool withSelect = false)
+        {
+            var res = Cursor.Buffer.GetLine(EndLine);
+            if (res.Item2 == null)
+            {
+                return;
+            }
+            End = res.Item1 + res.Item2.Value.Count - 1;
+            if (End < 0)
+            {
+                End = 0;
+            }
+            if (End > Cursor.Buffer.Text.Length)
+            {
+                End = Cursor.Buffer.Text.Length;
+            }
+            if (!withSelect)
+            {
+                Begin = End;
+            }
+            UpdateFromLineOffset();
+        }
+
+        public void MoveHorisontalWord(long offset, bool withSelect = false)
+        {
+            if (offset > 0)
+            {
+                for (long i = 0; i < offset; ++i)
+                {
+                    if (Cursor.Buffer.Text[End] == '\n')
+                    {
+                        MoveHorisontal(1, withSelect);
+                    }
+                    else
+                    {
+                        long pos = End;
+                        bool wasAlpha = char.IsLetterOrDigit(Cursor.Buffer.Text[pos]) || Cursor.Buffer.Text[pos] == '_';
+                        while (pos < Cursor.Buffer.Text.Length && 
+                               wasAlpha == (char.IsLetterOrDigit(Cursor.Buffer.Text[pos]) || Cursor.Buffer.Text[pos] == '_') &&
+                               Cursor.Buffer.Text[pos] != '\n')
+                        {
+                            pos++;
+                        }
+                        End = pos;
+                    }
+                }
+            }
+            else
+            {
+                offset = -offset;
+                for (long i = 0; i < offset; ++i)
+                {
+                    if (End != 0 && Cursor.Buffer.Text[End - 1] == '\n')
+                    {
+                        MoveHorisontal(-1, withSelect);
+                    }
+                    else
+                    {
+                        long pos = End - 1;
+                        bool wasAlpha = char.IsLetterOrDigit(Cursor.Buffer.Text[pos]) || Cursor.Buffer.Text[pos] == '_';
+                        while (pos >= 0 &&
+                               wasAlpha == (char.IsLetterOrDigit(Cursor.Buffer.Text[pos]) || Cursor.Buffer.Text[pos] == '_') &&
+                               Cursor.Buffer.Text[pos] != '\n')
+                        {
+                            pos--;
+                        }
+                        End = pos + 1;
+                    }
+                }
+            }
+            if (End < 0)
+            {
+                End = 0;
+            }
+            if (End > Cursor.Buffer.Text.Length)
+            {
+                End = Cursor.Buffer.Text.Length;
+            }
+            if (!withSelect)
+            {
+                Begin = End;
+            }
+            UpdateFromLineOffset();
         }
 
         public void MoveHorisontal(long offset, bool withSelect = false)
