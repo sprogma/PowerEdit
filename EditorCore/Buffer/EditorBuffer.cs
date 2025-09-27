@@ -9,8 +9,11 @@ using System.Threading.Tasks;
 
 namespace EditorCore.Buffer
 {
+    public delegate void EditorBufferOnUpdate(EditorBuffer buffer);
     public class EditorBuffer
     {
+        public EditorBufferOnUpdate? ActionOnUpdate;
+
         public const long MaxHistorySize = 1024;
         public LinkedList<Rope.Rope<char>> History { get; internal set; }
         public Rope.Rope<char> Text { get; internal set; }
@@ -21,6 +24,7 @@ namespace EditorCore.Buffer
 
         public EditorBuffer(Server.EditorServer server, BaseTokenizer tokenizer)
         {
+            ActionOnUpdate = null;
             History = [];
             Tokens = [];
             Tokenizer = tokenizer;
@@ -52,6 +56,7 @@ namespace EditorCore.Buffer
 
         public void OnUpdate()
         {
+            ActionOnUpdate?.Invoke(this);
             Tokens = Tokenizer.ParseContent(Text);
             History.AddLast(Text);
             while (History.Count > MaxHistorySize)
@@ -68,6 +73,7 @@ namespace EditorCore.Buffer
                 return;
             }
             Text = History.Last.Value;
+            Tokens = Tokenizer.ParseContent(Text);
             History.RemoveLast();
         }
 
@@ -150,6 +156,10 @@ namespace EditorCore.Buffer
             long index = 0;
             for (long i = 0; i < line; ++i)
             {
+                if (index >= Text.Length)
+                {
+                    return (0, null);
+                }
                 index = Text.IndexOf('\n', index);
                 if (index == -1)
                 {

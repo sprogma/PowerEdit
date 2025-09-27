@@ -3,6 +3,7 @@ using RegexTokenizer;
 using SDL_Sharp;
 using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -15,16 +16,19 @@ namespace SDL2Interface
         PowerEditWindow editor;
         SimpleTextWindow preview;
         DateTime lastDrawTime;
+        bool moditifed;
 
         public PowerEditPreviewWindow(Rect position, PowerEditWindow editor) : base(position)
         {
             Console.WriteLine("Creating");
+            moditifed = true;
             Rect right_position = position;
             Rect left_position = position;
             left_position.Width = position.Width / 2;
             right_position.Width = position.Width - left_position.Width;
             right_position.X += left_position.Width;
             editor.position = left_position;
+            editor.buffer.ActionOnUpdate +=  buf => {moditifed = true; };
             this.editor = editor;
             this.preview = new(new EditorBuffer(editor.buffer.Server, "processing ...", editor.usingCursor.Buffer.Tokenizer), right_position);
             this.lastDrawTime = DateTime.UtcNow;
@@ -33,9 +37,10 @@ namespace SDL2Interface
 
         public override void PreDraw()
         {
-            if ((DateTime.UtcNow - lastDrawTime).TotalSeconds > 1)
+            if ((DateTime.UtcNow - lastDrawTime).TotalSeconds > 1 && moditifed)
             {
                 lastDrawTime = DateTime.UtcNow;
+                moditifed = false;
                 /* update result */
 
                 Thread thread = new Thread(() =>

@@ -20,7 +20,7 @@ namespace EditorCore.Selection
 
         public EditorCursor Cursor { get; internal set; }
 
-        private void UpdateFromLineOffset()
+        public void UpdateFromLineOffset()
         {
             long last_newline = Cursor.Buffer.Text.LastIndexOf("\n", End - 1);
             FromLineOffset = End - last_newline - 1;
@@ -156,6 +156,11 @@ namespace EditorCore.Selection
             {
                 for (long i = 0; i < offset; ++i)
                 {
+                    if (End >= Cursor.Buffer.Text.Length)
+                    {
+                        End = Cursor.Buffer.Text.Length;
+                        break;
+                    }
                     if (Cursor.Buffer.Text[End] == '\n')
                     {
                         MoveHorisontal(1, withSelect);
@@ -179,6 +184,11 @@ namespace EditorCore.Selection
                 offset = -offset;
                 for (long i = 0; i < offset; ++i)
                 {
+                    if (End <= 0)
+                    {
+                        End = 0;
+                        break;
+                    }
                     if (End != 0 && Cursor.Buffer.Text[End - 1] == '\n')
                     {
                         MoveHorisontal(-1, withSelect);

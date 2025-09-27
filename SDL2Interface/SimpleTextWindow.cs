@@ -28,12 +28,12 @@ namespace SDL2Interface
             long lastToken = 0;
 
             /* draw text */
-            for (int i = 0; i < H / textRenderer.fontLineStep; ++i)
+            for (int i = 0; i < H / textRenderer.FontLineStep; ++i)
             {
                 (long index, Rope.Rope<char>? s) = buffer.GetLine(i);
                 if (s != null)
                 {
-                    lastToken = textRenderer.DrawTextLine(position.X + 5, position.Y + i * textRenderer.fontLineStep, s.Value, index, buffer.Tokens, lastToken);
+                    lastToken = textRenderer.DrawTextLine(position.X + 5, position.Y + i * textRenderer.FontLineStep, s.Value, index, buffer.Tokens, lastToken);
                 }
             }
         }

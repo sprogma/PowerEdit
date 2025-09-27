@@ -9,6 +9,7 @@ namespace PythonCommandProvider
     public class PythonProvider : CommandProviderInterface.ICommandProvider
     {
         public (long, long, string) ExampleScript => (18, 19, "o = map(lambda x: x, d)");
+        public BaseTokenizer Tokenizer => new SimpleTokenizer();
 
         public PythonProvider()
         { }

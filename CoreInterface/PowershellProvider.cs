@@ -1,4 +1,5 @@
-﻿using Rope;
+﻿using RegexTokenizer;
+using Rope;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -14,6 +15,8 @@ namespace PowershellCommandProvider
     public class PowershellProvider : CommandProviderInterface.ICommandProvider
     {
         public (long, long, string) ExampleScript => (13, 15, "$input | % { $_ }");
+        public BaseTokenizer Tokenizer => new PowershellTokenizer();
+
 
         internal Runspace runSpace;
 

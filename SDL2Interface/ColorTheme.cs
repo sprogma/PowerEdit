@@ -29,6 +29,7 @@ namespace SDL2Interface
                 TokenType.Class => new Color(0, 255, 128, 255),
                 TokenType.Keyword => new Color(255, 0, 0, 255),
                 TokenType.Operator => new Color(255, 0, 255, 255),
+                TokenType.NameHint => new Color(100, 100, 100, 255),
                 TokenType.OpenBraceRound => new Color(255, 0, 255, 255),
                 TokenType.CloseBraceRound => new Color(255, 0, 255, 255),
                 TokenType.OpenBraceSquare => new Color(255, 0, 255, 255),

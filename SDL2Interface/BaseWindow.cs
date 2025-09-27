@@ -15,14 +15,13 @@ namespace SDL2Interface
         static public int W, H;
         static public Window window;
         static public Renderer renderer;
-#pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring as nullable.
-        public static TextBufferRenderer textRenderer;
-#pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring as nullable.
+        public TextBufferRenderer textRenderer;
 
         internal Rect position;
 
         public BaseWindow(Rect position)
         {
+            textRenderer = new TextBufferRenderer(renderer, new ColorTheme());
             this.position = position;
         }
 

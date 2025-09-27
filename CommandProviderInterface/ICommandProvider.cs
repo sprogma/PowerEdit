@@ -12,7 +12,7 @@ namespace CommandProviderInterface
     {
         public (long, long, string) ExampleScript { get; }
 
-        public virtual BaseTokenizer Tokenizer => new SimpleTokenizer();
+        public BaseTokenizer Tokenizer { get; }
 
         public (IEnumerable<string>?, string?) Execute(string command, string[] args);
     }

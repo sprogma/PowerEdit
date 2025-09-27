@@ -113,6 +113,7 @@ namespace EditorCore.Cursor
                     }
                     break;
             }
+            Selections.ForEach(x => x.UpdateFromLineOffset());
         }
 
         /* declarations for simplicity */

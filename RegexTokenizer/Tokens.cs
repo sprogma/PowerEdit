@@ -24,6 +24,7 @@ namespace RegexTokenizer
         Class,
         Keyword,
         Operator,
+        NameHint,
         OpenBraceRound,
         CloseBraceRound,
         OpenBraceSquare,
