@@ -22,6 +22,7 @@ namespace SDL2Interface
 
         static void Main(string[] args)
         {
+            Console.WriteLine("Staring...");
             if (SDL.Init(SdlInitFlags.Everything) != 0)
             {
                 throw new Exception("SDL initialization failed");

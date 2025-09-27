@@ -1,6 +1,7 @@
 ﻿using EditorCore.Buffer;
 using EditorCore.Cursor;
 using EditorCore.Selection;
+using Microsoft.ApplicationInsights.Metrics.Extensibility;
 using SDL_Sharp;
 using System;
 using System.Collections.Generic;
@@ -64,6 +65,27 @@ namespace SDL2Interface
                     {
                         textRenderer.Scale(1.1);
                     }
+                    else if (e.Keyboard.Keysym.Scancode == Scancode.D && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0)
+                    {
+                        cursor.Selections.ForEach(x =>
+                        {
+                            if (x.Text.Length == 0)
+                            {
+                                var line = x.Cursor.Buffer.GetLine(x.EndLine);
+                                if (line.Item2 != null)
+                                {
+                                    x.Cursor.Buffer.InsertString(line.Item1, line.Item2.Value);
+                                    x.UpdateFromLineOffset();
+                                }
+                            }
+                            else
+                            {
+                                long a = x.Begin, b = x.End;
+                                x.Cursor.Buffer.InsertString(x.Min, x.Text);
+                                x.UpdateFromLineOffset();
+                            }
+                        });
+                    }
                     else if (e.Keyboard.Keysym.Scancode == Scancode.A && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0)
                     {
                         cursor.Selections = [new EditorSelection(cursor, 0, cursor.Buffer.Text.Length)];
@@ -103,6 +125,40 @@ namespace SDL2Interface
                             return false;
                         }
                     }
+                    else if (e.Keyboard.Keysym.Scancode == Scancode.N && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Alt) != 0)
+                    {
+                        if (cursor != null)
+                        {
+                            var lastSelection = cursor.Selections.MaxBy(x => x.Max);
+                            if (lastSelection != null && lastSelection.TextLength != 0)
+                            {
+                                Rope.Rope<char> strToFind = lastSelection.Text;
+                                long next = cursor.Buffer.Text.IndexOf(strToFind, lastSelection.Max);
+                                if (next != -1)
+                                {
+                                    cursor.Selections.Add(new EditorSelection(cursor, next, next + lastSelection.TextLength));
+                                }
+                            }
+                            return false;
+                        }
+                    }
+                    else if (e.Keyboard.Keysym.Scancode == Scancode.X && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Alt) != 0)
+                    {
+                        if (cursor != null)
+                        {
+                            var lastSelection = cursor.Selections.MaxBy(x => x.Max);
+                            if (lastSelection != null && lastSelection.TextLength != 0)
+                            {
+                                Rope.Rope<char> strToFind = lastSelection.Text;
+                                long next = cursor.Buffer.Text.IndexOf(strToFind, lastSelection.Max);
+                                if (next != -1)
+                                {
+                                    lastSelection.SetPosition(next, next + lastSelection.TextLength);
+                                }
+                            }
+                            return false;
+                        }
+                    }
                     else if (e.Keyboard.Keysym.Scancode == Scancode.Home)
                     {
                         cursor?.Selections.ForEach(x => { x.MoveToLineBegin(((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Shift) != 0); });
@@ -123,6 +179,50 @@ namespace SDL2Interface
                     {
                         long step = H / textRenderer.FontLineStep;
                         cursor?.Selections.ForEach(x => { x.MoveVertical(step, ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Shift) != 0); });
+                        return false;
+                    }
+                    else if (e.Keyboard.Keysym.Scancode == Scancode.Down && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Alt) != 0)
+                    {
+                        if (cursor?.Selections.Count == 1)
+                        {
+                            cursor?.Selections.ForEach(x => {
+                                long MaxLine = x.MaxLine;
+                                var after = x.Cursor.Buffer.GetLine(MaxLine + 1);
+                                if (after.Item2 == null)
+                                {
+                                    return;
+                                }
+                                x.Cursor.Buffer.DeleteString(after.Item1, after.Item2.Value.Length);
+                                var before = x.Cursor.Buffer.GetLine(x.MinLine);
+                                if (before.Item2 == null)
+                                {
+                                    return;
+                                }
+                                x.Cursor.Buffer.InsertString(before.Item1, after.Item2.Value);
+                            });
+                        }
+                        return false;
+                    }
+                    else if (e.Keyboard.Keysym.Scancode == Scancode.Up && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Alt) != 0)
+                    {
+                        if (cursor?.Selections.Count == 1)
+                        {
+                            cursor?.Selections.ForEach(x => {
+                                long MinLine = x.MinLine;
+                                var before = x.Cursor.Buffer.GetLine(MinLine - 1);
+                                if (before.Item2 == null)
+                                {
+                                    return;
+                                }
+                                x.Cursor.Buffer.DeleteString(before.Item1, before.Item2.Value.Length);
+                                var after = x.Cursor.Buffer.GetLine(x.MaxLine + 1);
+                                if (after.Item2 == null)
+                                {
+                                    return;
+                                }
+                                x.Cursor.Buffer.InsertString(after.Item1, before.Item2.Value);
+                            });
+                        }
                         return false;
                     }
                     else if (e.Keyboard.Keysym.Scancode == Scancode.Right && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0)

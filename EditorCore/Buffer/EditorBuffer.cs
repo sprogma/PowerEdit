@@ -148,6 +148,8 @@ namespace EditorCore.Buffer
 
         public (long, Rope.Rope<char>?) GetLine(long line)
         {
+            Rope.Rope<char> text = Text;
+
             if (line < 0)
             {
                 return (0, null);
@@ -156,11 +158,11 @@ namespace EditorCore.Buffer
             long index = 0;
             for (long i = 0; i < line; ++i)
             {
-                if (index >= Text.Length)
+                if (index >= text.Length)
                 {
                     return (0, null);
                 }
-                index = Text.IndexOf('\n', index);
+                index = text.IndexOf('\n', index);
                 if (index == -1)
                 {
                     return (0, null);
@@ -168,12 +170,12 @@ namespace EditorCore.Buffer
                 index++;
             }
 
-            long end = Text.IndexOf('\n', index);
+            long end = text.IndexOf('\n', index);
             if (end == -1)
             {
-                return (index, Text.Slice(index));
+                return (index, text.Slice(index));
             }
-            return (index, Text.Slice(index, end - index + 1));
+            return (index, text.Slice(index, end - index + 1));
         }
         public (long, long) GetPositionOffsets(long position)
         {
