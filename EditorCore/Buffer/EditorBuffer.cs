@@ -11,6 +11,8 @@ namespace EditorCore.Buffer
 {
     public class EditorBuffer
     {
+        public const long MaxHistorySize = 1024;
+        public LinkedList<Rope.Rope<char>> History { get; internal set; }
         public Rope.Rope<char> Text { get; internal set; }
         public Server.EditorServer Server { get; internal set; }
         public List<Cursor.EditorCursor> Cursors { get; internal set; }
@@ -19,20 +21,26 @@ namespace EditorCore.Buffer
 
         public EditorBuffer(Server.EditorServer server, BaseTokenizer tokenizer)
         {
+            History = [];
             Tokens = [];
             Tokenizer = tokenizer;
             Text = "";
             Cursors = [];
             Server = server;
+
+            History.AddLast(Text);
         }
 
         public EditorBuffer(Server.EditorServer server, Rope.Rope<char> content, BaseTokenizer tokenizer)
         {
+            History = [];
             Tokens = [];
             Tokenizer = tokenizer;
             Text = content;
             Cursors = [];
             Server = server;
+
+            History.AddLast(Text);
         }
 
         public Cursor.EditorCursor CreateCursor()
@@ -45,7 +53,22 @@ namespace EditorCore.Buffer
         public void OnUpdate()
         {
             Tokens = Tokenizer.ParseContent(Text);
+            History.AddLast(Text);
+            while (History.Count > MaxHistorySize)
+            {
+                History.RemoveFirst();
+            }
             Console.WriteLine("Updated");
+        }
+
+        public void Undo()
+        {
+            if (History.Last == null)
+            {
+                return;
+            }
+            Text = History.Last.Value;
+            History.RemoveLast();
         }
 
         public long InsertString(long position, Rope.Rope<char> data)

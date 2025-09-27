@@ -56,7 +56,12 @@ namespace SDL2Interface
                     cursor?.Selections.ForEach(x => x.InsertText(s));
                     return false;
                 case EventType.KeyDown:
-                    if (e.Keyboard.Keysym.Scancode == Scancode.F && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0)
+                    if (e.Keyboard.Keysym.Scancode == Scancode.Z && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0)
+                    {
+                        Console.WriteLine("UN");
+                        cursor.Buffer.Undo();
+                    }
+                    else if (e.Keyboard.Keysym.Scancode == Scancode.F && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0)
                     {
                         /* v.1 - open powerWindow */
                         if (cursor != null)
@@ -226,7 +231,7 @@ namespace SDL2Interface
                         cursor?.Selections.ForEach(x => {
                             long line = x.EndLine;
                             string? content = null;
-                            while (line >= 0 && string.IsNullOrEmpty(content = x.Cursor.Buffer.GetLine(line).Item2.ToString()))
+                            while (line >= 0 && string.IsNullOrWhiteSpace(content = x.Cursor.Buffer.GetLine(line).Item2.ToString()))
                             {
                                 line--;
                             }

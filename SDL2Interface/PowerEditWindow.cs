@@ -18,7 +18,12 @@ namespace SDL2Interface
 
         public (IEnumerable<string>?, string?) CurrentResult()
         {
-            return buffer.Server.CommandProvider.Execute(buffer.Text.ToString(), usingCursor.SelectionsText.ToArray());
+            var text = usingCursor.SelectionsText.Where(x => x != "").ToArray();
+            if (text.Length == 0)
+            {
+                text = [usingCursor.Buffer.Text.ToString()];
+            }
+            return buffer.Server.CommandProvider.Execute(buffer.Text.ToString(), text);
         }
 
         public PowerEditWindow(EditorServer server, EditorCursor usingCursor, Rect position) : 

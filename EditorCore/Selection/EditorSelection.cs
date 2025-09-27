@@ -100,7 +100,7 @@ namespace EditorCore.Selection
             }
             string str = res.Item2.Value.ToString();
             long textBegin = res.Item1;
-            if (!string.IsNullOrEmpty(str))
+            if (!string.IsNullOrWhiteSpace(str))
             {
                 textBegin = res.Item1 + str.TakeWhile(char.IsWhiteSpace).Count();
             }
