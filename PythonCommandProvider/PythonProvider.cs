@@ -8,7 +8,6 @@ namespace PythonCommandProvider
 {
     public class PythonProvider : CommandProviderInterface.ICommandProvider
     {
-        public (long, long, string) ExampleScript => (18, 19, "o = map(lambda x: x, d)");
         public BaseTokenizer Tokenizer => new SimpleTokenizer();
 
         public PythonProvider()
@@ -17,12 +16,22 @@ namespace PythonCommandProvider
         ~PythonProvider()
         { }
 
+        public (long, long, string) ExampleScript(string editType)
+        {
+            return editType switch
+            {
+                "edit" => (23, 24, "output = map(lambda x: x, data)"),
+                "replace" => (34, 34, "output = map(lambda x: x.replace(\"\",\"\"), data)"),
+                _ => (0, 0, "")
+            };
+        }
+
         public (IEnumerable<string>?, string?) Execute(string command, string[] args)
         {
             string inputData = "import json\n" +
-                               "o = d = [" + string.Join(',', args.Select(x => JsonSerializer.Serialize(x))) + "]\n";
+                               "output = data = [" + string.Join(',', args.Select(x => JsonSerializer.Serialize(x))) + "]\n";
             string inputCode = $"{inputData}\n{command}\n" +
-                               "print(json.dumps(list(map(str, o))))";
+                               "print(json.dumps(list(map(str, output))))";
 
             string? error = null;
             string? output = null;

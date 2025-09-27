@@ -14,7 +14,6 @@ namespace PowershellCommandProvider
 {
     public class PowershellProvider : CommandProviderInterface.ICommandProvider
     {
-        public (long, long, string) ExampleScript => (13, 15, "$input | % { $_ }");
         public BaseTokenizer Tokenizer => new PowershellTokenizer();
 
 
@@ -30,6 +29,16 @@ namespace PowershellCommandProvider
         {
             runSpace.Close();
             runSpace.Dispose();
+        }
+
+        public (long, long, string) ExampleScript(string editType)
+        {
+            return editType switch
+            {
+                "edit" => (16, 18, "@($input) | % { $_ }"),
+                "replace" => (19, 19, "@($input) -replace\"\",{\"\"}"),
+                _ => (0, 0, "")
+            };
         }
 
         public (IEnumerable<string>?, string?) Execute(string command, string[] args)

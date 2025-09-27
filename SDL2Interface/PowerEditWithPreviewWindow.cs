@@ -11,14 +11,14 @@ using System.Threading.Tasks;
 
 namespace SDL2Interface
 {
-    internal class PowerEditPreviewWindow : BaseWindow
+    internal class PowerEditWithPreviewWindow : BaseWindow
     {
         PowerEditWindow editor;
         SimpleTextWindow preview;
         DateTime lastDrawTime;
         bool moditifed;
 
-        public PowerEditPreviewWindow(Rect position, PowerEditWindow editor) : base(position)
+        public PowerEditWithPreviewWindow(Rect position, PowerEditWindow editor) : base(position)
         {
             Console.WriteLine("Creating");
             moditifed = true;

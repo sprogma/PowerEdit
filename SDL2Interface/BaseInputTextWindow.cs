@@ -6,6 +6,7 @@ using SDL_Sharp;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -14,6 +15,8 @@ namespace SDL2Interface
     internal abstract class BaseInputTextWindow : SimpleTextWindow
     {
         internal EditorCursor cursor;
+        bool relativeNumbers = true;
+        long enteredLineNumber = 0;
 
         protected BaseInputTextWindow(EditorBuffer buffer, Rect position) : base(buffer, position)
         {
@@ -23,25 +26,80 @@ namespace SDL2Interface
 
         public override void DrawElements()
         {
-            base.DrawElements();
+            SDL.SetRenderDrawColor(renderer, 0, 0, 0, 0);
+            SDL.RenderFillRect(renderer, ref position);
+
+            int leftBarSize = 0;
+
+            if (showNumbers)
+            {
+                if (relativeNumbers && cursor?.Selections.Count == 1)
+                {
+                    long cursorLine = cursor.Selections[0].EndLine;
+                    int maxPower = 4;
+                    long dummyValue = 0;
+                    /* draw numbers */
+                    for (int i = 0; i < H / textRenderer.FontLineStep; ++i)
+                    {
+                        (long index, Rope.Rope<char>? s) = buffer.GetLine(i);
+                        if (s != null)
+                        {
+                            long num = i;
+                            if (num < cursorLine)
+                            {
+                                num = 100 - (cursorLine - num);
+                            }
+                            else
+                            {
+                                num = num - cursorLine;
+                            }
+                            if (num == 0)
+                            {
+                                Rect rect = new(position.X + 5, position.Y + i * textRenderer.FontLineStep, position.Width - 10, textRenderer.FontLineStep);
+                                SDL.SetRenderDrawColor(renderer, 0, 20, 20, 255);
+                                SDL.RenderFillRect(renderer, ref rect);
+                            }
+                            else
+                            {
+                                textRenderer.DrawTextLine(position.X + 5, position.Y + i * textRenderer.FontLineStep, num.ToString().PadLeft(maxPower), 0, [], ref dummyValue);
+                            }
+                        }
+                    }
+                    leftBarSize = (int)((maxPower + 0.5) * textRenderer.FontStep);
+                }
+                else
+                {
+                    SimpleTextWindowDrawSimpleNumbers(ref leftBarSize);
+                }
+            }
+
+            SimpleTextWindowDrawText(leftBarSize);
 
             /* draw cursor */
             SDL.SetRenderDrawColor(renderer, 255, 255, 255, 255);
-            foreach (var selection in cursor.Selections)
+            if (cursor != null)
             {
+                foreach (var selection in cursor.Selections)
                 {
-                    (long line, long offset) = buffer.GetPositionOffsets(selection.End);
-                    Rect r = new((int)offset * textRenderer.FontStep, (int)line * textRenderer.FontLineStep, 5, textRenderer.FontLineStep);
-                    SDL.RenderFillRect(renderer, ref r);
-                }
-                for (long p = selection.Min; p < selection.Max; ++p)
-                {
-                    (long line, long offset) = buffer.GetPositionOffsets(p);
-                    Rect r = new((int)offset * textRenderer.FontStep, (int)line * textRenderer.FontLineStep + textRenderer.FontLineStep - 5, textRenderer.FontStep, 5);
-                    SDL.RenderFillRect(renderer, ref r);
+                    {
+                        (long line, long offset) = buffer.GetPositionOffsets(selection.End);
+                        Rect r = new(leftBarSize + position.X + 5 + (int)offset * textRenderer.FontStep, position.Y + (int)line * textRenderer.FontLineStep, 5, textRenderer.FontLineStep);
+                        SDL.RenderFillRect(renderer, ref r);
+                    }
+                    int selectionWidth = (int)(5 * textRenderer.currentScale);
+                    for (long p = selection.Min; p < selection.Max; ++p)
+                    {
+                        (long line, long offset) = buffer.GetPositionOffsets(p);
+                        Rect r = new(leftBarSize + position.X + 5 + (int)offset * textRenderer.FontStep, position.Y + (int)line * textRenderer.FontLineStep + textRenderer.FontLineStep - selectionWidth, textRenderer.FontStep, selectionWidth);
+                        SDL.RenderFillRect(renderer, ref r);
+                    }
                 }
             }
         }
+
+
+        [DllImport("user32.dll", EntryPoint = "keybd_event")]
+        static extern void WinapiKeybdEvent(byte bVk, byte bScan, uint dwFlags, UIntPtr dwExtraInfo);
 
         public override bool HandleEvent(Event e)
         {
@@ -56,7 +114,34 @@ namespace SDL2Interface
                     cursor?.Selections.ForEach(x => x.Cursor.Buffer.DeleteString(x.Min, x.TextLength));
                     cursor?.Selections.ForEach(x => x.InsertText(s));
                     return false;
+                case EventType.KeyUp:
+                    if (e.Keyboard.Keysym.Scancode == Scancode.CapsLock)
+                    {
+                        if (enteredLineNumber != 0)
+                        {
+                            long offset = enteredLineNumber;
+                            if (enteredLineNumber > 50)
+                            {
+                                offset = enteredLineNumber - 100;
+                            }
+                            cursor.Selections.ForEach(x => x.MoveVertical(offset, false));
+                            const int KEYEVENTF_EXTENDEDKEY = 0x1;
+                            const int KEYEVENTF_KEYUP = 0x2;
+                            WinapiKeybdEvent(0x14, 0x45, KEYEVENTF_EXTENDEDKEY, 0);
+                            WinapiKeybdEvent(0x14, 0x45, KEYEVENTF_EXTENDEDKEY | KEYEVENTF_KEYUP, 0);
+                        }
+                        enteredLineNumber = 0;
+                    }
+                    break;
                 case EventType.KeyDown:
+                    if (Scancode.D1 <= e.Keyboard.Keysym.Scancode && e.Keyboard.Keysym.Scancode <= Scancode.D0)
+                    {
+                        if (((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Caps) != 0)
+                        {
+                            enteredLineNumber *= 10;
+                            enteredLineNumber += (e.Keyboard.Keysym.Scancode == Scancode.D0 ? 0 : e.Keyboard.Keysym.Scancode - Scancode.D1 + 1);
+                        }
+                    }
                     if (e.Keyboard.Keysym.Scancode == Scancode.Minus && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0)
                     {
                         textRenderer.Scale(0.9);
@@ -106,11 +191,21 @@ namespace SDL2Interface
                     }
                     else if (e.Keyboard.Keysym.Scancode == Scancode.E && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0)
                     {
-                        /* v.1 - open powerWindow */
+                        /* v.1 - open powerWindow edit */
                         if (cursor != null)
                         {
-                            var win = new PowerEditWindow(cursor.Buffer.Server, cursor, position);
-                            Program.OpenWindow(new PowerEditPreviewWindow(position, win));
+                            var win = new PowerEditWindow(cursor.Buffer.Server, cursor, position, "edit");
+                            Program.OpenWindow(new PowerEditWithPreviewWindow(position, win));
+                            return false;
+                        }
+                    }
+                    else if (e.Keyboard.Keysym.Scancode == Scancode.R && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0)
+                    {
+                        /* v.1 - open powerWindow replace */
+                        if (cursor != null)
+                        {
+                            var win = new PowerEditWindow(cursor.Buffer.Server, cursor, position, "replace");
+                            Program.OpenWindow(new PowerEditWithPreviewWindow(position, win));
                             return false;
                         }
                     }
@@ -159,12 +254,14 @@ namespace SDL2Interface
                             return false;
                         }
                     }
-                    else if (e.Keyboard.Keysym.Scancode == Scancode.Home)
+                    else if (e.Keyboard.Keysym.Scancode == Scancode.Home ||
+                            (e.Keyboard.Keysym.Scancode == Scancode.J && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Alt) != 0))
                     {
                         cursor?.Selections.ForEach(x => { x.MoveToLineBegin(((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Shift) != 0); });
                         return false;
                     }
-                    else if (e.Keyboard.Keysym.Scancode == Scancode.End)
+                    else if (e.Keyboard.Keysym.Scancode == Scancode.End ||
+                            (e.Keyboard.Keysym.Scancode == Scancode.SemiColon && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Alt) != 0))
                     {
                         cursor?.Selections.ForEach(x => { x.MoveToLineEnd(((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Shift) != 0); });
                         return false;
@@ -225,12 +322,14 @@ namespace SDL2Interface
                         }
                         return false;
                     }
-                    else if (e.Keyboard.Keysym.Scancode == Scancode.Right && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0)
+                    else if ((e.Keyboard.Keysym.Scancode == Scancode.Right && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0) ||
+                             (e.Keyboard.Keysym.Scancode == Scancode.SemiColon && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0))
                     {
                         cursor?.Selections.ForEach(x => { x.MoveHorisontalWord(1, ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Shift) != 0); });
                         return false;
                     }
-                    else if (e.Keyboard.Keysym.Scancode == Scancode.Left && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0)
+                    else if ((e.Keyboard.Keysym.Scancode == Scancode.Left && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0) ||
+                             (e.Keyboard.Keysym.Scancode == Scancode.J && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0))
                     {
                         cursor?.Selections.ForEach(x => { x.MoveHorisontalWord(-1, ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Shift) != 0); });
                         return false;
@@ -245,22 +344,26 @@ namespace SDL2Interface
                         cursor?.Selections.ForEach(x => { x.MoveVertical(-10, ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Shift) != 0); });
                         return false;
                     }
-                    else if (e.Keyboard.Keysym.Scancode == Scancode.Right)
+                    else if (e.Keyboard.Keysym.Scancode == Scancode.Right ||
+                            (e.Keyboard.Keysym.Scancode == Scancode.L && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0))
                     {
                         cursor?.Selections.ForEach(x => { x.MoveHorisontal(1, ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Shift) != 0); });
                         return false;
                     }
-                    else if (e.Keyboard.Keysym.Scancode == Scancode.Left)
+                    else if (e.Keyboard.Keysym.Scancode == Scancode.Left ||
+                            (e.Keyboard.Keysym.Scancode == Scancode.K && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0))
                     {
                         cursor?.Selections.ForEach(x => { x.MoveHorisontal(-1, ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Shift) != 0); });
                         return false;
                     }
-                    else if (e.Keyboard.Keysym.Scancode == Scancode.Down)
+                    else if (e.Keyboard.Keysym.Scancode == Scancode.Down ||
+                            (e.Keyboard.Keysym.Scancode == Scancode.K && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Alt) != 0))
                     {
                         cursor?.Selections.ForEach(x => { x.MoveVertical(1, ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Shift) != 0); });
                         return false;
                     }
-                    else if (e.Keyboard.Keysym.Scancode == Scancode.Up)
+                    else if (e.Keyboard.Keysym.Scancode == Scancode.Up ||
+                            (e.Keyboard.Keysym.Scancode == Scancode.L && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Alt) != 0))
                     {
                         cursor?.Selections.ForEach(x => { x.MoveVertical(-1, ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Shift) != 0); });
                         return false;
@@ -315,7 +418,9 @@ namespace SDL2Interface
                         });
                         return false;
                     }
-                    else if (e.Keyboard.Keysym.Scancode == Scancode.Backspace)
+                    else if (e.Keyboard.Keysym.Scancode == Scancode.Backspace ||
+                            (e.Keyboard.Keysym.Scancode == Scancode.P && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Alt) != 0) ||
+                            (e.Keyboard.Keysym.Scancode == Scancode.P && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0))
                     {
                         cursor?.Selections.ForEach(x =>
                         {
@@ -368,7 +473,10 @@ namespace SDL2Interface
                         });
                         return false;
                     }
-                    else if (e.Keyboard.Keysym.Scancode == Scancode.Return)
+                    else if (e.Keyboard.Keysym.Scancode == Scancode.Return || 
+                            (e.Keyboard.Keysym.Scancode == Scancode.N && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Alt) != 0) || 
+                            (e.Keyboard.Keysym.Scancode == Scancode.N && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0))
+
                     {
                         /* clear all selection */
                         cursor?.Selections.ForEach(x => x.Cursor.Buffer.DeleteString(x.Min, x.TextLength));

@@ -14,10 +14,41 @@ namespace SDL2Interface
     internal class SimpleTextWindow : BaseWindow
     {
         internal EditorBuffer buffer;
+        public bool showNumbers = true;
 
         public SimpleTextWindow(EditorBuffer buffer, Rect position) : base(position)
         {
             this.buffer = buffer;
+        }
+
+        public void SimpleTextWindowDrawText(int leftBarSize)
+        {
+            long lastToken = 0;
+            for (int i = 0; i < H / textRenderer.FontLineStep; ++i)
+            {
+                (long index, Rope.Rope<char>? s) = buffer.GetLine(i);
+                if (s != null)
+                {
+                    textRenderer.DrawTextLine(leftBarSize + position.X + 5, position.Y + i * textRenderer.FontLineStep, s.Value, index, buffer.Tokens, ref lastToken);
+                }
+            }
+        }
+
+        public void SimpleTextWindowDrawSimpleNumbers(ref int leftBarSize)
+        {
+            int maxPower = 4;
+            long dummyValue = 0;
+            /* draw numbers */
+            for (int i = 0; i < H / textRenderer.FontLineStep; ++i)
+            {
+                (long index, Rope.Rope<char>? s) = buffer.GetLine(i);
+                if (s != null)
+                {
+                    int num = i;
+                    textRenderer.DrawTextLine(position.X + 5, position.Y + i * textRenderer.FontLineStep, num.ToString().PadLeft(maxPower), 0, [], ref dummyValue);
+                }
+            }
+            leftBarSize = (int)((maxPower + 0.5) * textRenderer.FontStep);
         }
 
         public override void DrawElements()
@@ -25,17 +56,13 @@ namespace SDL2Interface
             SDL.SetRenderDrawColor(renderer, 0, 0, 0, 0);
             SDL.RenderFillRect(renderer, ref position);
 
-            long lastToken = 0;
+            int leftBarSize = 0;
 
-            /* draw text */
-            for (int i = 0; i < H / textRenderer.FontLineStep; ++i)
+            if (showNumbers)
             {
-                (long index, Rope.Rope<char>? s) = buffer.GetLine(i);
-                if (s != null)
-                {
-                    lastToken = textRenderer.DrawTextLine(position.X + 5, position.Y + i * textRenderer.FontLineStep, s.Value, index, buffer.Tokens, lastToken);
-                }
+                SimpleTextWindowDrawSimpleNumbers(ref leftBarSize);
             }
+            SimpleTextWindowDrawText(leftBarSize);
         }
 
         public override bool HandleEvent(Event e)

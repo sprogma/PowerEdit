@@ -242,6 +242,10 @@ namespace EditorCore.Selection
 
         public void MoveVertical(long offset, bool withSelect = false)
         {
+            if (withSelect == false)
+            {
+                Begin = End = (offset < 0 ? Min : Max);
+            }
             if (offset < 0)
             {
                 offset = -offset;
@@ -250,8 +254,7 @@ namespace EditorCore.Selection
                     long endOfPrevLine = Cursor.Buffer.Text.LastIndexOf('\n', (int)(End - 1));
                     if (endOfPrevLine == -1)
                     {
-                        /* uncomment to jump to begin of file */
-                        // End = 0;
+                        End = 0;
                         goto update_begin_pointer;
                     }
                     long endOfBeforePrevLine = Cursor.Buffer.Text.LastIndexOf('\n', (int)(endOfPrevLine - 1));
@@ -265,8 +268,7 @@ namespace EditorCore.Selection
                     long nextLine = Cursor.Buffer.Text.IndexOf('\n', (int)End);
                     if (nextLine == -1)
                     {
-                        /* uncomment to jump to end of file */
-                        // End = Cursor.File.Text.Length;
+                        End = Cursor.Buffer.Text.Length;
                         goto update_begin_pointer;
                     }
                     long afterNextLine = Cursor.Buffer.Text.IndexOf('\n', (int)(nextLine + 1));

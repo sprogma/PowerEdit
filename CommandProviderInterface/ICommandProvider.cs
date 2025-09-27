@@ -10,7 +10,7 @@ namespace CommandProviderInterface
 {
     public interface ICommandProvider
     {
-        public (long, long, string) ExampleScript { get; }
+        public (long, long, string) ExampleScript(string editType);
 
         public BaseTokenizer Tokenizer { get; }
 

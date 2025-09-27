@@ -11,7 +11,7 @@ namespace SDL2Interface
 {
     internal class TextBufferRenderer
     {
-        private double currentScale;
+        internal double currentScale;
         internal int baseFontStep;
         internal int baseFontLineStep;
         static internal Renderer renderer;
@@ -25,7 +25,7 @@ namespace SDL2Interface
 
         public TextBufferRenderer(Renderer input_renderer, ColorTheme color_theme)
         {
-            currentScale = 1.0;
+            currentScale = 0.6;
             colorTheme = color_theme;
             if (asciiMapRectangles.Length == 0)
             {
@@ -86,7 +86,7 @@ namespace SDL2Interface
                 }
             }
         }
-        public long DrawTextLine(int x, int y, Rope.Rope<char> line, long position, List<Token> tokens, long lastToken)
+        public void DrawTextLine(int x, int y, Rope.Rope<char> line, long position, List<Token> tokens, ref long lastToken)
         {
             foreach (char c in line)
             {
@@ -146,7 +146,6 @@ namespace SDL2Interface
                 x += FontStep;
                 position++;
             }
-            return lastToken;
         }
 
         public void Scale(double scale)

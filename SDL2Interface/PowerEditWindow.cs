@@ -15,6 +15,7 @@ namespace SDL2Interface
     internal class PowerEditWindow: BaseInputTextWindow
     {
         public EditorCursor usingCursor;
+        string editType;
 
         public (IEnumerable<string>?, string?) CurrentResult()
         {
@@ -26,13 +27,14 @@ namespace SDL2Interface
             return buffer.Server.CommandProvider.Execute(buffer.Text.ToString(), text);
         }
 
-        public PowerEditWindow(EditorServer server, EditorCursor usingCursor, Rect position) : 
+        public PowerEditWindow(EditorServer server, EditorCursor usingCursor, Rect position, string editType) : 
                                base(new EditorBuffer(server, server.CommandProvider.Tokenizer), position)
         {
-            (long begin, long end, string text) = server.CommandProvider.ExampleScript;
+            (long begin, long end, string text) = server.CommandProvider.ExampleScript(editType);
             buffer.SetText(text);
             cursor.Selections[0].SetPosition(begin, end);
             this.usingCursor = usingCursor;
+            this.editType = editType;
         }
 
         internal void Apply()

@@ -32,7 +32,7 @@ namespace EditorCore.Buffer
             Cursors = [];
             Server = server;
 
-            History.AddLast(Text);
+            OnUpdate();
         }
 
         public EditorBuffer(Server.EditorServer server, Rope.Rope<char> content, BaseTokenizer tokenizer)
@@ -44,7 +44,7 @@ namespace EditorCore.Buffer
             Cursors = [];
             Server = server;
 
-            History.AddLast(Text);
+            OnUpdate();
         }
 
         public Cursor.EditorCursor CreateCursor()
