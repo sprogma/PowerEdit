@@ -222,6 +222,12 @@ namespace SDL2Interface
                         cursor?.Buffer.Undo();
                         return false;
                     }
+                    else if (e.Keyboard.Keysym.Scancode == Scancode.Y && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0)
+                    {
+                        Console.WriteLine("RE");
+                        cursor?.Buffer.Redo();
+                        return false;
+                    }
                     else if (e.Keyboard.Keysym.Scancode == Scancode.F && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0)
                     {
                         /* v.1 - open powerWindow */
@@ -447,6 +453,23 @@ namespace SDL2Interface
                             {
                                 x.InsertText("    ");
                             }
+                        });
+                        cursor?.Commit();
+                        return false;
+                    }
+                    else if ((e.Keyboard.Keysym.Scancode == Scancode.I && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Alt) != 0) ||
+                             (e.Keyboard.Keysym.Scancode == Scancode.I && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0))
+                    {
+                        cursor?.Selections.ForEach(x =>
+                        {
+                            if (x.TextLength == 0)
+                            {
+                                x.MoveToLineEnd(false);
+                                x.MoveVertical(-1, true);
+                                x.MoveToLineEnd(true);
+                            }
+                            x.Cursor.Buffer.DeleteString(x.Min, x.TextLength);
+                            x.UpdateFromLineOffset();
                         });
                         cursor?.Commit();
                         return false;

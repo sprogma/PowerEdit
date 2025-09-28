@@ -17,6 +17,7 @@ namespace EditorCore.Buffer
 
         public const long MaxHistorySize = 1024;
         public LinkedList<(Rope.Rope<char>, (long, long)[])> History { get; internal set; }
+        public LinkedList<(Rope.Rope<char>, (long, long)[])> RedoHistory { get; internal set; }
         public Rope.Rope<char> Text { get; internal set; }
         public Server.EditorServer Server { get; internal set; }
         public Cursor.EditorCursor? Cursor { get; internal set; }
@@ -27,6 +28,7 @@ namespace EditorCore.Buffer
         {
             ActionOnUpdate = null;
             History = [];
+            RedoHistory = [];
             Tokens = [];
             Tokenizer = tokenizer;
             Text = "";
@@ -40,6 +42,7 @@ namespace EditorCore.Buffer
         public EditorBuffer(Server.EditorServer server, Rope.Rope<char> content, BaseTokenizer tokenizer)
         {
             History = [];
+            RedoHistory = [];
             Tokens = [];
             Tokenizer = tokenizer;
             Text = content;
@@ -66,6 +69,7 @@ namespace EditorCore.Buffer
                     History.RemoveFirst();
                 }
             }
+            RedoHistory.Clear();
             Console.WriteLine("MAIN:Updated");
         }
 
@@ -80,10 +84,32 @@ namespace EditorCore.Buffer
             {
                 return;
             }
+            RedoHistory.AddLast(History.Last.Value);
+            while (RedoHistory.Count > MaxHistorySize)
+            {
+                RedoHistory.RemoveFirst();
+            }
             (Text, var selections) = History.Last.Value;
             Cursor.Selections = selections.Select(x => new EditorSelection(Cursor, x.Item1, x.Item2)).ToList();
             Tokens = Tokenizer.ParseContent(Text);
             History.RemoveLast();
+        }
+
+        public void Redo()
+        {
+            if (RedoHistory.Last == null || Cursor == null)
+            {
+                return;
+            }
+            History.AddLast(RedoHistory.Last.Value);
+            while (History.Count > MaxHistorySize)
+            {
+                History.RemoveFirst();
+            }
+            (Text, var selections) = RedoHistory.Last.Value;
+            Cursor.Selections = selections.Select(x => new EditorSelection(Cursor, x.Item1, x.Item2)).ToList();
+            Tokens = Tokenizer.ParseContent(Text);
+            RedoHistory.RemoveLast();
         }
 
         public long InsertString(long position, Rope.Rope<char> data)
