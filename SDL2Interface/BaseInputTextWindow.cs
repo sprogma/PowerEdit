@@ -322,14 +322,26 @@ namespace SDL2Interface
                         }
                         return false;
                     }
+                    else if (e.Keyboard.Keysym.Scancode == Scancode.Down ||
+                            (e.Keyboard.Keysym.Scancode == Scancode.K && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0))
+                    {
+                        cursor?.Selections.ForEach(x => { x.MoveVertical(1, ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Shift) != 0); });
+                        return false;
+                    }
+                    else if (e.Keyboard.Keysym.Scancode == Scancode.Up ||
+                            (e.Keyboard.Keysym.Scancode == Scancode.L && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0))
+                    {
+                        cursor?.Selections.ForEach(x => { x.MoveVertical(-1, ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Shift) != 0); });
+                        return false;
+                    }
                     else if ((e.Keyboard.Keysym.Scancode == Scancode.Right && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0) ||
-                             (e.Keyboard.Keysym.Scancode == Scancode.SemiColon && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0))
+                             (e.Keyboard.Keysym.Scancode == Scancode.L && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Alt) != 0))
                     {
                         cursor?.Selections.ForEach(x => { x.MoveHorisontalWord(1, ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Shift) != 0); });
                         return false;
                     }
                     else if ((e.Keyboard.Keysym.Scancode == Scancode.Left && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0) ||
-                             (e.Keyboard.Keysym.Scancode == Scancode.J && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0))
+                             (e.Keyboard.Keysym.Scancode == Scancode.K && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Alt) != 0))
                     {
                         cursor?.Selections.ForEach(x => { x.MoveHorisontalWord(-1, ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Shift) != 0); });
                         return false;
@@ -345,27 +357,15 @@ namespace SDL2Interface
                         return false;
                     }
                     else if (e.Keyboard.Keysym.Scancode == Scancode.Right ||
-                            (e.Keyboard.Keysym.Scancode == Scancode.L && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0))
+                            (e.Keyboard.Keysym.Scancode == Scancode.SemiColon && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0))
                     {
                         cursor?.Selections.ForEach(x => { x.MoveHorisontal(1, ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Shift) != 0); });
                         return false;
                     }
                     else if (e.Keyboard.Keysym.Scancode == Scancode.Left ||
-                            (e.Keyboard.Keysym.Scancode == Scancode.K && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0))
+                            (e.Keyboard.Keysym.Scancode == Scancode.J && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0))
                     {
                         cursor?.Selections.ForEach(x => { x.MoveHorisontal(-1, ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Shift) != 0); });
-                        return false;
-                    }
-                    else if (e.Keyboard.Keysym.Scancode == Scancode.Down ||
-                            (e.Keyboard.Keysym.Scancode == Scancode.K && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Alt) != 0))
-                    {
-                        cursor?.Selections.ForEach(x => { x.MoveVertical(1, ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Shift) != 0); });
-                        return false;
-                    }
-                    else if (e.Keyboard.Keysym.Scancode == Scancode.Up ||
-                            (e.Keyboard.Keysym.Scancode == Scancode.L && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Alt) != 0))
-                    {
-                        cursor?.Selections.ForEach(x => { x.MoveVertical(-1, ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Shift) != 0); });
                         return false;
                     }
                     else if (e.Keyboard.Keysym.Scancode == Scancode.Tab && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Shift) != 0)
@@ -405,7 +405,9 @@ namespace SDL2Interface
                         });
                         return false;
                     }
-                    else if (e.Keyboard.Keysym.Scancode == Scancode.Backspace && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0)
+                    else if ((e.Keyboard.Keysym.Scancode == Scancode.Backspace && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0) ||
+                             (e.Keyboard.Keysym.Scancode == Scancode.O && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Alt) != 0) ||
+                             (e.Keyboard.Keysym.Scancode == Scancode.O && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0))
                     {
                         cursor?.Selections.ForEach(x =>
                         {
@@ -473,10 +475,7 @@ namespace SDL2Interface
                         });
                         return false;
                     }
-                    else if (e.Keyboard.Keysym.Scancode == Scancode.Return || 
-                            (e.Keyboard.Keysym.Scancode == Scancode.N && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Alt) != 0) || 
-                            (e.Keyboard.Keysym.Scancode == Scancode.N && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0))
-
+                    else if (e.Keyboard.Keysym.Scancode == Scancode.Return)
                     {
                         /* clear all selection */
                         cursor?.Selections.ForEach(x => x.Cursor.Buffer.DeleteString(x.Min, x.TextLength));
@@ -503,6 +502,30 @@ namespace SDL2Interface
                                 }
                             });
                         }
+                        return false;
+                    }
+                    else if ((e.Keyboard.Keysym.Scancode == Scancode.N && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Alt) != 0) ||
+                             (e.Keyboard.Keysym.Scancode == Scancode.N && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0))
+                    {
+                        /* clear all selection */
+                        cursor?.Selections.ForEach(x => x.Cursor.Buffer.DeleteString(x.Min, x.TextLength));
+                        /* find previous line with text, and use it's indent */
+                        cursor?.Selections.ForEach(x =>
+                        {
+                            x.MoveToLineEnd();
+                            long line = x.EndLine;
+                            string? content = null;
+                            while (line >= 0 && string.IsNullOrWhiteSpace(content = x.Cursor.Buffer.GetLine(line).Item2.ToString()))
+                            {
+                                line--;
+                            }
+                            line++;
+                            if (content != null)
+                            {
+                                int indent = content.TakeWhile(char.IsWhiteSpace).Count();
+                                x.InsertText("\n" + new string(' ', indent));
+                            }
+                        });
                         return false;
                     }
                     break;
