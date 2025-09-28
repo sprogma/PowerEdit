@@ -41,10 +41,9 @@ namespace SDL2Interface
             SDL.GetWindowSize(BaseWindow.window, out BaseWindow.W, out BaseWindow.H);
 
             /* create application instance */
-
             {
-                PowershellProvider provider = new();
-                //PythonProvider provider = new();
+                //PowershellProvider provider = new();
+                PythonProvider provider = new();
                 EditorServer server = new(provider);
                 if (fileToOpen != null)
                 {

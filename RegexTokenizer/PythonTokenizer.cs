@@ -182,10 +182,8 @@ namespace RegexTokenizer
             return result;
         }
 
-        [GeneratedRegex(@"^R""([^(]*)\(")]
-        private static partial Regex RStringRegex();
 
-        [GeneratedRegex(@"(?<key>\b(if|elif|else|for|while|continue|break|return|yield|from|import|assert|throw|try|except|finally|def|class|global|nonlocal|match|case|async|await|and|or|in|not|is|lambda)\b)|(?<func>\b(\w|[_$])(\w|\d|[_$])*(?=\s*\())|(?<type>((?<=\bclass\s+)(\w|[_$])(\w|\d|[_$])*\b))|(?<var>\b[_$\w-[0-9]](\w|[_$])*\b)|(?<float>(\d*\.\d+|\d+\.\d*)([eE][+\-]\d+)?)|(?<int>(0[xX]?)?\d+)|(?<operator>[#!,.\-+*/?;:|&~<=>(){}\[\]])")]
+        [GeneratedRegex(@"(?<key>\b(if|elif|else|for|while|continue|break|return|yield|from|import|assert|try|except|finally|def|class|global|nonlocal|match|case|async|await|with|and|or|in|not|is|as|lambda|del|False|True|None|pass|raise)\b)|(?<func>\b(\w|[_$])(\w|\d|[_$])*(?=\s*\())|(?<type>((?<=\bclass\s+)(\w|[_$])(\w|\d|[_$])*\b))|(?<var>\b[_$\w-[0-9]](\w|[_$])*\b)|(?<float>(\d*\.\d+|\d+\.\d*)([eE][+\-]\d+)?)|(?<int>(0[xX]?)?\d+)|(?<operator>[#!,.\-+*/?;:|&~<=>(){}\[\]])")]
 
         private static partial Regex OtherComponentsRegex();
     }
