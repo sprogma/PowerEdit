@@ -40,6 +40,7 @@ namespace SDL2Interface
         internal void Apply()
         {
             usingCursor.ApplyCommand("edit", buffer.Text.ToString());
+            usingCursor.Commit();
         }
 
         public override bool HandleEvent(Event e)

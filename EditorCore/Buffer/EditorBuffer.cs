@@ -54,15 +54,23 @@ namespace EditorCore.Buffer
             return new_cursor;
         }
 
-        public void OnUpdate()
+        public void OnUpdate(bool pushHistory = true)
         {
             ActionOnUpdate?.Invoke(this);
             Tokens = Tokenizer.ParseContent(Text);
-            History.AddLast(Text);
-            while (History.Count > MaxHistorySize)
+            if (pushHistory)
             {
-                History.RemoveFirst();
+                History.AddLast(Text);
+                while (History.Count > MaxHistorySize)
+                {
+                    History.RemoveFirst();
+                }
             }
+            Console.WriteLine("MAIN:Updated");
+        }
+
+        public void OnSimpleUpdate()
+        {
             Console.WriteLine("Updated");
         }
 
@@ -96,7 +104,7 @@ namespace EditorCore.Buffer
                     }
                 }
             }
-            OnUpdate();
+            OnSimpleUpdate();
             return position + length;
         }
 
@@ -135,7 +143,7 @@ namespace EditorCore.Buffer
                     }
                 }
             }
-            OnUpdate();
+            OnSimpleUpdate();
         }
 
         /* declarations for simplicity */
@@ -143,6 +151,7 @@ namespace EditorCore.Buffer
         {
             DeleteString(0, Text.Length);
             long res = InsertString(0, data);
+            OnUpdate();
             return res;
         }
 

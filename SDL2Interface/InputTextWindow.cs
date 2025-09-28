@@ -113,6 +113,7 @@ namespace SDL2Interface
                     /* clear all selection */
                     cursor?.Selections.ForEach(x => x.Cursor.Buffer.DeleteString(x.Min, x.TextLength));
                     cursor?.Selections.ForEach(x => x.InsertText(s));
+                    cursor?.Commit();
                     return false;
                 case EventType.KeyUp:
                     if (e.Keyboard.Keysym.Scancode == Scancode.CapsLock)
@@ -170,10 +171,15 @@ namespace SDL2Interface
                                 x.UpdateFromLineOffset();
                             }
                         });
+                        cursor.Commit();
                     }
                     else if (e.Keyboard.Keysym.Scancode == Scancode.A && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0)
                     {
                         cursor.Selections = [new EditorSelection(cursor, 0, cursor.Buffer.Text.Length)];
+                    }
+                    else if (e.Keyboard.Keysym.Scancode == Scancode.W && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0)
+                    {
+                        cursor.Selections.ForEach(x => x.SetPosition(x.End, x.Begin));
                     }
                     else if (e.Keyboard.Keysym.Scancode == Scancode.Z && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0)
                     {
@@ -297,6 +303,7 @@ namespace SDL2Interface
                                 }
                                 x.Cursor.Buffer.InsertString(before.Item1, after.Item2.Value);
                             });
+                            cursor?.Commit();
                         }
                         return false;
                     }
@@ -319,6 +326,7 @@ namespace SDL2Interface
                                 }
                                 x.Cursor.Buffer.InsertString(after.Item1, before.Item2.Value);
                             });
+                            cursor?.Commit();
                         }
                         return false;
                     }
@@ -383,6 +391,7 @@ namespace SDL2Interface
                                 }
                             }
                         });
+                        cursor?.Commit();
                         return false;
                     }
                     else if (e.Keyboard.Keysym.Scancode == Scancode.Tab)
@@ -403,6 +412,7 @@ namespace SDL2Interface
                                 x.InsertText("    ");
                             }
                         });
+                        cursor?.Commit();
                         return false;
                     }
                     else if ((e.Keyboard.Keysym.Scancode == Scancode.Backspace && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0) ||
@@ -418,6 +428,7 @@ namespace SDL2Interface
                             x.Cursor.Buffer.DeleteString(x.Min, x.TextLength);
                             x.UpdateFromLineOffset();
                         });
+                        cursor?.Commit();
                         return false;
                     }
                     else if (e.Keyboard.Keysym.Scancode == Scancode.Backspace ||
@@ -446,6 +457,7 @@ namespace SDL2Interface
                                 x.UpdateFromLineOffset();
                             }
                         });
+                        cursor?.Commit();
                         return false;
                     }
                     else if (e.Keyboard.Keysym.Scancode == Scancode.Delete && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0)
@@ -458,6 +470,7 @@ namespace SDL2Interface
                             }
                             x.Cursor.Buffer.DeleteString(x.Min, x.TextLength);
                         });
+                        cursor?.Commit();
                         return false;
                     }
                     else if (e.Keyboard.Keysym.Scancode == Scancode.Delete)
@@ -473,6 +486,7 @@ namespace SDL2Interface
                                 x.Cursor.Buffer.DeleteString(x.Min, x.TextLength);
                             }
                         });
+                        cursor?.Commit();
                         return false;
                     }
                     else if (e.Keyboard.Keysym.Scancode == Scancode.Return)
@@ -502,6 +516,7 @@ namespace SDL2Interface
                                 }
                             });
                         }
+                        cursor?.Commit();
                         return false;
                     }
                     else if ((e.Keyboard.Keysym.Scancode == Scancode.N && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Alt) != 0) ||
@@ -526,6 +541,7 @@ namespace SDL2Interface
                                 x.InsertText("\n" + new string(' ', indent));
                             }
                         });
+                        cursor?.Commit();
                         return false;
                     }
                     break;

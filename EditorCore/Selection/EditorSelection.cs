@@ -134,7 +134,7 @@ namespace EditorCore.Selection
             {
                 return;
             }
-            End = res.Item1 + res.Item2.Value.Count - 1;
+            End = res.Item1 + res.Item2.Value.Count - (res.Item2.Value.EndsWith("\n") ? 1 : 0);
             if (End < 0)
             {
                 End = 0;

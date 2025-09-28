@@ -9,6 +9,7 @@ using System.Reflection.Metadata.Ecma335;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using System.Transactions;
 
 namespace EditorCore.Cursor
 {
@@ -117,6 +118,11 @@ namespace EditorCore.Cursor
         }
 
         /* declarations for simplicity */
+
+        public void Commit()
+        {
+            Buffer.OnUpdate();
+        }
 
         public IEnumerable<string> SelectionsText => Selections.Select(x => x.Text.ToString());
     }
