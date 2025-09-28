@@ -17,6 +17,7 @@ namespace SDL2Interface
         internal EditorCursor cursor;
         bool relativeNumbers = true;
         long enteredLineNumber = 0;
+        bool jumpInput = false;
 
         public InputTextWindow(EditorBuffer buffer, Rect position) : base(buffer, position)
         {
@@ -109,11 +110,14 @@ namespace SDL2Interface
                     Environment.Exit(1);
                     return false;
                 case EventType.TextInput:
-                    string s = GetTextInputValue(e.Text);
-                    /* clear all selection */
-                    cursor?.Selections.ForEach(x => x.Cursor.Buffer.DeleteString(x.Min, x.TextLength));
-                    cursor?.Selections.ForEach(x => x.InsertText(s));
-                    cursor?.Commit();
+                    if (!jumpInput)
+                    {
+                        string s = GetTextInputValue(e.Text);
+                        /* clear all selection */
+                        cursor?.Selections.ForEach(x => x.Cursor.Buffer.DeleteString(x.Min, x.TextLength));
+                        cursor?.Selections.ForEach(x => x.InsertText(s));
+                        cursor?.Commit();
+                    }
                     return false;
                 case EventType.KeyUp:
                     if (e.Keyboard.Keysym.Scancode == Scancode.CapsLock)
@@ -132,9 +136,15 @@ namespace SDL2Interface
                             WinapiKeybdEvent(0x14, 0x45, KEYEVENTF_EXTENDEDKEY | KEYEVENTF_KEYUP, 0);
                         }
                         enteredLineNumber = 0;
+                        jumpInput = false;
                     }
                     break;
                 case EventType.KeyDown:
+                    if (e.Keyboard.Keysym.Scancode == Scancode.CapsLock)
+                    {
+                        jumpInput = true;
+                        return false;
+                    }
                     if (Scancode.D1 <= e.Keyboard.Keysym.Scancode && e.Keyboard.Keysym.Scancode <= Scancode.D0)
                     {
                         if (((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Caps) != 0)
@@ -142,14 +152,17 @@ namespace SDL2Interface
                             enteredLineNumber *= 10;
                             enteredLineNumber += (e.Keyboard.Keysym.Scancode == Scancode.D0 ? 0 : e.Keyboard.Keysym.Scancode - Scancode.D1 + 1);
                         }
+                        return false;
                     }
                     if (e.Keyboard.Keysym.Scancode == Scancode.Minus && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0)
                     {
                         textRenderer.Scale(0.9);
+                        return false;
                     }
                     if (e.Keyboard.Keysym.Scancode == Scancode.Equals && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0)
                     {
                         textRenderer.Scale(1.1);
+                        return false;
                     }
                     else if (e.Keyboard.Keysym.Scancode == Scancode.D && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0)
                     {
@@ -172,19 +185,23 @@ namespace SDL2Interface
                             }
                         });
                         cursor.Commit();
+                        return false;
                     }
                     else if (e.Keyboard.Keysym.Scancode == Scancode.A && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0)
                     {
                         cursor.Selections = [new EditorSelection(cursor, 0, cursor.Buffer.Text.Length)];
+                        return false;
                     }
                     else if (e.Keyboard.Keysym.Scancode == Scancode.W && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0)
                     {
                         cursor.Selections.ForEach(x => x.SetPosition(x.End, x.Begin));
+                        return false;
                     }
                     else if (e.Keyboard.Keysym.Scancode == Scancode.Z && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0)
                     {
                         Console.WriteLine("UN");
                         cursor.Buffer.Undo();
+                        return false;
                     }
                     else if (e.Keyboard.Keysym.Scancode == Scancode.F && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0)
                     {

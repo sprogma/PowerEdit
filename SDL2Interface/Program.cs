@@ -42,8 +42,8 @@ namespace SDL2Interface
 
             /* create application instance */
             {
-                //PowershellProvider provider = new();
-                PythonProvider provider = new();
+                PowershellProvider provider = new();
+                //PythonProvider provider = new();
                 EditorServer server = new(provider);
                 if (fileToOpen != null)
                 {
