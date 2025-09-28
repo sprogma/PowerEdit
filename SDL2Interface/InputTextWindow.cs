@@ -189,7 +189,7 @@ namespace SDL2Interface
                                 var line = x.Cursor.Buffer.GetLine(x.EndLine);
                                 if (line.Item2 != null)
                                 {
-                                    x.Cursor.Buffer.InsertString(line.Item1, line.Item2.Value);
+                                    x.Cursor.Buffer.InsertString(line.Item1, line.Item2.Value + (line.Item2.Value.EndsWith("\n") ? "" : "\n"));
                                     x.UpdateFromLineOffset();
                                 }
                             }

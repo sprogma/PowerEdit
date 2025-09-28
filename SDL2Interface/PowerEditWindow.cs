@@ -19,13 +19,21 @@ namespace SDL2Interface
 
         public (IEnumerable<string>?, string?) CurrentResult()
         {
-            var text = usingCursor.SelectionsText.Where(x => x != "").ToArray();
-            if (text.Length == 0)
+            if (editType == "powerEdit")
             {
-                text = [usingCursor.Buffer.Text.ToString()];
+                var res = buffer.Server.CommandProvider.Execute(buffer.Text.ToString(), usingCursor.Selections.ToArray());
+                return (res.Item1?.Select(x => x.ToString()).Where(x => x != null).Cast<string>(), res.Item2);
             }
-            var res = buffer.Server.CommandProvider.Execute(buffer.Text.ToString(), text);
-            return (res.Item1?.Select(x => x.ToString()).Where(x => x != null).Cast<string>(), res.Item2);
+            else
+            {
+                var text = usingCursor.SelectionsText.Where(x => x != "").ToArray();
+                if (text.Length == 0)
+                {
+                    text = [usingCursor.Buffer.Text.ToString()];
+                }
+                var res = buffer.Server.CommandProvider.Execute(buffer.Text.ToString(), text);
+                return (res.Item1?.Select(x => x.ToString()).Where(x => x != null).Cast<string>(), res.Item2);
+            }
         }
 
         public PowerEditWindow(EditorServer server, EditorCursor usingCursor, Rect position, string editType) : 

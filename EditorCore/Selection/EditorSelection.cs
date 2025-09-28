@@ -69,6 +69,11 @@ namespace EditorCore.Selection
 
         /* declarations for simplicity */
 
+        public override string ToString()
+        {
+            return $"Selection[{Begin}:{End}]";
+        }
+
         public void Copy()
         {
             clipboard = Text;
@@ -86,11 +91,6 @@ namespace EditorCore.Selection
         public long EndLine => Cursor.Buffer.GetPositionOffsets(End).Item1;
         public long MinLine => Cursor.Buffer.GetPositionOffsets(Min).Item1;
         public long MaxLine => Cursor.Buffer.GetPositionOffsets(Max).Item1;
-
-        public static implicit operator string?(EditorSelection selection)
-        {
-            return selection.Text.ToString();
-        }
 
         public long InsertText(string text)
         {
