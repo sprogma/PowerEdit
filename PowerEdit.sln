@@ -15,7 +15,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PythonCommandProvider", "Py
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RegexTokenizer", "RegexTokenizer\RegexTokenizer.csproj", "{5863A886-0A56-4D6D-BEEC-B5BB1FE31FA9}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Rope", "Rope\Rope.csproj", "{51F0DB3B-2706-430A-B705-8E3AB654BDFF}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StringRope", "Rope\StringRope.csproj", "{51F0DB3B-2706-430A-B705-8E3AB654BDFF}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

@@ -193,7 +193,7 @@ namespace RegexTokenizer
         [GeneratedRegex(@"^R""([^(]*)\(")]
         private static partial Regex RStringRegex();
 
-        [GeneratedRegex(@"(?<key>\b(define|include|pragma|error|warning|if|else|for|while|do|goto|return|continue|break|typedef|struct|sizeof|volatile|__volatile__|asm|__asm__|inline|__inline__|register|__register__|restrict|static|extern|const)\b)|(?<func>\b(\w|[_$])(\w|\d|[_$])*(?=\s*\())|(?<type>((?<=\bstruct\s+)(\w|[_$])(\w|\d|[_$])*\b|\b([_$\w-[0-9]])(\w|\d|[_$])*(?=\s+[_$\w-[0-9]])))|(?<var>\b[_$\w-[0-9]](\w|[_$])*\b)|(?<float>(\d*\.\d+|\d+\.\d*)([eE][+\-]\d+)?([lL]|[fF])?)|(?<int>(0[xX]?)?\d+([zZ]|[uU][lL][lL]|[uU][lL]|[uU]|([lL]?)([lL]?)([uU]?))?)|(?<operator>[#!,.\-+*/?;:|&~<=>(){}\[\]])")]
+        [GeneratedRegex(@"(?<key>\b(define|include|pragma|error|warning|if|else|for|while|do|goto|return|continue|break|typedef|struct|enum|union|sizeof|volatile|__volatile__|asm|__asm__|inline|__inline__|register|__register__|restrict|static|extern|const)\b)|(?<func>\b(\w|[_$])(\w|\d|[_$])*(?=\s*\())|(?<type>((?<=\b(struct|enum|union|typedef)\s+)(\w|[_$])(\w|\d|[_$])*\b|\b([_$\w-[0-9]])(\w|\d|[_$])*(?=\s+[_$\w-[0-9]])))|(?<var>\b[_$\w-[0-9]](\w|[_$])*\b)|(?<float>(\d*\.\d+|\d+\.\d*)([eE][+\-]\d+)?([lL]|[fF])?)|(?<int>(0[xX]?)?\d+([zZ]|[uU][lL][lL]|[uU][lL]|[uU]|([lL]?)([lL]?)([uU]?))?)|(?<operator>[#!,.\-+*/?;:|&~<=>(){}\[\]])")]
 
         private static partial Regex OtherComponentsRegex();
     }

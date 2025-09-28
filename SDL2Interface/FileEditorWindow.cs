@@ -29,7 +29,7 @@ namespace SDL2Interface
                 case EventType.KeyDown:
                     if (e.Keyboard.Keysym.Scancode == Scancode.S && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0)
                     {
-                        file.Save(@"D:\a.c");
+                        file.Save();
                     }
                     break;
             }

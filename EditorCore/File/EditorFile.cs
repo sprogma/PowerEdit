@@ -17,17 +17,27 @@ namespace EditorCore.File
         public EditorBuffer Buffer { get; internal set; }
         public Server.EditorServer Server { get; internal set; }
 
+        string? filename;
+
         public EditorFile(Server.EditorServer server, string filename)
         {
+            this.filename = filename;
             Buffer = new EditorBuffer(server, 
                                       System.IO.File.ReadAllText(filename), 
                                       BaseTokenizer.CreateTokenizer(Path.GetExtension(filename).Substring(1) ?? ""));
             Server = server;
         }
 
-        public void Save(string filename)
+        public void Save(string? newFilename = null)
         {
-            System.IO.File.WriteAllText(filename, Buffer.Text.ToString());
+            if (newFilename != null)
+            {
+                filename = newFilename;
+            }
+            if (filename != null)
+            {
+                System.IO.File.WriteAllText(filename, Buffer.Text.ToString());
+            }
         }
 
         /* declarations for simplicity */

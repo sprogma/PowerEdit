@@ -17,7 +17,17 @@ namespace RegexTokenizer
             switch (fileExternsion)
             {
                 case "c":
+                case "h":
                     return new CTokenizer();
+                case "cpp":
+                case "hpp":
+                    return new CTokenizer();
+                case "py":
+                    return new PythonTokenizer();
+                case "ps1":
+                case "psm1":
+                case "psd1":
+                    return new PowershellTokenizer();
                 default:
                     break;
             }

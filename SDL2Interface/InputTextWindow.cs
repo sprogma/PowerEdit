@@ -162,12 +162,14 @@ namespace SDL2Interface
                     {
                         cursor?.Selections.ForEach(x => x.Copy());
                         cursor?.Selections.ForEach(x => x.Cursor.Buffer.DeleteString(x.Min, x.TextLength));
+                        cursor?.Commit();
                         return false;
                     }
                     if (e.Keyboard.Keysym.Scancode == Scancode.V && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0)
                     {
                         cursor?.Selections.ForEach(x => x.Cursor.Buffer.DeleteString(x.Min, x.TextLength));
                         cursor?.Selections.ForEach(x => x.Paste());
+                        cursor?.Commit();
                         return false;
                     }
                     if (e.Keyboard.Keysym.Scancode == Scancode.Minus && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0)
