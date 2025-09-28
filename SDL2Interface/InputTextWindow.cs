@@ -14,15 +14,14 @@ namespace SDL2Interface
 {
     internal class InputTextWindow : SimpleTextWindow
     {
-        internal EditorCursor cursor;
+        internal EditorCursor? cursor;
         bool relativeNumbers = true;
         long enteredLineNumber = 0;
         bool jumpInput = false;
 
         public InputTextWindow(EditorBuffer buffer, Rect position) : base(buffer, position)
         {
-            this.cursor = buffer.CreateCursor();
-            this.cursor.Selections.Add(new EditorSelection(this.cursor, 0));
+            this.cursor = buffer.Cursor;
         }
 
         public override void DrawElements()
@@ -129,7 +128,7 @@ namespace SDL2Interface
                             {
                                 offset = enteredLineNumber - 100;
                             }
-                            cursor.Selections.ForEach(x => x.MoveVertical(offset, false));
+                            cursor?.Selections.ForEach(x => x.MoveVertical(offset, false));
                             const int KEYEVENTF_EXTENDEDKEY = 0x1;
                             const int KEYEVENTF_KEYUP = 0x2;
                             WinapiKeybdEvent(0x14, 0x45, KEYEVENTF_EXTENDEDKEY, 0);
@@ -154,6 +153,23 @@ namespace SDL2Interface
                         }
                         return false;
                     }
+                    if (e.Keyboard.Keysym.Scancode == Scancode.C && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0)
+                    {
+                        cursor?.Selections.ForEach(x => x.Copy());
+                        return false;
+                    }
+                    if (e.Keyboard.Keysym.Scancode == Scancode.X && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0)
+                    {
+                        cursor?.Selections.ForEach(x => x.Copy());
+                        cursor?.Selections.ForEach(x => x.Cursor.Buffer.DeleteString(x.Min, x.TextLength));
+                        return false;
+                    }
+                    if (e.Keyboard.Keysym.Scancode == Scancode.V && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0)
+                    {
+                        cursor?.Selections.ForEach(x => x.Cursor.Buffer.DeleteString(x.Min, x.TextLength));
+                        cursor?.Selections.ForEach(x => x.Paste());
+                        return false;
+                    }
                     if (e.Keyboard.Keysym.Scancode == Scancode.Minus && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0)
                     {
                         textRenderer.Scale(0.9);
@@ -166,7 +182,7 @@ namespace SDL2Interface
                     }
                     else if (e.Keyboard.Keysym.Scancode == Scancode.D && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0)
                     {
-                        cursor.Selections.ForEach(x =>
+                        cursor?.Selections.ForEach(x =>
                         {
                             if (x.Text.Length == 0)
                             {
@@ -184,23 +200,26 @@ namespace SDL2Interface
                                 x.UpdateFromLineOffset();
                             }
                         });
-                        cursor.Commit();
+                        cursor?.Commit();
                         return false;
                     }
                     else if (e.Keyboard.Keysym.Scancode == Scancode.A && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0)
                     {
-                        cursor.Selections = [new EditorSelection(cursor, 0, cursor.Buffer.Text.Length)];
+                        if (cursor != null)
+                        {
+                            cursor.Selections = [new EditorSelection(cursor, 0, cursor.Buffer.Text.Length)];
+                        }
                         return false;
                     }
                     else if (e.Keyboard.Keysym.Scancode == Scancode.W && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0)
                     {
-                        cursor.Selections.ForEach(x => x.SetPosition(x.End, x.Begin));
+                        cursor?.Selections.ForEach(x => x.SetPosition(x.End, x.Begin));
                         return false;
                     }
                     else if (e.Keyboard.Keysym.Scancode == Scancode.Z && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0)
                     {
                         Console.WriteLine("UN");
-                        cursor.Buffer.Undo();
+                        cursor?.Buffer.Undo();
                         return false;
                     }
                     else if (e.Keyboard.Keysym.Scancode == Scancode.F && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0)

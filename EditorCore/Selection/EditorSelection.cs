@@ -20,6 +20,8 @@ namespace EditorCore.Selection
 
         public EditorCursor Cursor { get; internal set; }
 
+        public Rope.Rope<char>? clipboard { get; internal set; } = null;
+
         public void UpdateFromLineOffset()
         {
             long last_newline = Cursor.Buffer.Text.LastIndexOf("\n", End - 1);
@@ -66,6 +68,19 @@ namespace EditorCore.Selection
         }
 
         /* declarations for simplicity */
+
+        public void Copy()
+        {
+            clipboard = Text;
+        }
+
+        public void Paste()
+        {
+            if (clipboard != null)
+            {
+                InsertText(clipboard.Value);
+            }
+        }
 
         public long BeginLine => Cursor.Buffer.GetPositionOffsets(Begin).Item1;
         public long EndLine => Cursor.Buffer.GetPositionOffsets(End).Item1;

@@ -1,4 +1,5 @@
-﻿using RegexTokenizer;
+﻿using EditorCore.Selection;
+using RegexTokenizer;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -15,10 +16,10 @@ namespace EditorCore.Buffer
         public EditorBufferOnUpdate? ActionOnUpdate;
 
         public const long MaxHistorySize = 1024;
-        public LinkedList<Rope.Rope<char>> History { get; internal set; }
+        public LinkedList<(Rope.Rope<char>, (long, long)[])> History { get; internal set; }
         public Rope.Rope<char> Text { get; internal set; }
         public Server.EditorServer Server { get; internal set; }
-        public List<Cursor.EditorCursor> Cursors { get; internal set; }
+        public Cursor.EditorCursor? Cursor { get; internal set; }
         public BaseTokenizer Tokenizer { get; internal set; }
         public List<Token> Tokens { get; internal set; }
 
@@ -29,7 +30,8 @@ namespace EditorCore.Buffer
             Tokens = [];
             Tokenizer = tokenizer;
             Text = "";
-            Cursors = [];
+            Cursor = new(this);
+            Cursor.Selections.Add(new EditorSelection(Cursor, 0));
             Server = server;
 
             OnUpdate();
@@ -41,26 +43,24 @@ namespace EditorCore.Buffer
             Tokens = [];
             Tokenizer = tokenizer;
             Text = content;
-            Cursors = [];
+            Cursor = new(this);
+            Cursor.Selections.Add(new EditorSelection(Cursor, 0));
             Server = server;
 
             OnUpdate();
         }
 
-        public Cursor.EditorCursor CreateCursor()
-        {
-            Cursor.EditorCursor new_cursor = new Cursor.EditorCursor(this);
-            Cursors.Add(new_cursor);
-            return new_cursor;
-        }
-
         public void OnUpdate(bool pushHistory = true)
         {
+            if (Cursor == null)
+            {
+                return;
+            }
             ActionOnUpdate?.Invoke(this);
             Tokens = Tokenizer.ParseContent(Text);
             if (pushHistory)
             {
-                History.AddLast(Text);
+                History.AddLast((Text, Cursor.Selections.Select(x => (x.Begin, x.End)).ToArray()));
                 while (History.Count > MaxHistorySize)
                 {
                     History.RemoveFirst();
@@ -76,11 +76,12 @@ namespace EditorCore.Buffer
 
         public void Undo()
         {
-            if (History.Last == null)
+            if (History.Last == null || Cursor == null)
             {
                 return;
             }
-            Text = History.Last.Value;
+            (Text, var selections) = History.Last.Value;
+            Cursor.Selections = selections.Select(x => new EditorSelection(Cursor, x.Item1, x.Item2)).ToList();
             Tokens = Tokenizer.ParseContent(Text);
             History.RemoveLast();
         }
@@ -90,9 +91,9 @@ namespace EditorCore.Buffer
             long length = data.Length;
             Text = Text.InsertRange(position, data);
             /* move all cursors */
-            foreach (var cursor in Cursors)
+            if (Cursor != null)
             {
-                foreach (var selection in cursor.Selections)
+                foreach (var selection in Cursor.Selections)
                 {
                     if (selection.Begin >= position)
                     {
@@ -121,9 +122,9 @@ namespace EditorCore.Buffer
             }
             Text = Text.RemoveRange(position, count);
             /* move all cursors */
-            foreach (var cursor in Cursors)
+            if (Cursor != null)
             {
-                foreach (var selection in cursor.Selections)
+                foreach (var selection in Cursor.Selections)
                 {
                     if (selection.Begin >= position + count)
                     {
