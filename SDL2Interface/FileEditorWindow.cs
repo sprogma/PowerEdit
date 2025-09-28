@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 
 namespace SDL2Interface
 {
-    internal class FileEditorWindow : BaseInputTextWindow
+    internal class FileEditorWindow : InputTextWindow
     {
         internal EditorFile file;
 

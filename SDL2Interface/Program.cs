@@ -8,6 +8,8 @@ using SDL_Sharp.Ttf;
 using System.Runtime.InteropServices;
 using System.Text;
 using PythonCommandProvider;
+using EditorCore.Buffer;
+using RegexTokenizer;
 
 namespace SDL2Interface
 {
@@ -22,7 +24,8 @@ namespace SDL2Interface
 
         static void Main(string[] args)
         {
-            Console.WriteLine("Staring...");
+            string? fileToOpen = args.ElementAtOrDefault(1);
+            Console.WriteLine($"Opening \"{fileToOpen}\"...");
             if (SDL.Init(SdlInitFlags.Everything) != 0)
             {
                 throw new Exception("SDL initialization failed");
@@ -43,8 +46,15 @@ namespace SDL2Interface
                 PowershellProvider provider = new();
                 //PythonProvider provider = new();
                 EditorServer server = new(provider);
-                EditorFile file = new(server, @"D:\a.c");
-                windows.Add(new FileEditorWindow(file, new Rect(0, 0, BaseWindow.W, BaseWindow.H)));
+                if (fileToOpen != null)
+                {
+                    EditorFile file = new(server, fileToOpen);
+                    windows.Add(new FileEditorWindow(file, new Rect(0, 0, BaseWindow.W, BaseWindow.H)));
+                }
+                else
+                {
+                    windows.Add(new InputTextWindow(new EditorBuffer(server, BaseTokenizer.CreateTokenizer("")), new Rect(0, 0, BaseWindow.W, BaseWindow.H)));
+                }
             }
 
             while (windows.Count > 0)

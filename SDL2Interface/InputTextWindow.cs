@@ -12,13 +12,13 @@ using System.Threading.Tasks;
 
 namespace SDL2Interface
 {
-    internal abstract class BaseInputTextWindow : SimpleTextWindow
+    internal class InputTextWindow : SimpleTextWindow
     {
         internal EditorCursor cursor;
         bool relativeNumbers = true;
         long enteredLineNumber = 0;
 
-        protected BaseInputTextWindow(EditorBuffer buffer, Rect position) : base(buffer, position)
+        public InputTextWindow(EditorBuffer buffer, Rect position) : base(buffer, position)
         {
             this.cursor = buffer.CreateCursor();
             this.cursor.Selections.Add(new EditorSelection(this.cursor, 0));

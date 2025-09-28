@@ -12,7 +12,7 @@ using System.Threading.Tasks;
 
 namespace SDL2Interface
 {
-    internal class PowerEditWindow: BaseInputTextWindow
+    internal class PowerEditWindow: InputTextWindow
     {
         public EditorCursor usingCursor;
         string editType;

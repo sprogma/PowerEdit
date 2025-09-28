@@ -8,7 +8,7 @@ namespace PythonCommandProvider
 {
     public class PythonProvider : CommandProviderInterface.ICommandProvider
     {
-        public BaseTokenizer Tokenizer => new SimpleTokenizer();
+        public BaseTokenizer Tokenizer => new PythonTokenizer();
 
         public PythonProvider()
         { }

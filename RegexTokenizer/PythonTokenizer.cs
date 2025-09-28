@@ -1,14 +1,16 @@
-﻿using Rope;
+﻿using RegexTokenizer;
+using Rope;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection.Metadata;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace RegexTokenizer
 {
-    public partial class PowershellTokenizer : BaseTokenizer
+    public partial class PythonTokenizer: BaseTokenizer
     {
         public override List<Token> ParseContent(Rope<char> content)
         {
@@ -23,25 +25,38 @@ namespace RegexTokenizer
                     end = content.IndexOf('\n', pos);
                     if (end == -1) { end = content.Length; }
 
-                    while ((end >= 1 &&
-                             content[end - 1] == '`') ||
-                           (end >= 2 &&
-                             content[end - 1] == '\r' &&
-                             content[end - 2] == '`'))
-                    {
-                        end = content.IndexOf('\n', end + 1);
-                        if (end == -1) { end = content.Length; break; }
-                    }
                     result.Add(new Token(TokenType.Comment, pos, end));
                     pos = end + 1;
                 }
-                else if (content.Slice(pos).StartsWith("<#"))
+                else if (content.Slice(pos).StartsWith("'''"))
                 {
-                    end = content.IndexOf("#>", pos + 2);
+                    end = content.IndexOf("'''", pos + 1);
                     if (end == -1) { end = content.Length; }
 
-                    result.Add(new Token(TokenType.MultilineComment, pos, end + 1));
-                    pos = end + 2;
+                    while (end >= 1 &&
+                           content[end - 1] == '\\')
+                    {
+                        end = content.IndexOf("'''", end + 1);
+                        if (end == -1) { end = content.Length; break; }
+                    }
+
+                    result.Add(new Token(TokenType.String, pos, end + 2));
+                    pos = end + 3;
+                }
+                else if (content.Slice(pos).StartsWith("\"\"\""))
+                {
+                    end = content.IndexOf("\"\"\"", pos + 1);
+                    if (end == -1) { end = content.Length; }
+
+                    while (end >= 1 &&
+                           content[end - 1] == '\\')
+                    {
+                        end = content.IndexOf("\"\"\"", end + 1);
+                        if (end == -1) { end = content.Length; break; }
+                    }
+
+                    result.Add(new Token(TokenType.String, pos, end + 2));
+                    pos = end + 3;
                 }
                 else if (content.Slice(pos).StartsWith("'"))
                 {
@@ -49,22 +64,14 @@ namespace RegexTokenizer
                     if (end == -1) { end = content.Length; }
 
                     while (end >= 1 &&
-                           content[end - 1] == '`')
+                           content[end - 1] == '\\')
                     {
                         end = content.IndexOf('\'', end + 1);
                         if (end == -1) { end = content.Length; break; }
                     }
 
-                    result.Add(new Token(TokenType.RawString, pos, end));
+                    result.Add(new Token(TokenType.String, pos, end));
                     pos = end + 1;
-                }
-                else if (content.Slice(pos).StartsWith("@\'"))
-                {
-                    end = content.IndexOf("\'@", pos + 2);
-                    if (end == -1) { end = content.Length; }
-
-                    result.Add(new Token(TokenType.RawString, pos, end + 1));
-                    pos = end + 2;
                 }
                 else if (content.Slice(pos).StartsWith("\""))
                 {
@@ -72,7 +79,7 @@ namespace RegexTokenizer
                     if (end == -1) { end = content.Length; }
 
                     while (end >= 1 &&
-                           content[end - 1] == '`')
+                           content[end - 1] == '\\')
                     {
                         end = content.IndexOf('"', end + 1);
                         if (end == -1) { end = content.Length; break; }
@@ -80,21 +87,6 @@ namespace RegexTokenizer
 
                     result.Add(new Token(TokenType.String, pos, end));
                     pos = end + 1;
-                }
-                else if (content.Slice(pos).StartsWith("@\""))
-                {
-                    end = content.IndexOf("\"@", pos + 2);
-                    if (end == -1) { end = content.Length; }
-
-                    while (end >= 2 &&
-                           content[end - 2] == '`')
-                    {
-                        end = content.IndexOf("\"@", end + 1);
-                        if (end == -1) { end = content.Length; break; }
-                    }
-
-                    result.Add(new Token(TokenType.String, pos, end + 1));
-                    pos = end + 2;
                 }
                 else
                 {
@@ -144,13 +136,9 @@ namespace RegexTokenizer
                     {
                         regexResult.Add(new Token(TokenType.IntegerLiteral, pos + m.Index, pos + m.Index + m.Length - 1));
                     }
-                    if (m.Groups["operator"].Success || m.Groups["namedoperator"].Success)
+                    if (m.Groups["operator"].Success)
                     {
                         regexResult.Add(new Token(TokenType.Operator, pos + m.Index, pos + m.Index + m.Length - 1));
-                    }
-                    if (m.Groups["namehint"].Success)
-                    {
-                        regexResult.Add(new Token(TokenType.NameHint, pos + m.Index, pos + m.Index + m.Length - 1));
                     }
                 }
 
@@ -194,8 +182,11 @@ namespace RegexTokenizer
             return result;
         }
 
+        [GeneratedRegex(@"^R""([^(]*)\(")]
+        private static partial Regex RStringRegex();
 
-        [GeneratedRegex(@"(?<namedoperator>(-(and|or|xor|band|bnot|bor|bxor|shl|shr|replace|split|match|notmatch|lt|le|gt|ge|ne|eq|in|notin|contains|notcontains|not)))|(?<key>\b(param|class|function|for|foreach|foreach\s+parallel|while|do|until|if|elseif|else|begin|process|try|catch|switch|case|default|end|return|break|continue|exit|throw)\b)|(?<func>((\b(\w|[_$?])(\w|\d|[_$?])*(?=\s*\())|((?<=[\s|+*])(\w|[_$])(\w|\d|[_$])*(?=\s*\())|(?<=function)\s+[\w\-_$?]+))|(?<type>((?<=\bclass\s+)(\w|[_$])(\w|\d|[_$])*\b|\[[\w.]*?\]))|(?<namehint>(-[\w_$:?]+))|(?<var>\$[\w_$:?]+|\$\{[^}]*\})|(?<float>(\d*\.\d+|\d+\.\d*)([eE][+\-]\d+)?[d]?|\d+(([eE][+\-]\d+)[d]?|d))|(?<int>(0[xX]?)?\d+[lun]?)|(?<operator>[@#!,.\-+*/?;:|&~<=>(){}\[\]])", RegexOptions.IgnoreCase)]
+        [GeneratedRegex(@"(?<key>\b(if|elif|else|for|while|continue|break|return|yield|from|import|assert|throw|try|except|finally|def|class|global|nonlocal|match|case|async|await|and|or|in|not|is|lambda)\b)|(?<func>\b(\w|[_$])(\w|\d|[_$])*(?=\s*\())|(?<type>((?<=\bclass\s+)(\w|[_$])(\w|\d|[_$])*\b))|(?<var>\b[_$\w-[0-9]](\w|[_$])*\b)|(?<float>(\d*\.\d+|\d+\.\d*)([eE][+\-]\d+)?)|(?<int>(0[xX]?)?\d+)|(?<operator>[#!,.\-+*/?;:|&~<=>(){}\[\]])")]
+
         private static partial Regex OtherComponentsRegex();
     }
 }
