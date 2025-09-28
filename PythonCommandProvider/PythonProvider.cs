@@ -26,7 +26,7 @@ namespace PythonCommandProvider
             };
         }
 
-        public (IEnumerable<string>?, string?) Execute(string command, string[] args)
+        public (IEnumerable<object>?, string?) Execute(string command, object[] args)
         {
             string inputData = "import json\n" +
                                "output = data = [" + string.Join(',', args.Select(x => JsonSerializer.Serialize(x))) + "]\n";

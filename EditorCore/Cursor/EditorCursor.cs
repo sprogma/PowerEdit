@@ -29,65 +29,81 @@ namespace EditorCore.Cursor
         {
             switch (type)
             {
-                case "edit":
-                    Rope.Rope<char>[] args;
-                    bool used_all_text = false;
-                    if (Selections.Count == 0 || Selections.All(x => x.TextLength == 0))
+                case "powerEdit":
                     {
-                        args = [Buffer.Text];
-                        used_all_text = true;
-                    }
-                    else
-                    {
-                        args = Selections.Select(x => x.Text).OfType<Rope.Rope<char>>().ToArray();
-                    }
-                    (var enumerable_result, string? error_string) = Buffer.Server.CommandProvider.Execute(command, args.Select(x => x.ToString()).ToArray());
-                    var result = enumerable_result?.ToArray();
-                    if (result == null)
-                    {
-                        return;
-                    }
-                    Console.WriteLine($"get result: {string.Join(' ', result.Select(x => x.ToString()))}");
-                    if (used_all_text)
-                    {
-                        Buffer.DeleteString(0, Buffer.Text.Length);
-                    }
-                    else
-                    {
-                        Selections.ForEach(x => Buffer.DeleteString(x.Min, x.TextLength));
-                    }
-                    {
-                        int id = 0;
-                        if (result.Length == Selections.Count)
+                        (var enumerable_result, string? error_string) = Buffer.Server.CommandProvider.Execute(command, Selections.ToArray());
+                        if (enumerable_result == null)
                         {
-                            foreach (var item in result)
-                            {
-                                Selections[id].Begin = Selections[id].End;
-                                long begin = Selections[id].End;
-                                Selections[id].InsertText(item);
-                                /* select entered text */
-                                Selections[id].SetPosition(begin, Selections[id].End);
-                                id++;
-                            }
+                            return;
+                        }
+                        Console.WriteLine($"get result: {string.Join(' ', enumerable_result.Select(x => x.ToString()))}");
+                        Selections = enumerable_result.Where(x => x is EditorSelection).Cast<EditorSelection>().ToList();
+                    }
+                    break;
+                case "edit":
+                    {
+                        Rope.Rope<char>[] args;
+                        bool used_all_text = false;
+                        if (Selections.Count == 0 || Selections.All(x => x.TextLength == 0))
+                        {
+                            args = [Buffer.Text];
+                            used_all_text = true;
                         }
                         else
                         {
-                            if (Selections.Count == 0)
+                            args = Selections.Select(x => x.Text).OfType<Rope.Rope<char>>().ToArray();
+                        }
+                        (var enumerable_result, string? error_string) = Buffer.Server.CommandProvider.Execute(command, args.Select(x => x.ToString()).ToArray());
+                        var result = enumerable_result?.Select(x => x.ToString()).
+                                                        Where(x => x != null).
+                                                        Cast<string>().
+                                                        ToArray();
+                        if (result == null)
+                        {
+                            return;
+                        }
+                        Console.WriteLine($"get result: {string.Join(' ', result.Select(x => x.ToString()))}");
+                        if (used_all_text)
+                        {
+                            Buffer.DeleteString(0, Buffer.Text.Length);
+                        }
+                        else
+                        {
+                            Selections.ForEach(x => Buffer.DeleteString(x.Min, x.TextLength));
+                        }
+                        {
+                            int id = 0;
+                            if (result.Length == Selections.Count)
                             {
-                                Selections.Add(new EditorSelection(this, 0));
+                                foreach (var item in result)
+                                {
+                                    Selections[id].Begin = Selections[id].End;
+                                    long begin = Selections[id].End;
+                                    Selections[id].InsertText(item);
+                                    /* select entered text */
+                                    Selections[id].SetPosition(begin, Selections[id].End);
+                                    id++;
+                                }
                             }
-                            long begin = Selections[^1].End;
-                            Selections = [];
-                            List<EditorSelection> newSelections = [];
-                            foreach (var item in result)
+                            else
                             {
-                                var s = new EditorSelection(this, begin);
-                                long endPosition = s.InsertText(item);
-                                s.SetPosition(begin, endPosition);
-                                begin = endPosition;
-                                newSelections.Add(s);
+                                if (Selections.Count == 0)
+                                {
+                                    Selections.Add(new EditorSelection(this, 0));
+                                }
+                                long begin = Selections[^1].End;
+                                Selections = [];
+                                List<EditorSelection> newSelections = [];
+                                foreach (var item in result)
+                                {
+                                    var s = new EditorSelection(this, begin);
+                                    long endPosition = s.InsertText(item);
+                                    s.SetPosition(begin, endPosition);
+                                    begin = endPosition;
+                                    newSelections.Add(s);
+                                }
+                                Selections.AddRange(newSelections);
                             }
-                            Selections.AddRange(newSelections);
                         }
                     }
                     break;

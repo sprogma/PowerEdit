@@ -14,6 +14,6 @@ namespace CommandProviderInterface
 
         public BaseTokenizer Tokenizer { get; }
 
-        public (IEnumerable<string>?, string?) Execute(string command, string[] args);
+        public (IEnumerable<object>?, string?) Execute(string command, object[] args);
     }
 }

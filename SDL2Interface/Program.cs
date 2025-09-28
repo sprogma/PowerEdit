@@ -24,7 +24,7 @@ namespace SDL2Interface
 
         static void Main(string[] args)
         {
-            string? fileToOpen = args.ElementAtOrDefault(1);
+            string? fileToOpen = args.ElementAtOrDefault(0);
             Console.WriteLine($"Opening \"{fileToOpen}\"...");
             if (SDL.Init(SdlInitFlags.Everything) != 0)
             {

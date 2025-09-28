@@ -24,7 +24,8 @@ namespace SDL2Interface
             {
                 text = [usingCursor.Buffer.Text.ToString()];
             }
-            return buffer.Server.CommandProvider.Execute(buffer.Text.ToString(), text);
+            var res = buffer.Server.CommandProvider.Execute(buffer.Text.ToString(), text);
+            return (res.Item1?.Select(x => x.ToString()).Where(x => x != null).Cast<string>(), res.Item2);
         }
 
         public PowerEditWindow(EditorServer server, EditorCursor usingCursor, Rect position, string editType) : 
@@ -39,7 +40,14 @@ namespace SDL2Interface
 
         internal void Apply()
         {
-            usingCursor.ApplyCommand("edit", buffer.Text.ToString());
+            if (editType == "powerEdit")
+            {
+                usingCursor.ApplyCommand("powerEdit", buffer.Text.ToString());
+            }
+            else /* edit or replace events */
+            {
+                usingCursor.ApplyCommand("edit", buffer.Text.ToString());
+            }
             usingCursor.Commit();
         }
 

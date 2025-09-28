@@ -37,11 +37,12 @@ namespace PowershellCommandProvider
             {
                 "edit" => (16, 18, "@($input) | % { $_ }"),
                 "replace" => (19, 19, "@($input) -replace\"\",{\"\"}"),
+                "powerEdit" => (9, 9, "@($input)"),
                 _ => (0, 0, "")
             };
         }
 
-        public (IEnumerable<string>?, string?) Execute(string command, string[] args)
+        public (IEnumerable<object>?, string?) Execute(string command, object[] args)
         {
             Pipeline pipeline = runSpace.CreatePipeline();
             pipeline.Commands.AddScript(command);
@@ -55,7 +56,7 @@ namespace PowershellCommandProvider
                 Console.WriteLine($"ERROR: {ex}");
                 return (null, ex.ToString());
             }
-            return (results.Where(x => x != null).Select(x => x.ToString()), null);
+            return (results.Select(x => (x is PSObject o ? o.BaseObject: x)).Where(x => x != null), null);
         }
     }
 }

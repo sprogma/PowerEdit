@@ -242,6 +242,18 @@ namespace SDL2Interface
                             return false;
                         }
                     }
+                    else if (e.Keyboard.Keysym.Scancode == Scancode.E && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0
+                                                                      && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Shift) != 0)
+                    {
+                        /* v.1 - open powerWindow powerEdit */
+                        if (cursor != null)
+                        {
+                            Console.WriteLine("powerEdit!\n");
+                            var win = new PowerEditWindow(cursor.Buffer.Server, cursor, position, "powerEdit");
+                            Program.OpenWindow(new PowerEditWithPreviewWindow(position, win));
+                            return false;
+                        }
+                    }
                     else if (e.Keyboard.Keysym.Scancode == Scancode.E && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0)
                     {
                         /* v.1 - open powerWindow edit */
