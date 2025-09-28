@@ -17,7 +17,6 @@ namespace EditorCore.Buffer
 
         public const long MaxHistorySize = 1024;
 
-        public SortedList<long, long> LinePositions { get; internal set; } = [];
         public LinkedList<(Rope.Rope<char>, (long, long)[])> History { get; internal set; } = [];
         public LinkedList<(Rope.Rope<char>, (long, long)[])> RedoHistory { get; internal set; } = [];
         public Rope.Rope<char> Text { get; internal set; }
