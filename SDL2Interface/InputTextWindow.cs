@@ -216,6 +216,11 @@ namespace SDL2Interface
                         cursor?.Selections.ForEach(x => x.SetPosition(x.End, x.Begin));
                         return false;
                     }
+                    else if (e.Keyboard.Keysym.Scancode == Scancode.Q && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0)
+                    {
+                        cursor?.Selections.ForEach(x => x.SetPosition(x.End));
+                        return false;
+                    }
                     else if (e.Keyboard.Keysym.Scancode == Scancode.Z && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0)
                     {
                         Console.WriteLine("UN");
