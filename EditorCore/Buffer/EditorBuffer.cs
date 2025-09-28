@@ -13,23 +13,21 @@ namespace EditorCore.Buffer
     public delegate void EditorBufferOnUpdate(EditorBuffer buffer);
     public class EditorBuffer
     {
-        public EditorBufferOnUpdate? ActionOnUpdate;
+        public EditorBufferOnUpdate? ActionOnUpdate = null;
 
         public const long MaxHistorySize = 1024;
-        public LinkedList<(Rope.Rope<char>, (long, long)[])> History { get; internal set; }
-        public LinkedList<(Rope.Rope<char>, (long, long)[])> RedoHistory { get; internal set; }
+
+        public SortedList<long, long> LinePositions { get; internal set; } = [];
+        public LinkedList<(Rope.Rope<char>, (long, long)[])> History { get; internal set; } = [];
+        public LinkedList<(Rope.Rope<char>, (long, long)[])> RedoHistory { get; internal set; } = [];
         public Rope.Rope<char> Text { get; internal set; }
         public Server.EditorServer Server { get; internal set; }
         public Cursor.EditorCursor? Cursor { get; internal set; }
         public BaseTokenizer Tokenizer { get; internal set; }
-        public List<Token> Tokens { get; internal set; }
+        public List<Token> Tokens { get; internal set; } = [];
 
         public EditorBuffer(Server.EditorServer server, BaseTokenizer tokenizer)
         {
-            ActionOnUpdate = null;
-            History = [];
-            RedoHistory = [];
-            Tokens = [];
             Tokenizer = tokenizer;
             Text = "";
             Cursor = new(this);
@@ -41,9 +39,6 @@ namespace EditorCore.Buffer
 
         public EditorBuffer(Server.EditorServer server, Rope.Rope<char> content, BaseTokenizer tokenizer)
         {
-            History = [];
-            RedoHistory = [];
-            Tokens = [];
             Tokenizer = tokenizer;
             Text = content;
             Cursor = new(this);
@@ -70,12 +65,10 @@ namespace EditorCore.Buffer
                 }
             }
             RedoHistory.Clear();
-            Console.WriteLine("MAIN:Updated");
         }
 
         public void OnSimpleUpdate()
         {
-            Console.WriteLine("Updated");
         }
 
         public void Undo()

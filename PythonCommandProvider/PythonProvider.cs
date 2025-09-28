@@ -29,7 +29,7 @@ namespace PythonCommandProvider
         public (IEnumerable<object>?, string?) Execute(string command, object[] args)
         {
             string inputData = "import json\n" +
-                               "output = data = [" + string.Join(',', args.Select(x => JsonSerializer.Serialize(x))) + "]\n";
+                               "output = data = [" + string.Join(',', args.Select(x => JsonSerializer.Serialize(x.ToString()))) + "]\n";
             string inputCode = $"{inputData}\n{command}\n" +
                                "print(json.dumps(list(map(str, output))))";
 
