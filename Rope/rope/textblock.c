@@ -14,10 +14,29 @@
 #include "modification.h"
 
 
+static int textblock_history_reserve(struct textblock *t, ssize_t size)
+{
+    while (size > t->history_buffer_alloc)
+    {
+        t->history_buffer_alloc = 2 * t->history_buffer_alloc + !(t->history_buffer_alloc);
+    }
+    void *new_ptr = realloc(t->history_buffer, sizeof(*t->history_buffer) * t->history_buffer_alloc);
+    if (new_ptr == NULL)
+    {
+        return 1;
+    }
+    t->history_buffer = new_ptr;
+    return 0;
+}
+
+
 int textblock_init(struct textblock *t)
 {
     t->string = NULL;
     t->len = 0;
+
+    t->history_buffer_alloc = 16;
+    t->history_buffer = malloc(sizeof(*t->history_buffer) * t->history_buffer_alloc);
 }
 
 int textblock_destroy(struct textblock *t)
@@ -25,10 +44,12 @@ int textblock_destroy(struct textblock *t)
     free(t->string);
 }
 
-int textblock_modificate(struct textblock *t, struct modification *mod)
+int textblock_modificate(struct textblock *t, struct modification *mod, ssize_t version)
 {
-    printf("get modification mod!\n");
-    printf("get modification mod! %zd %zd %s\n", mod->pos, mod->len, mod->text);
+    printf("get modification mod! %zd %zd %s IN %zd\n", mod->pos, mod->len, mod->text, version);
+    
+    textblock_history_reserve(t, version);
+    
     switch (mod->type)
     {
         case ModificationInsert:
@@ -60,14 +81,16 @@ int textblock_modificate(struct textblock *t, struct modification *mod)
     return 0;
 }
 
-int textblock_get_size(struct textblock *t, ssize_t *size)
+int textblock_get_size(struct textblock *t, ssize_t *size, ssize_t version)
 {
+    textblock_history_reserve(t, version);
+    
     printf("return len: %zd\n", t->len);
     *size = t->len;
     return 0;
 }
 
-int textblock_read(struct textblock *t, ssize_t from, ssize_t length, char *buffer)
+int textblock_read(struct textblock *t, ssize_t from, ssize_t length, char *buffer, ssize_t version)
 {
     printf("read from %zd len %zd : %c [%d]\n", from, length, t->string[from], t->string[from]);
     memcpy(buffer, t->string + from, length);

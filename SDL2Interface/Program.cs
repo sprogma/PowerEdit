@@ -24,6 +24,22 @@ namespace SDL2Interface
 
         static void Main(string[] args)
         {
+            /* ropes check */
+            TextBuffer.TextBuffer buf = new();
+
+            buf.Insert(0, "ABCDEFGabcdefg");
+            buf.RemoveAt(2);
+            buf.RemoveAt(4, 3);
+            Console.WriteLine(buf.Substring(0, buf.Length));
+            buf.Undo();
+            Console.WriteLine(buf.Substring(0, buf.Length));
+            buf.Undo();
+            Console.WriteLine(buf.Substring(0, buf.Length));
+            buf.Redo();
+            Console.WriteLine(buf.Substring(0, buf.Length));
+
+            return;
+
             string? fileToOpen = args.ElementAtOrDefault(0);
             Console.WriteLine($"Opening \"{fileToOpen}\"...");
             if (SDL.Init(SdlInitFlags.Everything) != 0)

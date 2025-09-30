@@ -7,10 +7,16 @@
 
 struct buffer
 {
+    ssize_t  version;
+    ssize_t *version_tree;
+    ssize_t *version_skiplist;
+    ssize_t  version_tree_len;
+    ssize_t  version_tree_alloc;
+
     struct textblock **blocks;
-    size_t             blocks_len;
-    size_t             blocks_alloc;
-    size_t             avr_block_size;
+    ssize_t             blocks_len;
+    ssize_t             blocks_alloc;
+    ssize_t             avr_block_size;
 
     struct node_allocator allocator;
 

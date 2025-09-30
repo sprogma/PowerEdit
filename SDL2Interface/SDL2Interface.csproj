@@ -22,6 +22,7 @@
     <ProjectReference Include="..\EditorCore\EditorCore.csproj" />
     <ProjectReference Include="..\PythonCommandProvider\PythonCommandProvider.csproj" />
     <ProjectReference Include="..\RegexTokenizer\RegexTokenizer.csproj" />
+    <ProjectReference Include="..\Rope\TextBuffer.csproj" />
   </ItemGroup>
 
 </Project>

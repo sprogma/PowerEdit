@@ -16,6 +16,7 @@
   <ItemGroup>
     <ProjectReference Include="..\CommandProviderInterface\CommandProviderInterface.csproj" />
     <ProjectReference Include="..\RegexTokenizer\RegexTokenizer.csproj" />
+    <ProjectReference Include="..\Rope\TextBuffer.csproj" />
   </ItemGroup>
 
 </Project>
