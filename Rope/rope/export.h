@@ -2,23 +2,26 @@
 #define EXPORT
 
 
+// #define BAN_READ_WRONG_PIECES
+
+
 #include "stddef.h"
+
 #include "modification.h"
+#include "buffer.h"
 
 
 
-struct buffer;
 
+int buffer_init(struct buffer *b);
 
+int buffer_destroy(struct buffer *b);
 
-int buffer_create(struct buffer **b);
+int buffer_moditify(struct buffer *b, struct modification *mod);
 
-int buffer_insert(struct buffer *b, size_t pos, size_t length, char *text);
+int buffer_get_size(struct buffer *b, ssize_t *length);
 
-int buffer_delete(struct buffer *b, size_t pos, size_t length);
-
-int buffer_read(struct buffer *b, size_t pos, size_t length, char *buffer);
-
+int buffer_read(struct buffer *b, ssize_t from, ssize_t length, char *buffer);
 
 
 #endif

@@ -20,8 +20,8 @@ enum
 struct modification
 {
     uint64_t type;
-    size_t position;
-    size_t length;
+    ssize_t pos;
+    ssize_t len;
     char *text;
 };
 

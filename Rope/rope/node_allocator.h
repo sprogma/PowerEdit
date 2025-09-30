@@ -16,4 +16,16 @@ struct node_allocator
     size_t        free_alloc;
 };
 
+
+
+int node_allocator_free(struct node_allocator *a, struct node *ptr);
+
+int node_allocator_new(struct node_allocator *a, struct node **result);
+
+int node_allocator_destroy(struct node_allocator *a);
+
+int node_allocator_init(struct node_allocator *a);
+
+
+
 #endif
