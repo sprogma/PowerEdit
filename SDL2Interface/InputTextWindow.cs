@@ -41,7 +41,7 @@ namespace SDL2Interface
                     /* draw numbers */
                     for (int i = 0; i < H / textRenderer.FontLineStep; ++i)
                     {
-                        (long index, Rope.Rope<char>? s) = buffer.GetLine(i);
+                        (long index, string? s) = buffer.GetLine(i);
                         if (s != null)
                         {
                             long num = i;
@@ -191,7 +191,7 @@ namespace SDL2Interface
                                 var line = x.Cursor.Buffer.GetLine(x.EndLine);
                                 if (line.Item2 != null)
                                 {
-                                    x.Cursor.Buffer.InsertString(line.Item1, line.Item2.Value + (line.Item2.Value.EndsWith("\n") ? "" : "\n"));
+                                    x.Cursor.Buffer.InsertString(line.Item1, line.Item2 + (line.Item2.EndsWith("\n") ? "" : "\n"));
                                     x.UpdateFromLineOffset();
                                 }
                             }
@@ -294,7 +294,7 @@ namespace SDL2Interface
                             var lastSelection = cursor.Selections.MaxBy(x => x.Max);
                             if (lastSelection != null && lastSelection.TextLength != 0)
                             {
-                                Rope.Rope<char> strToFind = lastSelection.Text;
+                                string strToFind = lastSelection.Text;
                                 long next = cursor.Buffer.Text.IndexOf(strToFind, lastSelection.Max);
                                 if (next != -1)
                                 {
@@ -311,7 +311,7 @@ namespace SDL2Interface
                             var lastSelection = cursor.Selections.MaxBy(x => x.Max);
                             if (lastSelection != null && lastSelection.TextLength != 0)
                             {
-                                Rope.Rope<char> strToFind = lastSelection.Text;
+                                string strToFind = lastSelection.Text;
                                 long next = cursor.Buffer.Text.IndexOf(strToFind, lastSelection.Max);
                                 if (next != -1)
                                 {
@@ -356,13 +356,13 @@ namespace SDL2Interface
                                 {
                                     return;
                                 }
-                                x.Cursor.Buffer.DeleteString(after.Item1, after.Item2.Value.Length);
+                                x.Cursor.Buffer.DeleteString(after.Item1, after.Item2.Length);
                                 var before = x.Cursor.Buffer.GetLine(x.MinLine);
                                 if (before.Item2 == null)
                                 {
                                     return;
                                 }
-                                x.Cursor.Buffer.InsertString(before.Item1, after.Item2.Value);
+                                x.Cursor.Buffer.InsertString(before.Item1, after.Item2);
                             });
                             cursor?.Commit();
                         }
@@ -379,13 +379,13 @@ namespace SDL2Interface
                                 {
                                     return;
                                 }
-                                x.Cursor.Buffer.DeleteString(before.Item1, before.Item2.Value.Length);
+                                x.Cursor.Buffer.DeleteString(before.Item1, before.Item2.Length);
                                 var after = x.Cursor.Buffer.GetLine(x.MaxLine + 1);
                                 if (after.Item2 == null)
                                 {
                                     return;
                                 }
-                                x.Cursor.Buffer.InsertString(after.Item1, before.Item2.Value);
+                                x.Cursor.Buffer.InsertString(after.Item1, before.Item2);
                             });
                             cursor?.Commit();
                         }
@@ -444,10 +444,10 @@ namespace SDL2Interface
                             long endLine = x.MaxLine;
                             for (long line = x.MinLine; line <= endLine; ++line)
                             {
-                                (long pos, Rope.Rope<char>? str) = x.Cursor.Buffer.GetLine(line);
+                                (long pos, string? str) = x.Cursor.Buffer.GetLine(line);
                                 if (str != null)
                                 {
-                                    x.Cursor.Buffer.DeleteString(pos, Math.Min(4, str.Value.ToString().TakeWhile(char.IsWhiteSpace).Count()));
+                                    x.Cursor.Buffer.DeleteString(pos, Math.Min(4, str.TakeWhile(char.IsWhiteSpace).Count()));
                                     x.UpdateFromLineOffset();
                                 }
                             }
@@ -518,7 +518,7 @@ namespace SDL2Interface
                             if (x.TextLength == 0)
                             {
                                 if (x.End >= 4 &&
-                                    x.Cursor.Buffer.Text.Slice(x.End - 4, 4).All(x => x == ' '))
+                                    x.Cursor.Buffer.Text.Substring(x.End - 4, 4).All(x => x == ' '))
                                 {
                                     x.Cursor.Buffer.DeleteString(x.End - 4, 4);
                                     x.UpdateFromLineOffset();
@@ -582,7 +582,7 @@ namespace SDL2Interface
                             {
                                 long line = x.EndLine;
                                 string? content = null;
-                                while (line >= 0 && string.IsNullOrWhiteSpace(content = x.Cursor.Buffer.GetLine(line).Item2.ToString()))
+                                while (line >= 0 && string.IsNullOrWhiteSpace(content = x.Cursor.Buffer.GetLine(line).Item2))
                                 {
                                     line--;
                                 }
@@ -608,7 +608,7 @@ namespace SDL2Interface
                             x.MoveToLineEnd();
                             long line = x.EndLine;
                             string? content = null;
-                            while (line >= 0 && string.IsNullOrWhiteSpace(content = x.Cursor.Buffer.GetLine(line).Item2.ToString()))
+                            while (line >= 0 && string.IsNullOrWhiteSpace(content = x.Cursor.Buffer.GetLine(line).Item2))
                             {
                                 line--;
                             }

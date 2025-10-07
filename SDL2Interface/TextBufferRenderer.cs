@@ -86,7 +86,7 @@ namespace SDL2Interface
                 }
             }
         }
-        public void DrawTextLine(int x, int y, Rope.Rope<char> line, long position, List<Token> tokens, ref long lastToken)
+        public void DrawTextLine(int x, int y, string line, long position, List<Token> tokens, ref long lastToken)
         {
             foreach (char c in line)
             {

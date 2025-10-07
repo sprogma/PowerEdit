@@ -7,10 +7,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="FlatlinerDOA.Rope" Version="1.4.38" />
-  </ItemGroup>
-
-  <ItemGroup>
     <ProjectReference Include="..\RegexTokenizer\RegexTokenizer.csproj" />
     <ProjectReference Include="..\Rope\TextBuffer.csproj" />
   </ItemGroup>

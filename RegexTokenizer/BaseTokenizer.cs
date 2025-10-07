@@ -1,5 +1,4 @@
-﻿using Rope;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -9,7 +8,7 @@ namespace RegexTokenizer
 {
     public abstract class BaseTokenizer
     {
-        public abstract List<Token> ParseContent(Rope<char> content);
+        public abstract List<Token> ParseContent(string content);
 
         public static BaseTokenizer CreateTokenizer(string fileExternsion)
         {

@@ -20,7 +20,7 @@ namespace EditorCore.Selection
 
         public EditorCursor Cursor { get; internal set; }
 
-        public Rope.Rope<char>? clipboard { get; internal set; } = null;
+        public string? clipboard { get; internal set; } = null;
 
         public void UpdateFromLineOffset()
         {
@@ -83,7 +83,7 @@ namespace EditorCore.Selection
         {
             if (clipboard != null)
             {
-                InsertText(clipboard.Value);
+                InsertText(clipboard);
             }
         }
 
@@ -99,13 +99,6 @@ namespace EditorCore.Selection
             return res;
         }
 
-        public long InsertText(Rope.Rope<char> text)
-        {
-            long res = Cursor.Buffer.InsertString(End, text);
-            UpdateFromLineOffset();
-            return res;
-        }
-
         public void MoveToLineBegin(bool withSelect = false)
         {
             var res = Cursor.Buffer.GetLine(EndLine);
@@ -113,7 +106,7 @@ namespace EditorCore.Selection
             {
                 return;
             }
-            string str = res.Item2.Value.ToString();
+            string str = res.Item2;
             long textBegin = res.Item1;
             if (!string.IsNullOrWhiteSpace(str))
             {
@@ -149,7 +142,7 @@ namespace EditorCore.Selection
             {
                 return;
             }
-            End = res.Item1 + res.Item2.Value.Count - (res.Item2.Value.EndsWith("\n") ? 1 : 0);
+            End = res.Item1 + res.Item2.Length - (res.Item2.EndsWith("\n") ? 1 : 0);
             if (End < 0)
             {
                 End = 0;
@@ -309,6 +302,6 @@ namespace EditorCore.Selection
 
         public long TextLength => Max - Min;
 
-        public Rope.Rope<char> Text => (TextLength == 0 ? "" : Cursor.Buffer.Text.Slice(Min, TextLength));
+        public string Text => (TextLength == 0 ? "" : Cursor.Buffer.Text.Substring(Min, TextLength));
     }
 }

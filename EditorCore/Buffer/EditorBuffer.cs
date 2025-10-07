@@ -17,9 +17,7 @@ namespace EditorCore.Buffer
 
         public const long MaxHistorySize = 1024;
 
-        public LinkedList<(Rope.Rope<char>, (long, long)[])> History { get; internal set; } = [];
-        public LinkedList<(Rope.Rope<char>, (long, long)[])> RedoHistory { get; internal set; } = [];
-        public Rope.Rope<char> Text { get; internal set; }
+        public TextBuffer.TextBuffer Text { get; internal set; }
         public Server.EditorServer Server { get; internal set; }
         public Cursor.EditorCursor? Cursor { get; internal set; }
         public BaseTokenizer Tokenizer { get; internal set; }
@@ -28,7 +26,7 @@ namespace EditorCore.Buffer
         public EditorBuffer(Server.EditorServer server, BaseTokenizer tokenizer)
         {
             Tokenizer = tokenizer;
-            Text = "";
+            Text = new();
             Cursor = new(this);
             Cursor.Selections.Add(new EditorSelection(Cursor, 0));
             Server = server;
@@ -36,13 +34,15 @@ namespace EditorCore.Buffer
             OnUpdate();
         }
 
-        public EditorBuffer(Server.EditorServer server, Rope.Rope<char> content, BaseTokenizer tokenizer)
+        public EditorBuffer(Server.EditorServer server, string content, BaseTokenizer tokenizer)
         {
             Tokenizer = tokenizer;
-            Text = content;
+            Text = new();
             Cursor = new(this);
             Cursor.Selections.Add(new EditorSelection(Cursor, 0));
             Server = server;
+
+            Text.Insert(0, content);
 
             OnUpdate();
         }
@@ -54,16 +54,11 @@ namespace EditorCore.Buffer
                 return;
             }
             ActionOnUpdate?.Invoke(this);
-            Tokens = Tokenizer.ParseContent(Text);
+            Tokens = Tokenizer.ParseContent(Text.Substring(0));
             if (pushHistory)
             {
-                History.AddLast((Text, Cursor.Selections.Select(x => (x.Begin, x.End)).ToArray()));
-                while (History.Count > MaxHistorySize)
-                {
-                    History.RemoveFirst();
-                }
+                Text.PushHistory();
             }
-            RedoHistory.Clear();
         }
 
         public void OnSimpleUpdate()
@@ -72,42 +67,32 @@ namespace EditorCore.Buffer
 
         public void Undo()
         {
-            if (History.Last == null || Cursor == null)
+            if (Cursor == null)
             {
                 return;
             }
-            RedoHistory.AddLast(History.Last.Value);
-            while (RedoHistory.Count > MaxHistorySize)
-            {
-                RedoHistory.RemoveFirst();
-            }
-            (Text, var selections) = History.Last.Value;
-            Cursor.Selections = selections.Select(x => new EditorSelection(Cursor, x.Item1, x.Item2)).ToList();
-            Tokens = Tokenizer.ParseContent(Text);
-            History.RemoveLast();
+            Text.Undo();
+            //(Text, var selections) = History.Last.Value;
+            //Cursor.Selections = selections.Select(x => new EditorSelection(Cursor, x.Item1, x.Item2)).ToList();
+            Tokens = Tokenizer.ParseContent(Text.Substring(0));
         }
 
         public void Redo()
         {
-            if (RedoHistory.Last == null || Cursor == null)
+            if (Cursor == null)
             {
                 return;
             }
-            History.AddLast(RedoHistory.Last.Value);
-            while (History.Count > MaxHistorySize)
-            {
-                History.RemoveFirst();
-            }
-            (Text, var selections) = RedoHistory.Last.Value;
-            Cursor.Selections = selections.Select(x => new EditorSelection(Cursor, x.Item1, x.Item2)).ToList();
-            Tokens = Tokenizer.ParseContent(Text);
-            RedoHistory.RemoveLast();
+            Text.Redo();
+            //(Text, var selections) = RedoHistory.Last.Value;
+            //Cursor.Selections = selections.Select(x => new EditorSelection(Cursor, x.Item1, x.Item2)).ToList();
+            Tokens = Tokenizer.ParseContent(Text.Substring(0));
         }
 
-        public long InsertString(long position, Rope.Rope<char> data)
+        public long InsertString(long position, string data)
         {
             long length = data.Length;
-            Text = Text.InsertRange(position, data);
+            Text.Insert(position, data);
             /* move all cursors */
             if (Cursor != null)
             {
@@ -138,7 +123,7 @@ namespace EditorCore.Buffer
                 count += position;
                 position = 0;
             }
-            Text = Text.RemoveRange(position, count);
+            Text.RemoveAt(position, count);
             /* move all cursors */
             if (Cursor != null)
             {
@@ -174,16 +159,17 @@ namespace EditorCore.Buffer
             return res;
         }
 
-        public (long, Rope.Rope<char>?) GetLine(long line)
+        public (long, string?) GetLine(long line)
         {
-            Rope.Rope<char> text = Text;
+            string text = Text.Substring(0);
+            Console.WriteLine($"TEXT: {text}");
 
             if (line < 0)
             {
                 return (0, null);
             }
 
-            long index = 0;
+            int index = 0;
             for (long i = 0; i < line; ++i)
             {
                 if (index >= text.Length)
@@ -198,17 +184,17 @@ namespace EditorCore.Buffer
                 index++;
             }
 
-            long end = text.IndexOf('\n', index);
+            int end = text.IndexOf('\n', index);
             if (end == -1)
             {
-                return (index, text.Slice(index));
+                return (index, text.Substring(index));
             }
-            return (index, text.Slice(index, end - index + 1));
+            return (index, text.Substring(index, end - index + 1));
         }
         public (long, long) GetPositionOffsets(long position)
         {
             Debug.Assert(position >= 0);
-            long line = Text.Slice(0, position).Count(x => x == '\n');
+            long line = Text.Substring(0, position).Count(x => x == '\n');
             long last_newline = Text.LastIndexOf("\n", position - 1);
             long offset = position - last_newline - 1;
             return (line, offset);

@@ -23,28 +23,28 @@ namespace TextBuffer
         internal static extern int buffer_destroy(IntPtr ptr);
 
         [DllImport("msrope.dll", CallingConvention = CallingConvention.Cdecl)]
-        internal static extern int buffer_moditify_star(IntPtr ptr, UInt64 type, nint pos, nint len, string? text);
+        internal static extern int buffer_moditify_star(IntPtr ptr, UInt64 type, long pos, long len, string? text);
 
         [DllImport("msrope.dll", CallingConvention = CallingConvention.Cdecl)]
-        internal static extern int buffer_get_size(IntPtr ptr, ref nint length);
+        internal static extern int buffer_get_size(IntPtr ptr, ref long length);
 
         [DllImport("msrope.dll", CallingConvention = CallingConvention.Cdecl)]
-        internal static extern int buffer_read(IntPtr ptr, nint from, nint length, StringBuilder buffer);
+        internal static extern int buffer_read(IntPtr ptr, long from, long length, StringBuilder buffer);
 
         [DllImport("msrope.dll", CallingConvention = CallingConvention.Cdecl)]
-        internal static extern int buffer_version_set(IntPtr ptr, nint version);
+        internal static extern int buffer_version_set(IntPtr ptr, long version);
 
         [DllImport("msrope.dll", CallingConvention = CallingConvention.Cdecl)]
-        internal static extern int buffer_version_get(IntPtr ptr, ref nint version);
+        internal static extern int buffer_version_get(IntPtr ptr, ref long version);
 
         [DllImport("msrope.dll", CallingConvention = CallingConvention.Cdecl)]
-        internal static extern int buffer_version_before(IntPtr ptr, nint version, nint steps, ref nint result);
+        internal static extern int buffer_version_before(IntPtr ptr, long version, long steps, ref long result);
     }
 
     public class TextBuffer
     {
-        nint handle;
-        Stack<nint> undos;
+        IntPtr handle;
+        Stack<long> undos;
 
         public TextBuffer()
         {
@@ -52,7 +52,7 @@ namespace TextBuffer
             undos = [];
         }
 
-        public char this[int index] { 
+        public char this[long index] { 
             get 
             {
                 StringBuilder sb = new(1);
@@ -67,22 +67,27 @@ namespace TextBuffer
         }
 
         public int Length { get {
-                nint size = 0;
+                long size = 0;
                 CLibrary.buffer_get_size(handle, ref size);
                 return (int)size;
             } }
 
 
-        public string Substring(int pos, int len)
+        public string Substring(long pos, long len)
         {
-            StringBuilder sb = new(len);
+            // Console.WriteLine($"Req SUBSTR of len {len}");
+            StringBuilder sb = new((int)len + 10);
             CLibrary.buffer_read(handle, pos, len, sb);
-            return sb.ToString();
+            // Console.WriteLine($"READ sb of len {sb.Length}");
+            // TODO: fix this bug
+            return sb.ToString().Substring(0, (int)len);
         }
 
-        public int IndexOf(char item, int offset)
+        public string Substring(long pos) => Substring(pos, Length - pos);
+
+        public long IndexOf(char item, long offset)
         {
-            for (int i = offset; i < Length; ++i)
+            for (long i = offset; i < Length; ++i)
             {
                 if (this[i] == item)
                 {
@@ -92,11 +97,36 @@ namespace TextBuffer
             return -1;
         }
 
-        public int LastIndexOf(char item, int offset)
+        public long LastIndexOf(char item, long offset)
         {
-            for (int i = offset; i >= 0; --i)
+            for (long i = offset; i >= 0; --i)
             {
                 if (this[i] == item)
+                {
+                    return i;
+                }
+            }
+            return -1;
+        }
+
+        public long IndexOf(string item, long offset)
+        {
+            long l = Length;
+            for (long i = Math.Max(offset, 0); i + item.Length <= l; ++i)
+            {
+                if (Substring(i, item.Length) == item)
+                {
+                    return i;
+                }
+            }
+            return -1;
+        }
+
+        public long LastIndexOf(string item, long offset)
+        {
+            for (long i = Math.Min(offset - item.Length + 1, Length - item.Length); i >= 0; --i)
+            {
+                if (Substring(i, item.Length) == item)
                 {
                     return i;
                 }
@@ -106,8 +136,8 @@ namespace TextBuffer
 
         public void Undo()
         {
-            nint version = 0;
-            nint result = 0;
+            long version = 0;
+            long result = 0;
             CLibrary.buffer_version_get(handle, ref version);
             CLibrary.buffer_version_before(handle, version, 1, ref result);
             CLibrary.buffer_version_set(handle, result);
@@ -116,24 +146,29 @@ namespace TextBuffer
 
         public void Redo()
         {
-            if (undos.TryPop(out nint version))
+            if (undos.TryPop(out long version))
             {
                 CLibrary.buffer_version_set(handle, version);
             }
         }
 
-        public void Insert(int index, string item)
+        public void Insert(long index, string item)
         {
             undos.Clear();
             CLibrary.buffer_moditify_star(handle, Modification.Insert, index, item.Length, item);
         }
 
-        public void RemoveAt(int index, int count = 1)
+        public void RemoveAt(long index, long count = 1)
         {
             undos.Clear();
             CLibrary.buffer_moditify_star(handle, Modification.Delete, index, count, null);
         }
 
         public void Clear() => RemoveAt(0, Length);
+
+        public void PushHistory()
+        {
+            // TODO: this
+        }
     }
 }

@@ -21,7 +21,7 @@ namespace SDL2Interface
         {
             if (editType == "powerEdit")
             {
-                var res = buffer.Server.CommandProvider.Execute(buffer.Text.ToString(), usingCursor.Selections.ToArray());
+                var res = buffer.Server.CommandProvider.Execute(buffer.Text.Substring(0), usingCursor.Selections.ToArray());
                 return (res.Item1?.Select(x => x.ToString()).Where(x => x != null).Cast<string>(), res.Item2);
             }
             else
@@ -29,9 +29,9 @@ namespace SDL2Interface
                 var text = usingCursor.SelectionsText.Where(x => x != "").ToArray();
                 if (text.Length == 0)
                 {
-                    text = [usingCursor.Buffer.Text.ToString()];
+                    text = [usingCursor.Buffer.Text.Substring(0)];
                 }
-                var res = buffer.Server.CommandProvider.Execute(buffer.Text.ToString(), text);
+                var res = buffer.Server.CommandProvider.Execute(buffer.Text.Substring(0), text);
                 return (res.Item1?.Select(x => x.ToString()).Where(x => x != null).Cast<string>(), res.Item2);
             }
         }
@@ -50,11 +50,11 @@ namespace SDL2Interface
         {
             if (editType == "powerEdit")
             {
-                usingCursor.ApplyCommand("powerEdit", buffer.Text.ToString());
+                usingCursor.ApplyCommand("powerEdit", buffer.Text.Substring(0));
             }
             else /* edit or replace events */
             {
-                usingCursor.ApplyCommand("edit", buffer.Text.ToString());
+                usingCursor.ApplyCommand("edit", buffer.Text.Substring(0));
             }
             usingCursor.Commit();
         }

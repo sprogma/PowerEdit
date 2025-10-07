@@ -26,10 +26,10 @@ namespace SDL2Interface
             long lastToken = 0;
             for (int i = 0; i < H / textRenderer.FontLineStep; ++i)
             {
-                (long index, Rope.Rope<char>? s) = buffer.GetLine(i);
+                (long index, string? s) = buffer.GetLine(i);
                 if (s != null)
                 {
-                    textRenderer.DrawTextLine(leftBarSize + position.X + 5, position.Y + i * textRenderer.FontLineStep, s.Value, index, buffer.Tokens, ref lastToken);
+                    textRenderer.DrawTextLine(leftBarSize + position.X + 5, position.Y + i * textRenderer.FontLineStep, s, index, buffer.Tokens, ref lastToken);
                 }
             }
         }
@@ -41,7 +41,7 @@ namespace SDL2Interface
             /* draw numbers */
             for (int i = 0; i < H / textRenderer.FontLineStep; ++i)
             {
-                (long index, Rope.Rope<char>? s) = buffer.GetLine(i);
+                (long index, string? s) = buffer.GetLine(i);
                 if (s != null)
                 {
                     int num = i;

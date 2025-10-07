@@ -25,7 +25,7 @@ namespace SDL2Interface
 
         private void Apply()
         {
-            usingCursor.ApplyCommand("find", buffer.Text.ToString());
+            usingCursor.ApplyCommand("find", buffer.Text.Substring(0));
         }
 
         public override bool HandleEvent(Event e)

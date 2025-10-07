@@ -1,5 +1,4 @@
-﻿using Rope;
-using System.Linq;
+﻿using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 
@@ -7,15 +6,15 @@ namespace RegexTokenizer
 {
     public partial class CTokenizer : BaseTokenizer
     {
-        public override List<Token> ParseContent(Rope<char> content)
+        public override List<Token> ParseContent(string content)
         {
             List<Token> result = [];
             /* 1. first parse comments and strings using loop */
-            long pos = 0;
+            int pos = 0;
             while (pos < content.Length)
             {
-                long end;
-                if (content.Slice(pos).StartsWith("//"))
+                int end;
+                if (content.Substring(pos).StartsWith("//"))
                 {
                     end = content.IndexOf('\n', pos);
                     if (end == -1) { end = content.Length; }
@@ -32,7 +31,7 @@ namespace RegexTokenizer
                     result.Add(new Token(TokenType.Comment, pos, end));
                     pos = end + 1;
                 }
-                else if (content.Slice(pos).StartsWith("/*"))
+                else if (content.Substring(pos).StartsWith("/*"))
                 {
                     end = content.IndexOf("*/", pos + 2);
                     if (end == -1) { end = content.Length; }
@@ -40,7 +39,7 @@ namespace RegexTokenizer
                     result.Add(new Token(TokenType.MultilineComment, pos, end + 1));
                     pos = end + 2;
                 }
-                else if (content.Slice(pos).StartsWith("'"))
+                else if (content.Substring(pos).StartsWith("'"))
                 {
                     end = content.IndexOf('\'', pos + 1);
                     if (end == -1) { end = content.Length; }
@@ -55,7 +54,7 @@ namespace RegexTokenizer
                     result.Add(new Token(TokenType.Char, pos, end));
                     pos = end + 1;
                 }
-                else if (content.Slice(pos).StartsWith("\""))
+                else if (content.Substring(pos).StartsWith("\""))
                 {
                     end = content.IndexOf('"', pos + 1);
                     if (end == -1) { end = content.Length; }
@@ -70,9 +69,9 @@ namespace RegexTokenizer
                     result.Add(new Token(TokenType.String, pos, end));
                     pos = end + 1;
                 }
-                else if (content.Slice(pos).StartsWith("R\""))
+                else if (content.Substring(pos).StartsWith("R\""))
                 {
-                    string beginString = content.Slice(pos, Math.Min(content.Length - pos, 64)).ToString();
+                    string beginString = content.Substring(pos, Math.Min(content.Length - pos, 64)).ToString();
                     Match match = RStringRegex().Match(beginString);
                     if (match.Success == false)
                     {
@@ -101,13 +100,13 @@ namespace RegexTokenizer
             pos = 0;
             while (pos < content.Length)
             {
-                long end = content.IndexOf('\n', pos + 1);
+                int end = content.IndexOf('\n', pos + 1);
                 if (end == -1)
                 {
                     end = content.Length;
                 }
 
-                Rope<char> lineSlice = content.Slice(pos, end - pos);
+                string lineSlice = content.Substring(pos, end - pos);
                 string line = lineSlice.ToString();
 
                 MatchCollection res = OtherComponentsRegex().Matches(line);

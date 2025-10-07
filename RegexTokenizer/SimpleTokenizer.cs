@@ -1,5 +1,4 @@
-﻿using Rope;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -9,7 +8,7 @@ namespace RegexTokenizer
 {
     public class SimpleTokenizer : BaseTokenizer
     {
-        public override List<Token> ParseContent(Rope<char> content)
+        public override List<Token> ParseContent(string content)
         {
             return [];
         }

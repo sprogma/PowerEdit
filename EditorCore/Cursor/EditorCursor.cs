@@ -42,16 +42,16 @@ namespace EditorCore.Cursor
                     break;
                 case "edit":
                     {
-                        Rope.Rope<char>[] args;
+                        string[] args;
                         bool used_all_text = false;
                         if (Selections.Count == 0 || Selections.All(x => x.TextLength == 0))
                         {
-                            args = [Buffer.Text];
+                            args = [Buffer.Text.Substring(0)];
                             used_all_text = true;
                         }
                         else
                         {
-                            args = Selections.Select(x => x.Text).OfType<Rope.Rope<char>>().ToArray();
+                            args = Selections.Select(x => x.Text).OfType<string>().ToArray();
                         }
                         (var enumerable_result, string? error_string) = Buffer.Server.CommandProvider.Execute(command, args.Select(x => x.ToString()).ToArray());
                         var result = enumerable_result?.Select(x => x.ToString()).
@@ -118,7 +118,7 @@ namespace EditorCore.Cursor
                     }
                     if (textFields.Count == 0)
                     {
-                        textFields.Add((0, Buffer.Text.ToString()));
+                        textFields.Add((0, Buffer.Text.Substring(0)));
                     }
                     Selections.Clear();
                     foreach (var (index, value) in textFields)

@@ -142,7 +142,12 @@ int buffer_destroy(struct buffer *b)
 int buffer_moditify(struct buffer *b, struct modification *mod)
 {
     assert(0 <= mod->pos);
-    assert(0 < mod->len);
+    assert(0 <= mod->len); // TODO: fix bugs and make it 0 -> 1
+
+    if (mod->len == 0)
+    {
+        return 0;
+    }
 
     /* create new version */
     ssize_t version = 0;
@@ -289,7 +294,12 @@ int buffer_get_size(struct buffer *b, ssize_t *length)
 int buffer_read(struct buffer *b, ssize_t from, ssize_t length, char *buffer)
 {
     assert(0 <= from);
-    assert(1 <= length);
+    assert(0 <= length); // TODO: fix bugs and make it 0 -> 1
+
+    if (length == 0)
+    {
+        return 0;
+    }
     
     /* find first block to read from */
     ssize_t pos = 0, size = 0;

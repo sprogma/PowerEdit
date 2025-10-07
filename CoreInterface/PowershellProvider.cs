@@ -1,5 +1,4 @@
 ﻿using RegexTokenizer;
-using Rope;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
