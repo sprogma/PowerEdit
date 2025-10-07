@@ -44,10 +44,12 @@ namespace TextBuffer
     public class TextBuffer
     {
         nint handle;
+        Stack<nint> undos;
 
         public TextBuffer()
         {
             CLibrary.buffer_create(ref handle);
+            undos = [];
         }
 
         public char this[int index] { 
@@ -106,23 +108,29 @@ namespace TextBuffer
         {
             nint version = 0;
             nint result = 0;
-            CLibrary.buffer_version_current(handle, ref version);
+            CLibrary.buffer_version_get(handle, ref version);
             CLibrary.buffer_version_before(handle, version, 1, ref result);
             CLibrary.buffer_version_set(handle, result);
+            undos.Push(version);
         }
 
         public void Redo()
         {
-
+            if (undos.TryPop(out nint version))
+            {
+                CLibrary.buffer_version_set(handle, version);
+            }
         }
 
         public void Insert(int index, string item)
         {
+            undos.Clear();
             CLibrary.buffer_moditify_star(handle, Modification.Insert, index, item.Length, item);
         }
 
         public void RemoveAt(int index, int count = 1)
         {
+            undos.Clear();
             CLibrary.buffer_moditify_star(handle, Modification.Delete, index, count, null);
         }
 

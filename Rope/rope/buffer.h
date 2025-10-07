@@ -9,6 +9,7 @@ struct buffer
 {
     ssize_t  version;
     ssize_t *version_tree;
+    ssize_t *version_depth;
     ssize_t *version_skiplist;
     ssize_t  version_tree_len;
     ssize_t  version_tree_alloc;

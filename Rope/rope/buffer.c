@@ -50,16 +50,27 @@ static int buffer_new_version(struct buffer *b, ssize_t parent, ssize_t *result_
     {
         b->version_tree_alloc = 2 * b->version_tree_alloc + !(b->version_tree_alloc);
         void *new_ptr_1 = realloc(b->version_tree, sizeof(*b->version_tree) * b->version_tree_alloc);
-        void *new_ptr_2 = realloc(b->version_skiplist, sizeof(*b->version_skiplist) * b->version_tree_alloc);
-        if (new_ptr_1 == NULL || new_ptr_2 == NULL)
+        void *new_ptr_2 = realloc(b->version_depth, sizeof(*b->version_depth) * b->version_tree_alloc);
+        void *new_ptr_3 = realloc(b->version_skiplist, sizeof(*b->version_skiplist) * b->version_tree_alloc);
+        if (new_ptr_1 == NULL || new_ptr_2 == NULL || new_ptr_3)
         {
             return 1;
         }
         b->version_tree = new_ptr_1;
-        b->version_skiplist = new_ptr_2;
+        b->version_depth = new_ptr_2;
+        b->version_skiplist = new_ptr_3;
     }
     b->version_tree[b->version_tree_len] = parent;
-    b->version_skiplist[b->version_tree_len] = b->version_tree[b->version_skiplist[parent]];
+    b->version_depth[b->version_tree_len] = b->version_depth[parent] + 1;
+    if (b->version_depth[parent] - b->version_depth[b->version_skiplist[parent]] ==
+        b->version_depth[b->version_skiplist[parent]] - b->version_depth[b->version_skiplist[b->version_skiplist[parent]]])
+    {
+        b->version_skiplist[b->version_tree_len] = b->version_depth[b->version_skiplist[b->version_skiplist[parent]]];
+    }
+    else
+    {    
+        b->version_skiplist[b->version_tree_len] = parent;
+    }
     *result_version = b->version_tree_len++;
     return 0;
 }
@@ -88,6 +99,7 @@ int buffer_init(struct buffer *b)
     b->version_tree_len = 0;
     b->version_tree_alloc = 16;
     b->version_tree = malloc(sizeof(*b->version_tree) * b->version_tree_alloc);
+    b->version_depth = malloc(sizeof(*b->version_skiplist) * b->version_tree_alloc);
     b->version_skiplist = malloc(sizeof(*b->version_skiplist) * b->version_tree_alloc);
     
     b->blocks_len = 0;
@@ -101,7 +113,9 @@ int buffer_init(struct buffer *b)
 
     /* create loop on first version! */
     b->version_tree[0] = 0;
+    b->version_depth[0] = 0;
     b->version_skiplist[0] = 0;
+    b->version_tree_len = 1;
     
     /* create first text block */
     buffer_reserve_blocks(b, 1);
@@ -129,7 +143,15 @@ int buffer_moditify(struct buffer *b, struct modification *mod)
 {
     assert(0 <= mod->pos);
     assert(0 < mod->len);
-    
+
+    /* create new version */
+    ssize_t version = 0;
+    if (buffer_new_version(b, b->version, &version) != 0 || version == 0)
+    {
+        return 4;
+    }
+    b->version = version;
+        
     /* find buffer to modificate */
     switch (mod->type)
     {
@@ -139,11 +161,17 @@ int buffer_moditify(struct buffer *b, struct modification *mod)
             for (ssize_t i = 0; i < b->blocks_len; ++i, pos += size)
             {
                 size = 0;
-                textblock_get_size(b->blocks[i], &size);
+                if (textblock_get_size(b, b->blocks[i], &size, b->version) != 0)
+                {
+                    return 9;
+                }
                 if (pos <= mod->pos && mod->pos < pos + size)
                 {
                     /* this buffer contains position for modification */
-                    textblock_modificate(b->blocks[i], mod);
+                    if (textblock_modificate(b, b->blocks[i], mod, b->version) != 0)
+                    {
+                        return 9;
+                    }
                     return 0;
                 }
             }
@@ -151,15 +179,24 @@ int buffer_moditify(struct buffer *b, struct modification *mod)
             if (b->blocks_len == 0 && mod->pos == 0)
             {
                 /* create first block */
-                buffer_reserve_blocks(b, 1);
+                if (buffer_reserve_blocks(b, 1) != 0)
+                {
+                    return 5;
+                }
                 
                 b->blocks_len++;
                 b->blocks[0] = malloc(sizeof(*b->blocks[0]));
-                textblock_init(b->blocks[0]);
+                if (textblock_init(b->blocks[0]) != 0)
+                {
+                    return 9;
+                }
             }
             else if (pos == mod->pos)
             {
-                textblock_modificate(b->blocks[b->blocks_len - 1], mod);
+                if (textblock_modificate(b, b->blocks[b->blocks_len - 1], mod, b->version) != 0)
+                {
+                    return 9;
+                }
             }
             else
             {
@@ -174,12 +211,18 @@ int buffer_moditify(struct buffer *b, struct modification *mod)
             for (ssize_t i = 0; i < b->blocks_len; ++i, pos += size)
             {
                 size = 0;
-                textblock_get_size(b->blocks[i], &size);
+                if (textblock_get_size(b, b->blocks[i], &size, b->version))
+                {
+                    return 9;
+                }
                 /* is block fully deleted? */
                 if (mod->pos <= pos && pos + size <= mod->pos + mod->len)
                 {
                     /* delete entire block */
-                    buffer_delete_block(b, i);
+                    if (buffer_delete_block(b, i) != 0)
+                    {
+                        return 9;
+                    }
                     /* update this loop counter */
                     --i;
                     continue;
@@ -190,7 +233,10 @@ int buffer_moditify(struct buffer *b, struct modification *mod)
                     struct modification new_mod = *mod;
                     new_mod.pos = 0;
                     new_mod.len = mod->pos + mod->len - pos;
-                    textblock_modificate(b->blocks[i], &new_mod);
+                    if (textblock_modificate(b, b->blocks[i], &new_mod, b->version) != 0)
+                    {
+                        return 9;
+                    }
                 }
                 /* is deleted some suffix of block? */
                 else if (mod->pos < pos + size && mod->pos + mod->len >= pos + size)
@@ -198,7 +244,10 @@ int buffer_moditify(struct buffer *b, struct modification *mod)
                     struct modification new_mod = *mod;
                     new_mod.pos = mod->pos - pos;
                     new_mod.len = pos + size - mod->pos;
-                    textblock_modificate(b->blocks[i], &new_mod);
+                    if (textblock_modificate(b, b->blocks[i], &new_mod, b->version) != 0)
+                    {
+                        return 9;
+                    }
                 }
                 /* else - is is something ? */
                 else if (pos < mod->pos && mod->pos + mod->len < pos + size)
@@ -206,7 +255,10 @@ int buffer_moditify(struct buffer *b, struct modification *mod)
                     struct modification new_mod = *mod;
                     new_mod.pos = mod->pos - pos;
                     new_mod.len = mod->len;
-                    textblock_modificate(b->blocks[i], &new_mod);
+                    if (textblock_modificate(b, b->blocks[i], &new_mod, b->version) != 0)
+                    {
+                        return 9;
+                    }
                 }
                 else
                 {
@@ -228,7 +280,7 @@ int buffer_get_size(struct buffer *b, ssize_t *length)
     for (ssize_t i = 0; i < b->blocks_len; ++i)
     {
         ssize_t size = 0;
-        textblock_get_size(b->blocks[i], &size);
+        textblock_get_size(b, b->blocks[i], &size, b->version);
         len += size;
     }
     *length = len;
@@ -245,7 +297,7 @@ int buffer_read(struct buffer *b, ssize_t from, ssize_t length, char *buffer)
     for (ssize_t i = 0; i < b->blocks_len; ++i, pos += size)
     {
         size = 0;
-        textblock_get_size(b->blocks[i], &size);
+        textblock_get_size(b, b->blocks[i], &size, b->version);
         printf("SPAN: %zd-%zd READ %zd-%zd\n", pos, size, from, length);
         /* if we read any part of this block */
         if (pos <= from && from < pos + size)
@@ -253,7 +305,7 @@ int buffer_read(struct buffer *b, ssize_t from, ssize_t length, char *buffer)
             /* find this part's size and position */
             ssize_t start = (from > pos ? from : pos);
             ssize_t end = (from + length > pos + size ? pos + size : from + length);
-            textblock_read(b->blocks[i], start, end - start, buffer);
+            textblock_read(b, b->blocks[i], start, end - start, buffer, b->version);
             buffer += end - start;
             total_read += end - start;
         }
@@ -296,14 +348,57 @@ int buffer_version_before(struct buffer *b, ssize_t version, ssize_t steps, ssiz
 }
 
 
+static ssize_t up_variant(struct buffer *b, ssize_t x, ssize_t add)
+{
+    while (b->version_tree[x] != x && add > 0)
+    {
+        ssize_t d = b->version_depth[x] - b->version_depth[b->version_skiplist[x]];
+        if (d <= add)
+        {
+            x = b->version_skiplist[x];
+            add -= d;
+        }
+        else
+        {
+            x = b->version_tree[x];
+            add--;
+        }
+    }
+
+    return x;
+}
+
+
 int buffer_version_lca(struct buffer *b, ssize_t version_a, ssize_t version_b, ssize_t *result)
 {
-    ssize_t was_len = 0;
-    ssize_t was_alloc = 16;
-    ssize_t *was = malloc(sizeof(*was) * was_alloc);
-
-    while (1)
+    if (b->version_depth[version_a] > b->version_depth[version_b])
     {
-        if ()
+        version_a = up_variant(b, version_a, b->version_depth[version_a] - b->version_depth[version_b]);
     }
+    if (b->version_depth[version_a] < b->version_depth[version_b])
+    {
+        version_b = up_variant(b, version_b, b->version_depth[version_b] - b->version_depth[version_a]);
+    }
+
+    assert(b->version_depth[version_a] == b->version_depth[version_b]);
+
+    ssize_t jump = version_a;
+
+    while (version_a != version_b)
+    {
+        ssize_t tmp_a = up_variant(b, version_a, jump);
+        ssize_t tmp_b = up_variant(b, version_b, jump);
+        if (tmp_a != tmp_b)
+        {
+            version_a = tmp_a;
+            version_b = tmp_b;
+        }
+        else
+        {
+            jump /= 2;
+        }
+    }
+
+    *result = version_a;
+    return 0;
 }
