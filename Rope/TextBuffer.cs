@@ -14,6 +14,7 @@ namespace TextBuffer
         public const UInt64 Delete = 1;
     };
 
+
     internal static class CLibrary
     {
         [DllImport("msrope.dll", CallingConvention = CallingConvention.Cdecl)]
@@ -29,7 +30,7 @@ namespace TextBuffer
         internal static extern int buffer_get_size(IntPtr ptr, ref long length);
 
         [DllImport("msrope.dll", CallingConvention = CallingConvention.Cdecl)]
-        internal static extern int buffer_read(IntPtr ptr, long from, long length, StringBuilder buffer);
+        internal static extern int buffer_read(IntPtr ptr, long from, long length, IntPtr buffer);
 
         [DllImport("msrope.dll", CallingConvention = CallingConvention.Cdecl)]
         internal static extern int buffer_version_set(IntPtr ptr, long version);
@@ -53,11 +54,13 @@ namespace TextBuffer
         }
 
         public char this[long index] { 
-            get 
+            get
             {
-                StringBuilder sb = new(1);
-                CLibrary.buffer_read(handle, index, 1, sb);
-                return sb[0];
+                IntPtr destPtr = Marshal.AllocHGlobal(1);
+                CLibrary.buffer_read(handle, index, 1, destPtr);
+                string res = Marshal.PtrToStringAnsi(destPtr, 1);
+                Marshal.FreeHGlobal(destPtr);
+                return res[0];
             } 
             set
             {
@@ -76,11 +79,11 @@ namespace TextBuffer
         public string Substring(long pos, long len)
         {
             // Console.WriteLine($"Req SUBSTR of len {len}");
-            StringBuilder sb = new((int)len + 10);
-            CLibrary.buffer_read(handle, pos, len, sb);
-            // Console.WriteLine($"READ sb of len {sb.Length}");
-            // TODO: fix this bug
-            return sb.ToString().Substring(0, (int)len);
+            IntPtr destPtr = Marshal.AllocHGlobal((int)(len + 10));
+            CLibrary.buffer_read(handle, pos, len, destPtr);
+            string res = Marshal.PtrToStringAnsi(destPtr, (int)len);
+            Marshal.FreeHGlobal(destPtr);
+            return res;
         }
 
         public string Substring(long pos) => Substring(pos, Length - pos);

@@ -16,34 +16,37 @@
 
 static int textblock_history_reserve(struct textblock *t, ssize_t size)
 {
+    printf("reserve history\n");
     ssize_t old_size = t->history_buffer_alloc;
-    while (size > t->history_buffer_alloc)
+    while (size + 1 > t->history_buffer_alloc)
     {
         t->history_buffer_alloc = 2 * t->history_buffer_alloc + !(t->history_buffer_alloc);
     }
-    void *new_ptr_1 = realloc(t->history_buffer, sizeof(*t->history_buffer) * t->history_buffer_alloc);
-    void *new_ptr_2 = realloc(t->history_len_buffer, sizeof(*t->history_len_buffer) * t->history_buffer_alloc);
-    if (new_ptr_1 == NULL || new_ptr_2 == NULL)
+    if (t->history_buffer_alloc != old_size)
     {
-        return 1;
+        void *new_ptr_1 = realloc(t->history_buffer, sizeof(*t->history_buffer) * t->history_buffer_alloc);
+        void *new_ptr_2 = realloc(t->history_len_buffer, sizeof(*t->history_len_buffer) * t->history_buffer_alloc);
+        if (new_ptr_1 == NULL || new_ptr_2 == NULL)
+        {
+            return 1;
+        }
+        t->history_buffer = new_ptr_1;
+        t->history_len_buffer = new_ptr_2;
+        memset(t->history_buffer + old_size, 0, sizeof(*t->history_buffer) * (t->history_buffer_alloc - old_size));
+        memset(t->history_len_buffer + old_size, 0, sizeof(*t->history_len_buffer) * (t->history_buffer_alloc - old_size));
+        printf("ret\n");
     }
-    memset(t->history_buffer + old_size, 0, sizeof(*t->history_buffer) * (t->history_buffer_alloc - old_size));
-    memset(t->history_len_buffer + old_size, 0, sizeof(*t->history_len_buffer) * (t->history_buffer_alloc - old_size));
-    t->history_buffer = new_ptr_1;
-    t->history_len_buffer = new_ptr_2;
     return 0;
 }
 
 
 static size_t base_of(struct buffer *b, struct textblock *t, ssize_t version)
 {
-    ssize_t parent = version;
-
-    while (t->history_buffer[parent] == NULL && parent != b->version_tree[parent])
+    while (t->history_buffer[version] == NULL && version != b->version_tree[version])
     {
-        parent = b->version_tree[parent];
+        version = b->version_tree[version];
     }
-    return parent;
+    return version;
 }
 
 
@@ -78,10 +81,12 @@ int textblock_modificate(struct buffer *b, struct textblock *t, struct modificat
 
     /* find block state in this version: */
     ssize_t parent = base_of(b, t, version);
+    printf("Parent %lld Version %lld buf: %p buf %p\n", parent, version, t->history_buffer[parent], t->history_buffer[version]);
     if (t->history_buffer[parent] == NULL)
     {
         return 1;
     }
+
     
     switch (mod->type)
     {
@@ -94,6 +99,7 @@ int textblock_modificate(struct buffer *b, struct textblock *t, struct modificat
             memcpy(tmp + mod->pos + mod->len, old + mod->pos, t->history_len_buffer[parent] - mod->pos);
             t->history_buffer[version] = tmp;
             t->history_len_buffer[version] = t->history_len_buffer[parent] + mod->len;
+            printf("Len = %lld = %lld + %lld\n", t->history_len_buffer[version], t->history_len_buffer[parent], mod->len);
             break;
         }
         case ModificationDelete:
@@ -114,6 +120,8 @@ int textblock_modificate(struct buffer *b, struct textblock *t, struct modificat
 
 int textblock_get_size(struct buffer *b, struct textblock *t, ssize_t *size, ssize_t version)
 {
+    textblock_history_reserve(t, version);
+        
     /* find block state in this version: */
     ssize_t parent = base_of(b, t, version);
     if (t->history_buffer[parent] == NULL)
@@ -121,13 +129,15 @@ int textblock_get_size(struct buffer *b, struct textblock *t, ssize_t *size, ssi
         return 1;
     }
    
-    printf("return len: %zd\n", t->history_len_buffer[parent]);
+    printf("return len [version %zd [parent %zd]]: %zd\n", version, parent, t->history_len_buffer[parent]);
     *size = t->history_len_buffer[parent];
     return 0;
 }
 
 int textblock_read(struct buffer *b, struct textblock *t, ssize_t from, ssize_t length, char *buffer, ssize_t version)
 {
+    textblock_history_reserve(t, version);   
+
     /* find block state in this version: */
     ssize_t parent = base_of(b, t, version);
     if (t->history_buffer[parent] == NULL)
