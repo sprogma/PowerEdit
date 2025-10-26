@@ -226,6 +226,11 @@ namespace SDL2Interface
                         DeleteSelf();
                         return false;
                     }
+                    else if (e.Keyboard.Keysym.Scancode == Scancode.Escape)
+                    {
+                        DeleteSelf();
+                        return false;
+                    }
                     break;
             }
             return base.HandleEvent(e);

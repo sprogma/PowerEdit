@@ -36,7 +36,7 @@ namespace EditorCore.File
             }
             if (filename != null)
             {
-                System.IO.File.WriteAllText(filename, Buffer.Text.ToString());
+                Buffer.Text.SaveToFile(filename);
             }
         }
 

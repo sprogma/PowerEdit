@@ -14,6 +14,7 @@ namespace SDL2Interface
     internal class SimpleTextWindow : BaseWindow
     {
         internal EditorBuffer buffer;
+        public long viewOffset = 0;
         public bool showNumbers = true;
 
         public SimpleTextWindow(EditorBuffer buffer, Rect position) : base(position)
@@ -24,12 +25,13 @@ namespace SDL2Interface
         public void SimpleTextWindowDrawText(int leftBarSize)
         {
             long lastToken = 0;
-            for (int i = 0; i < H / textRenderer.FontLineStep; ++i)
+            for (int t = 0; t < H / textRenderer.FontLineStep; ++t)
             {
+                int i = t + (int)viewOffset;
                 (long index, string? s) = buffer.GetLine(i);
                 if (s != null)
                 {
-                    textRenderer.DrawTextLine(leftBarSize + position.X + 5, position.Y + i * textRenderer.FontLineStep, s, index, buffer.Tokens, ref lastToken);
+                    textRenderer.DrawTextLine(leftBarSize + position.X + 5, position.Y + t * textRenderer.FontLineStep, s, index, buffer.Tokens, ref lastToken);
                 }
             }
         }
@@ -39,13 +41,14 @@ namespace SDL2Interface
             int maxPower = 4;
             long dummyValue = 0;
             /* draw numbers */
-            for (int i = 0; i < H / textRenderer.FontLineStep; ++i)
+            for (int t = 0; t < H / textRenderer.FontLineStep; ++t)
             {
+                int i = t + (int)viewOffset;
                 (long index, string? s) = buffer.GetLine(i);
                 if (s != null)
                 {
                     int num = i;
-                    textRenderer.DrawTextLine(position.X + 5, position.Y + i * textRenderer.FontLineStep, num.ToString().PadLeft(maxPower), 0, [], ref dummyValue);
+                    textRenderer.DrawTextLine(position.X + 5, position.Y + t * textRenderer.FontLineStep, num.ToString().PadLeft(maxPower), 0, [], ref dummyValue);
                 }
             }
             leftBarSize = (int)((maxPower + 0.5) * textRenderer.FontStep);

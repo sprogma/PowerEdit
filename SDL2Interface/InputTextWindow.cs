@@ -24,6 +24,29 @@ namespace SDL2Interface
             this.cursor = buffer.Cursor;
         }
 
+        public override void PreDraw()
+        {
+            base.PreDraw();
+
+            if (cursor == null)
+            {
+                return;
+            }
+            /* align offset to see cursor */
+            if (cursor.Selections.Count > 0)
+            {
+                long cursorLine = cursor.Selections[0].MinLine;
+                if (cursorLine < viewOffset + 3)
+                {
+                    viewOffset = cursorLine - 3;
+                }
+                if (cursorLine > viewOffset + H / textRenderer.FontLineStep - 4)
+                {
+                    viewOffset = cursorLine - H / textRenderer.FontLineStep + 4;
+                }
+            }
+        }
+
         public override void DrawElements()
         {
             SDL.SetRenderDrawColor(renderer, 0, 0, 0, 0);
@@ -39,8 +62,9 @@ namespace SDL2Interface
                     int maxPower = 4;
                     long dummyValue = 0;
                     /* draw numbers */
-                    for (int i = 0; i < H / textRenderer.FontLineStep; ++i)
+                    for (int t = 0; t < H / textRenderer.FontLineStep; ++t)
                     {
+                        int i = t + (int)viewOffset;
                         (long index, string? s) = buffer.GetLine(i);
                         if (s != null)
                         {
@@ -55,13 +79,13 @@ namespace SDL2Interface
                             }
                             if (num == 0)
                             {
-                                Rect rect = new(position.X + 5, position.Y + i * textRenderer.FontLineStep, position.Width - 10, textRenderer.FontLineStep);
+                                Rect rect = new(position.X + 5, position.Y + t * textRenderer.FontLineStep, position.Width - 10, textRenderer.FontLineStep);
                                 SDL.SetRenderDrawColor(renderer, 0, 20, 20, 255);
                                 SDL.RenderFillRect(renderer, ref rect);
                             }
                             else
                             {
-                                textRenderer.DrawTextLine(position.X + 5, position.Y + i * textRenderer.FontLineStep, num.ToString().PadLeft(maxPower), 0, [], ref dummyValue);
+                                textRenderer.DrawTextLine(position.X + 5, position.Y + t * textRenderer.FontLineStep, num.ToString().PadLeft(maxPower), 0, [], ref dummyValue);
                             }
                         }
                     }
@@ -83,14 +107,14 @@ namespace SDL2Interface
                 {
                     {
                         (long line, long offset) = buffer.GetPositionOffsets(selection.End);
-                        Rect r = new(leftBarSize + position.X + 5 + (int)offset * textRenderer.FontStep, position.Y + (int)line * textRenderer.FontLineStep, 5, textRenderer.FontLineStep);
+                        Rect r = new(leftBarSize + position.X + 5 + (int)offset * textRenderer.FontStep, position.Y + (int)(line - viewOffset) * textRenderer.FontLineStep, 5, textRenderer.FontLineStep);
                         SDL.RenderFillRect(renderer, ref r);
                     }
                     int selectionWidth = (int)(5 * textRenderer.currentScale);
                     for (long p = selection.Min; p < selection.Max; ++p)
                     {
                         (long line, long offset) = buffer.GetPositionOffsets(p);
-                        Rect r = new(leftBarSize + position.X + 5 + (int)offset * textRenderer.FontStep, position.Y + (int)line * textRenderer.FontLineStep + textRenderer.FontLineStep - selectionWidth, textRenderer.FontStep, selectionWidth);
+                        Rect r = new(leftBarSize + position.X + 5 + (int)offset * textRenderer.FontStep, position.Y + (int)(line - viewOffset) * textRenderer.FontLineStep + textRenderer.FontLineStep - selectionWidth, textRenderer.FontStep, selectionWidth);
                         SDL.RenderFillRect(renderer, ref r);
                     }
                 }

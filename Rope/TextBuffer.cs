@@ -202,5 +202,10 @@ namespace TextBuffer
             Console.WriteLine($"Get array!");
             return result;
         }
+
+        public void SaveToFile(string filename)
+        {
+            File.WriteAllText(filename, Substring(0));
+        }
     }
 }
