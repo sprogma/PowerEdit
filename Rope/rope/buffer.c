@@ -36,6 +36,7 @@ static int buffer_delete_block(struct buffer *b, ssize_t index)
 
     struct textblock *deleted = b->blocks[index];
     memmove(b->blocks + index, b->blocks + index + 1, sizeof(*b->blocks) * (b->blocks_len - index - 1));
+    b->blocks_len--;
     textblock_destroy(deleted);
     free(deleted);
     return 0;
@@ -200,6 +201,10 @@ int buffer_moditify(struct buffer *b, struct modification *mod)
                 {
                     return 9;
                 }
+                if (textblock_modificate(b, b->blocks[b->blocks_len - 1], mod, b->version) != 0)
+                {
+                    return 9;
+                }
             }
             else // if (pos == mod->pos)
             {
@@ -219,6 +224,7 @@ int buffer_moditify(struct buffer *b, struct modification *mod)
         case ModificationDelete:
         {
             ssize_t pos = 0, size = 0;
+            assert(b->blocks_len == 1);
             for (ssize_t i = 0; i < b->blocks_len; ++i, pos += size)
             {
                 size = 0;
@@ -227,16 +233,25 @@ int buffer_moditify(struct buffer *b, struct modification *mod)
                     return 9;
                 }
                 /* is block fully deleted? */
+                printf("IS DEL FULL: %zd %zd   %zd %zd\n", mod->pos, mod->len, pos, size);
                 if (mod->pos <= pos && pos + size <= mod->pos + mod->len)
                 {
-                    /* delete entire block */
-                    if (buffer_delete_block(b, i) != 0)
+                    // CAN't delete block, becouse of history, which is stored in it.
+                    // /* delete entire block */
+                    // if (buffer_delete_block(b, i) != 0)
+                    // {
+                    //     return 9;
+                    // }
+                    // /* update this loop counter */
+                    // --i;
+                    // continue;
+                    struct modification new_mod = *mod;
+                    new_mod.pos = 0;
+                    new_mod.len = mod->pos + mod->len - pos;
+                    if (textblock_modificate(b, b->blocks[i], &new_mod, b->version) != 0)
                     {
                         return 9;
                     }
-                    /* update this loop counter */
-                    --i;
-                    continue;
                 }
                 /* is deleted some prefix of block? */
                 else if (mod->pos <= pos && mod->pos + mod->len > pos)
@@ -274,7 +289,7 @@ int buffer_moditify(struct buffer *b, struct modification *mod)
                 else
                 {
                     /* this branch mean that this modification doen't modificates this block */
-                    assert(mod->pos + mod->len < pos || mod->pos >= pos + size);
+                    assert(mod->pos + mod->len <= pos || mod->pos >= pos + size);
                 }
             }
             return 0;
