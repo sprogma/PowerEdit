@@ -162,7 +162,6 @@ namespace EditorCore.Buffer
         public (long, string?) GetLine(long line)
         {
             string text = Text.Substring(0);
-            Console.WriteLine($"TEXT: {text}");
 
             if (line < 0)
             {

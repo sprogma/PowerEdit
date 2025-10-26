@@ -66,7 +66,7 @@ namespace SDL2Interface
                 }
                 else
                 {
-                    windows.Add(new InputTextWindow(new EditorBuffer(server, BaseTokenizer.CreateTokenizer("")), new Rect(0, 0, BaseWindow.W, BaseWindow.H)));
+                    windows.Add(new InputTextWindow(new EditorBuffer(server, BaseTokenizer.CreateTokenizer("c")), new Rect(0, 0, BaseWindow.W, BaseWindow.H)));
                 }
             }
 

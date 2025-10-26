@@ -16,7 +16,7 @@
 
 static int textblock_history_reserve(struct textblock *t, ssize_t size)
 {
-    printf("reserve history\n");
+    // printf("reserve history\n");
     ssize_t old_size = t->history_buffer_alloc;
     while (size + 1 > t->history_buffer_alloc)
     {
@@ -34,7 +34,7 @@ static int textblock_history_reserve(struct textblock *t, ssize_t size)
         t->history_len_buffer = new_ptr_2;
         memset(t->history_buffer + old_size, 0, sizeof(*t->history_buffer) * (t->history_buffer_alloc - old_size));
         memset(t->history_len_buffer + old_size, 0, sizeof(*t->history_len_buffer) * (t->history_buffer_alloc - old_size));
-        printf("ret\n");
+        // printf("ret\n");
     }
     return 0;
 }
@@ -52,7 +52,7 @@ static size_t base_of(struct buffer *b, struct textblock *t, ssize_t version)
 
 int textblock_init(struct textblock *t)
 {
-    t->history_buffer_alloc = 128;
+    t->history_buffer_alloc = 16;
     t->history_buffer = calloc(1, sizeof(*t->history_buffer) * t->history_buffer_alloc);
     t->history_len_buffer = calloc(1, sizeof(*t->history_len_buffer) * t->history_buffer_alloc);
 
@@ -75,13 +75,13 @@ int textblock_destroy(struct textblock *t)
 
 int textblock_modificate(struct buffer *b, struct textblock *t, struct modification *mod, ssize_t version)
 {
-    printf("get modification mod! %zd %zd %s IN %zd\n", mod->pos, mod->len, mod->text, version);
+    // printf("get modification mod! %zd %zd %s IN %zd\n", mod->pos, mod->len, mod->text, version);
     
     textblock_history_reserve(t, version);
 
     /* find block state in this version: */
     ssize_t parent = base_of(b, t, version);
-    printf("Parent %lld Version %lld buf: %p buf %p\n", parent, version, t->history_buffer[parent], t->history_buffer[version]);
+    // printf("Parent %lld Version %lld buf: %p buf %p\n", parent, version, t->history_buffer[parent], t->history_buffer[version]);
     if (t->history_buffer[parent] == NULL)
     {
         return 1;
@@ -99,7 +99,9 @@ int textblock_modificate(struct buffer *b, struct textblock *t, struct modificat
             memcpy(tmp + mod->pos + mod->len, old + mod->pos, t->history_len_buffer[parent] - mod->pos);
             t->history_buffer[version] = tmp;
             t->history_len_buffer[version] = t->history_len_buffer[parent] + mod->len;
-            printf("Len = %lld = %lld + %lld\n", t->history_len_buffer[version], t->history_len_buffer[parent], mod->len);
+            // printf("Len = %lld = %lld + %lld\n", t->history_len_buffer[version], t->history_len_buffer[parent], mod->len);
+            //char c;
+            //scanf("%c", &c);
             break;
         }
         case ModificationDelete:
@@ -129,7 +131,7 @@ int textblock_get_size(struct buffer *b, struct textblock *t, ssize_t *size, ssi
         return 1;
     }
    
-    printf("return len [version %zd [parent %zd]]: %zd\n", version, parent, t->history_len_buffer[parent]);
+    // printf("return len [version %zd [parent %zd]]: %zd\n", version, parent, t->history_len_buffer[parent]);
     *size = t->history_len_buffer[parent];
     return 0;
 }
@@ -144,7 +146,7 @@ int textblock_read(struct buffer *b, struct textblock *t, ssize_t from, ssize_t 
     {
         return 1;
     }
-    printf("read from %zd len %zd : %c [%d]\n", from, length, t->history_buffer[parent][from], t->history_buffer[parent][from]);
+    // printf("read from %zd len %zd : %c [%d]\n", from, length, t->history_buffer[parent][from], t->history_buffer[parent][from]);
     memcpy(buffer, t->history_buffer[parent] + from, length);
     return 0;
 }

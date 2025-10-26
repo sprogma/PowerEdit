@@ -47,7 +47,7 @@ static int buffer_new_version(struct buffer *b, ssize_t parent, ssize_t *result_
     assert(parent < b->version_tree_len);
     assert(b->version_tree_len <= b->version_tree_alloc);
 
-    printf("create new version?\n");
+    // printf("create new version?\n");
     
     if (b->version_tree_len >= b->version_tree_alloc)
     {
@@ -55,7 +55,7 @@ static int buffer_new_version(struct buffer *b, ssize_t parent, ssize_t *result_
         void *new_ptr_1 = realloc(b->version_tree, sizeof(*b->version_tree) * b->version_tree_alloc);
         void *new_ptr_2 = realloc(b->version_depth, sizeof(*b->version_depth) * b->version_tree_alloc);
         void *new_ptr_3 = realloc(b->version_skiplist, sizeof(*b->version_skiplist) * b->version_tree_alloc);
-        if (new_ptr_1 == NULL || new_ptr_2 == NULL || new_ptr_3)
+        if (new_ptr_1 == NULL || new_ptr_2 == NULL || new_ptr_3 == NULL)
         {
             return 1;
         }
@@ -152,7 +152,7 @@ int buffer_moditify(struct buffer *b, struct modification *mod)
         return 0;
     }
 
-    printf("MOD from %lld type: %lld of len %lld\n", mod->pos, mod->type, mod->len);
+    // printf("MOD from %lld type: %lld of len %lld\n", mod->pos, mod->type, mod->len);
 
     /* create new version */
     // ssize_t old_version = b->version;
@@ -233,7 +233,7 @@ int buffer_moditify(struct buffer *b, struct modification *mod)
                     return 9;
                 }
                 /* is block fully deleted? */
-                printf("IS DEL FULL: %zd %zd   %zd %zd\n", mod->pos, mod->len, pos, size);
+                // printf("IS DEL FULL: %zd %zd   %zd %zd\n", mod->pos, mod->len, pos, size);
                 if (mod->pos <= pos && pos + size <= mod->pos + mod->len)
                 {
                     // CAN't delete block, becouse of history, which is stored in it.
@@ -329,7 +329,7 @@ int buffer_read(struct buffer *b, ssize_t from, ssize_t length, char *buffer)
     {
         size = 0;
         textblock_get_size(b, b->blocks[i], &size, b->version);
-        printf("SPAN: %zd-%zd READ %zd-%zd\n", pos, size, from, length);
+        // printf("SPAN: %zd-%zd READ %zd-%zd\n", pos, size, from, length);
         /* if we read any part of this block */
         if (pos <= from && from < pos + size)
         {
