@@ -45,8 +45,10 @@ static int buffer_new_version(struct buffer *b, ssize_t parent, ssize_t *result_
 {
     assert(parent < b->version_tree_len);
     assert(b->version_tree_len <= b->version_tree_alloc);
+
+    printf("create new version?\n");
     
-    if (b->version_tree_len == b->version_tree_alloc)
+    if (b->version_tree_len >= b->version_tree_alloc)
     {
         b->version_tree_alloc = 2 * b->version_tree_alloc + !(b->version_tree_alloc);
         void *new_ptr_1 = realloc(b->version_tree, sizeof(*b->version_tree) * b->version_tree_alloc);
@@ -149,7 +151,10 @@ int buffer_moditify(struct buffer *b, struct modification *mod)
         return 0;
     }
 
+    printf("MOD from %lld type: %lld of len %lld\n", mod->pos, mod->type, mod->len);
+
     /* create new version */
+    // ssize_t old_version = b->version;
     ssize_t version = 0;
     if (buffer_new_version(b, b->version, &version) != 0 || version == 0)
     {
@@ -161,7 +166,7 @@ int buffer_moditify(struct buffer *b, struct modification *mod)
     switch (mod->type)
     {
         case ModificationInsert:
-        {        
+        {
             ssize_t pos = 0, size = 0;
             for (ssize_t i = 0; i < b->blocks_len; ++i, pos += size)
             {
@@ -196,18 +201,19 @@ int buffer_moditify(struct buffer *b, struct modification *mod)
                     return 9;
                 }
             }
-            else if (pos == mod->pos)
+            else // if (pos == mod->pos)
             {
+                mod->pos = pos;
                 if (textblock_modificate(b, b->blocks[b->blocks_len - 1], mod, b->version) != 0)
                 {
                     return 9;
                 }
             }
-            else
-            {
-                /* error: we get wrong insert position */
-                return 1;
-            }
+            // else
+            // {
+            //     /* error: we get wrong insert position */
+            //     return 1;
+            // }
             return 0;
         }
         case ModificationDelete:
