@@ -144,7 +144,7 @@ namespace SDL2Interface
                         jumpInput = true;
                         return false;
                     }
-                    if (Scancode.D1 <= e.Keyboard.Keysym.Scancode && e.Keyboard.Keysym.Scancode <= Scancode.D0)
+                    else if (Scancode.D1 <= e.Keyboard.Keysym.Scancode && e.Keyboard.Keysym.Scancode <= Scancode.D0)
                     {
                         if (((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Caps) != 0)
                         {
@@ -158,26 +158,26 @@ namespace SDL2Interface
                         cursor?.Selections.ForEach(x => x.Copy());
                         return false;
                     }
-                    if (e.Keyboard.Keysym.Scancode == Scancode.X && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0)
+                    else if (e.Keyboard.Keysym.Scancode == Scancode.X && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0)
                     {
                         cursor?.Selections.ForEach(x => x.Copy());
                         cursor?.Selections.ForEach(x => x.Cursor.Buffer.DeleteString(x.Min, x.TextLength));
                         cursor?.Commit();
                         return false;
                     }
-                    if (e.Keyboard.Keysym.Scancode == Scancode.V && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0)
+                    else if (e.Keyboard.Keysym.Scancode == Scancode.V && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0)
                     {
                         cursor?.Selections.ForEach(x => x.Cursor.Buffer.DeleteString(x.Min, x.TextLength));
                         cursor?.Selections.ForEach(x => x.Paste());
                         cursor?.Commit();
                         return false;
                     }
-                    if (e.Keyboard.Keysym.Scancode == Scancode.Minus && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0)
+                    else if (e.Keyboard.Keysym.Scancode == Scancode.Minus && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0)
                     {
                         textRenderer.Scale(0.9);
                         return false;
                     }
-                    if (e.Keyboard.Keysym.Scancode == Scancode.Equals && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0)
+                    else if (e.Keyboard.Keysym.Scancode == Scancode.Equals && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0)
                     {
                         textRenderer.Scale(1.1);
                         return false;
@@ -221,6 +221,12 @@ namespace SDL2Interface
                     else if (e.Keyboard.Keysym.Scancode == Scancode.Q && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0)
                     {
                         cursor?.Selections.ForEach(x => x.SetPosition(x.End));
+                        return false;
+                    }
+                    else if (e.Keyboard.Keysym.Scancode == Scancode.Z && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0 && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Shift) != 0)
+                    {
+                        Console.WriteLine("MEGA UN");
+                        Program.OpenWindow(new TreeWalkWindow(buffer.Text, position));
                         return false;
                     }
                     else if (e.Keyboard.Keysym.Scancode == Scancode.Z && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0)

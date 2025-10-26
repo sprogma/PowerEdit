@@ -49,6 +49,10 @@ ROPE_EXPORT int buffer_version_lca(struct buffer *b, ssize_t version_a, ssize_t 
 
 ROPE_EXPORT int buffer_version_before(struct buffer *b, ssize_t version, ssize_t steps, ssize_t *result);
 
+ROPE_EXPORT int buffer_read_versions_count(struct buffer *b, ssize_t *result);
+
+ROPE_EXPORT int buffer_read_versions(struct buffer *b, ssize_t count, ssize_t *result);
+
 
 #ifdef __cplusplus
 }

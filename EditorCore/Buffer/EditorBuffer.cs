@@ -15,6 +15,8 @@ namespace EditorCore.Buffer
     {
         public EditorBufferOnUpdate? ActionOnUpdate = null;
 
+        public Dictionary<long, EditorSelection[]> History;
+
         public const long MaxHistorySize = 1024;
 
         public TextBuffer.TextBuffer Text { get; internal set; }
@@ -72,7 +74,7 @@ namespace EditorCore.Buffer
                 return;
             }
             Text.Undo();
-            //(Text, var selections) = History.Last.Value;
+
             //Cursor.Selections = selections.Select(x => new EditorSelection(Cursor, x.Item1, x.Item2)).ToList();
             Tokens = Tokenizer.ParseContent(Text.Substring(0));
         }
@@ -83,7 +85,11 @@ namespace EditorCore.Buffer
             {
                 return;
             }
-            Text.Redo();
+            if (Text.Redo() == null)
+            {
+                return;
+            }
+
             //(Text, var selections) = RedoHistory.Last.Value;
             //Cursor.Selections = selections.Select(x => new EditorSelection(Cursor, x.Item1, x.Item2)).ToList();
             Tokens = Tokenizer.ParseContent(Text.Substring(0));

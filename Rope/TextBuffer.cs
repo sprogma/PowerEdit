@@ -18,7 +18,7 @@ namespace TextBuffer
     internal static class CLibrary
     {
         [DllImport("msrope.dll", CallingConvention = CallingConvention.Cdecl)]
-        internal static extern int buffer_create(ref IntPtr ptr);
+        internal static extern int buffer_create(out IntPtr ptr);
 
         [DllImport("msrope.dll", CallingConvention = CallingConvention.Cdecl)]
         internal static extern int buffer_destroy(IntPtr ptr);
@@ -27,7 +27,7 @@ namespace TextBuffer
         internal static extern int buffer_moditify_star(IntPtr ptr, UInt64 type, long pos, long len, string? text);
 
         [DllImport("msrope.dll", CallingConvention = CallingConvention.Cdecl)]
-        internal static extern int buffer_get_size(IntPtr ptr, ref long length);
+        internal static extern int buffer_get_size(IntPtr ptr, out long length);
 
         [DllImport("msrope.dll", CallingConvention = CallingConvention.Cdecl)]
         internal static extern int buffer_read(IntPtr ptr, long from, long length, IntPtr buffer);
@@ -36,11 +36,18 @@ namespace TextBuffer
         internal static extern int buffer_version_set(IntPtr ptr, long version);
 
         [DllImport("msrope.dll", CallingConvention = CallingConvention.Cdecl)]
-        internal static extern int buffer_version_get(IntPtr ptr, ref long version);
+        internal static extern int buffer_version_get(IntPtr ptr, out long version);
 
         [DllImport("msrope.dll", CallingConvention = CallingConvention.Cdecl)]
-        internal static extern int buffer_version_before(IntPtr ptr, long version, long steps, ref long result);
+        internal static extern int buffer_version_before(IntPtr ptr, long version, long steps, out long result);
+
+        [DllImport("msrope.dll", CallingConvention = CallingConvention.Cdecl)]
+        internal static extern int buffer_read_versions_count(IntPtr ptr, out long result);
+
+        [DllImport("msrope.dll", CallingConvention = CallingConvention.Cdecl)]
+        internal static extern int buffer_read_versions(IntPtr ptr, long count, long[] parents);
     }
+
 
     public class TextBuffer
     {
@@ -49,7 +56,7 @@ namespace TextBuffer
 
         public TextBuffer()
         {
-            CLibrary.buffer_create(ref handle);
+            CLibrary.buffer_create(out handle);
             undos = [];
         }
 
@@ -70,8 +77,7 @@ namespace TextBuffer
         }
 
         public int Length { get {
-                long size = 0;
-                CLibrary.buffer_get_size(handle, ref size);
+                CLibrary.buffer_get_size(handle, out long size);
                 return (int)size;
             } }
 
@@ -137,22 +143,23 @@ namespace TextBuffer
             return -1;
         }
 
-        public void Undo()
+        public long Undo()
         {
-            long version = 0;
-            long result = 0;
-            CLibrary.buffer_version_get(handle, ref version);
-            CLibrary.buffer_version_before(handle, version, 1, ref result);
+            CLibrary.buffer_version_get(handle, out long version);
+            CLibrary.buffer_version_before(handle, version, 1, out long result);
             CLibrary.buffer_version_set(handle, result);
             undos.Push(version);
+            return result;
         }
 
-        public void Redo()
+        public long? Redo()
         {
             if (undos.TryPop(out long version))
             {
                 CLibrary.buffer_version_set(handle, version);
+                return version;
             }
+            return null;
         }
 
         public void Insert(long index, string item)
@@ -172,6 +179,28 @@ namespace TextBuffer
         public void PushHistory()
         {
             // TODO: this
+        }
+
+        public void SetVersion(long version)
+        {
+            CLibrary.buffer_version_set(handle, version);
+        }
+
+        public long GetCurrentVersion()
+        {
+            CLibrary.buffer_version_get(handle, out long version);
+            Console.WriteLine($"Get version {version}");
+            return version;
+        }
+
+        public long[] GetVersionTree()
+        {
+            CLibrary.buffer_read_versions_count(handle, out long versions_count);
+            Console.WriteLine($"Get version count: {versions_count}");
+            long[] result = new long[versions_count];
+            CLibrary.buffer_read_versions(handle, versions_count, result);
+            Console.WriteLine($"Get array!");
+            return result;
         }
     }
 }

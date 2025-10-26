@@ -433,3 +433,15 @@ int buffer_version_lca(struct buffer *b, ssize_t version_a, ssize_t version_b, s
     *result = version_a;
     return 0;
 }
+
+int buffer_read_versions_count(struct buffer *b, ssize_t *result)
+{
+    *result = b->version_tree_len;
+    return 0;
+}
+
+int buffer_read_versions(struct buffer *b, ssize_t count, ssize_t *result)
+{
+    memcpy(result, b->version_tree, sizeof(*b->version_tree) * count);
+    return 0;
+}

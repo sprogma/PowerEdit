@@ -17,7 +17,6 @@ namespace EditorCore.Cursor
     {
         public List<EditorSelection> Selections { get; set; }
         public EditorBuffer Buffer { get; internal set; }
-        List<Token> Tokens => Buffer.Tokens;
 
         internal EditorCursor(EditorBuffer buffer)
         {
