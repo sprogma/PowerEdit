@@ -230,14 +230,22 @@ int buffer_moditify(struct buffer *b, struct modification *mod)
                 printf("IS DEL FULL: %zd %zd   %zd %zd\n", mod->pos, mod->len, pos, size);
                 if (mod->pos <= pos && pos + size <= mod->pos + mod->len)
                 {
-                    /* delete entire block */
-                    if (buffer_delete_block(b, i) != 0)
+                    // CAN't delete block, becouse of history, which is stored in it.
+                    // /* delete entire block */
+                    // if (buffer_delete_block(b, i) != 0)
+                    // {
+                    //     return 9;
+                    // }
+                    // /* update this loop counter */
+                    // --i;
+                    // continue;
+                    struct modification new_mod = *mod;
+                    new_mod.pos = 0;
+                    new_mod.len = mod->pos + mod->len - pos;
+                    if (textblock_modificate(b, b->blocks[i], &new_mod, b->version) != 0)
                     {
                         return 9;
                     }
-                    /* update this loop counter */
-                    --i;
-                    continue;
                 }
                 /* is deleted some prefix of block? */
                 else if (mod->pos <= pos && mod->pos + mod->len > pos)

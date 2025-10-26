@@ -49,7 +49,7 @@ static size_t base_of(struct buffer *b, struct textblock *t, ssize_t version)
 
 int textblock_init(struct textblock *t)
 {
-    t->history_buffer_alloc = 16;
+    t->history_buffer_alloc = 128;
     t->history_buffer = calloc(1, sizeof(*t->history_buffer) * t->history_buffer_alloc);
     t->history_len_buffer = calloc(1, sizeof(*t->history_len_buffer) * t->history_buffer_alloc);
 
