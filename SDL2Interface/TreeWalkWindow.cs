@@ -73,11 +73,11 @@ namespace SDL2Interface
 
         void WalkTree(Node root, Action<Node> callback)
         {
-            callback(root);
             foreach (Node node in root.childs)
             {
                 WalkTree(node, callback);
             }
+            callback(root);
         }
 
         void UpdateVisibleParent(Node node)
@@ -92,7 +92,7 @@ namespace SDL2Interface
                 return;
             }
             UpdateVisibleParent(node.parent);
-            node.up = (node.parent.hidden == true ? node.parent.up : node.parent);
+            node.up = (node.parent.hidden ? node.parent.up : node.parent);
             node.depth = node.parent.depth + (node.parent.hidden ? 0 : 1);
         }
 
@@ -114,22 +114,25 @@ namespace SDL2Interface
                 UpdateVisibleParent(node);
             }
             /* calculate childs */
-            foreach (Node node in tree.Where(x => !x.hidden).Reverse())
+            foreach (Node node in tree.Where(x => !x.hidden))
             {
                 node.up?.childs.Add(node);
             }
             /* calculate node's positions */
             float currentX = 0.0f;
-            WalkTree(tree[0], (Node x) => { 
-                x.position.Y = x.depth * LineHeight;  
-                if (x.childs.Count == 0)
+            WalkTree(tree[0], (Node x) => {
+                if (!x.hidden)
                 {
-                    x.position.X = currentX;
-                    currentX += NodeStepWidth;
-                }
-                else
-                {
-                    x.position.X = x.childs.Average(x => x.position.X);
+                    x.position.Y = x.depth * LineHeight;  
+                    if (x.childs.Count == 0)
+                    {
+                        x.position.X = currentX;
+                        currentX += NodeStepWidth;
+                    }
+                    else
+                    {
+                        x.position.X = x.childs.Average(x => x.position.X);
+                    }
                 }
             });
 
