@@ -67,9 +67,7 @@ namespace EditorCore.Buffer
                 return;
             }
             var ver = Text.GetCurrentVersion();
-            Console.WriteLine($"Curr version {ver}");
             var cursors = Text.GetCursors(ver);
-            Console.WriteLine($"get cursors: {cursors.Length} cursors, first at {cursors[0].Begin} {cursors[0].End}");
             Cursor.Selections = cursors.Select(x => new EditorSelection(Cursor, x.Begin, x.End)).ToList();
         }
 

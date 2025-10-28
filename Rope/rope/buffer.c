@@ -464,7 +464,7 @@ int buffer_set_version_cursors(struct buffer* buf, int64_t version, int64_t coun
     buf->version_cursors_count[version] = count;
     buf->version_cursors[version] = malloc(sizeof(*buf->version_cursors[version]) * count);
     memcpy(buf->version_cursors[version], cursors, sizeof(*buf->version_cursors[version]) * count);
-    printf("Saved cursors: %d items first at %d %d\n", count, cursors[0].begin, cursors[0].end);
+    //printf("Saved cursors: %d items first at %d %d\n", count, cursors[0].begin, cursors[0].end);
     return 0;
 }
 
@@ -477,7 +477,7 @@ int buffer_get_version_cursors_count(struct buffer *buf, int64_t version, int64_
 int buffer_get_version_cursors(struct buffer *buf, int64_t version, int64_t count, struct cursor_t* cursors)
 {
     memcpy(cursors, buf->version_cursors[version], sizeof(*cursors) * count);
-    printf("Read cursors: %d items first at %d %d\n", count, cursors[0].begin, cursors[0].end);
+    //printf("Read cursors: %d items first at %d %d\n", count, cursors[0].begin, cursors[0].end);
     return 0;
 }
 
