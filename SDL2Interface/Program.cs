@@ -38,7 +38,7 @@ namespace SDL2Interface
             //buf.Redo();
             //Console.WriteLine(buf.Substring(0, buf.Length));
 
-            string? fileToOpen = args.ElementAtOrDefault(0);
+            string? fileToOpen = args.Where(x => !x.StartsWith("-")).ElementAtOrDefault(0);
             Console.WriteLine($"Opening \"{fileToOpen}\"...");
             if (SDL.Init(SdlInitFlags.Everything) != 0)
             {
@@ -56,8 +56,22 @@ namespace SDL2Interface
 
             /* create application instance */
             {
-                PowershellProvider provider = new();
-                //PythonProvider provider = new();
+                ICommandProvider? provider;
+
+                if (args.Contains("--python"))
+                {
+                    provider = new PythonProvider();
+                }
+                else
+                {
+                    provider = new PowershellProvider();
+                }
+
+                if (provider == null)
+                {
+                    Console.WriteLine("Error: Not selected any provider");
+                    return;
+                }
                 EditorServer server = new(provider);
                 if (fileToOpen != null)
                 {

@@ -203,17 +203,14 @@ namespace TextBuffer
         public long GetCurrentVersion()
         {
             CLibrary.buffer_version_get(handle, out long version);
-            Console.WriteLine($"Get version {version}");
             return version;
         }
 
         public long[] GetVersionTree()
         {
             CLibrary.buffer_read_versions_count(handle, out long versions_count);
-            Console.WriteLine($"Get version count: {versions_count}");
             long[] result = new long[versions_count];
             CLibrary.buffer_read_versions(handle, versions_count, result);
-            Console.WriteLine($"Get array!");
             return result;
         }
 
