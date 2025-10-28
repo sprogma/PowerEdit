@@ -252,7 +252,7 @@ namespace SDL2Interface
                             ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Shift) != 0)
                     {
                         Console.WriteLine("MEGA UN");
-                        Program.OpenWindow(new TreeWalkWindow(buffer.Text, position));
+                        Program.OpenWindow(new TreeWalkWindow(buffer, buffer.Text, position));
                         return false;
                     }
                     else if (e.Keyboard.Keysym.Scancode == Scancode.Z && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0)

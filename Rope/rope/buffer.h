@@ -8,8 +8,8 @@
 
 struct cursor_t
 {
-    int end;
-    int begin;
+    int64_t begin;
+    int64_t end;
 };
 
 struct buffer

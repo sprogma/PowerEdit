@@ -7,6 +7,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
+using TextBuffer;
 
 namespace EditorCore.Buffer
 {
@@ -14,8 +15,6 @@ namespace EditorCore.Buffer
     public class EditorBuffer
     {
         public EditorBufferOnUpdate? ActionOnUpdate = null;
-
-        public Dictionary<long, EditorSelection[]> History;
 
         public const long MaxHistorySize = 1024;
 
@@ -32,6 +31,7 @@ namespace EditorCore.Buffer
             Cursor = new(this);
             Cursor.Selections.Add(new EditorSelection(Cursor, 0));
             Server = server;
+            SaveCursorState();
 
             OnUpdate();
         }
@@ -43,10 +43,34 @@ namespace EditorCore.Buffer
             Cursor = new(this);
             Cursor.Selections.Add(new EditorSelection(Cursor, 0));
             Server = server;
+            SaveCursorState();
 
             Text.Insert(0, content);
+            SaveCursorState();
 
             OnUpdate();
+        }
+
+        public void SaveCursorState()
+        {
+            if (Cursor == null)
+            {
+                return;
+            }
+            Text.SaveCursors(Text.GetCurrentVersion(), Cursor.Selections.Select(x => new MarshallingCursor(x.Begin, x.End)).ToArray());
+        }
+
+        public void LoadCursorState()
+        {
+            if (Cursor == null)
+            {
+                return;
+            }
+            var ver = Text.GetCurrentVersion();
+            Console.WriteLine($"Curr version {ver}");
+            var cursors = Text.GetCursors(ver);
+            Console.WriteLine($"get cursors: {cursors.Length} cursors, first at {cursors[0].Begin} {cursors[0].End}");
+            Cursor.Selections = cursors.Select(x => new EditorSelection(Cursor, x.Begin, x.End)).ToList();
         }
 
         public void OnUpdate(bool pushHistory = true)
@@ -74,6 +98,7 @@ namespace EditorCore.Buffer
                 return;
             }
             Text.Undo();
+            LoadCursorState();
 
             //Cursor.Selections = selections.Select(x => new EditorSelection(Cursor, x.Item1, x.Item2)).ToList();
             Tokens = Tokenizer.ParseContent(Text.Substring(0));
@@ -89,6 +114,7 @@ namespace EditorCore.Buffer
             {
                 return;
             }
+            LoadCursorState();
 
             //(Text, var selections) = RedoHistory.Last.Value;
             //Cursor.Selections = selections.Select(x => new EditorSelection(Cursor, x.Item1, x.Item2)).ToList();
@@ -114,6 +140,7 @@ namespace EditorCore.Buffer
                     }
                 }
             }
+            SaveCursorState();
             OnSimpleUpdate();
             return position + length;
         }
@@ -153,6 +180,7 @@ namespace EditorCore.Buffer
                     }
                 }
             }
+            SaveCursorState();
             OnSimpleUpdate();
         }
 

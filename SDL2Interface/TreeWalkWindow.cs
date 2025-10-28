@@ -44,6 +44,7 @@ namespace SDL2Interface
         List<Node> tree;
         Node current;
         TextBuffer.TextBuffer buffer;
+        EditorBuffer? ebuffer;
         public bool showNumbers = true;
 
         const float NodeHeight = 1.0f;
@@ -56,8 +57,9 @@ namespace SDL2Interface
         float DestinationScale = 30.0f;
         Vector2 Camera = new(){ X=0.0f, Y=0.0f };
 
-        public TreeWalkWindow(TextBuffer.TextBuffer buffer, Rect position) : base(position)
+        public TreeWalkWindow(EditorBuffer? ebuffer, TextBuffer.TextBuffer buffer, Rect position) : base(position)
         {
+            this.ebuffer = ebuffer;
             this.buffer = buffer;
             this.tree = new();
             long[] parents = this.buffer.GetVersionTree();
@@ -251,6 +253,11 @@ namespace SDL2Interface
                     else if (e.Keyboard.Keysym.Scancode == Scancode.Return)
                     {
                         buffer.SetVersion(current.id);
+                        if (ebuffer != null)
+                        {
+                            ebuffer.LoadCursorState();
+                            ebuffer.OnUpdate();
+                        }
                         DeleteSelf();
                         return false;
                     }

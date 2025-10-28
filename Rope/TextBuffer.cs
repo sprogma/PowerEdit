@@ -14,6 +14,11 @@ namespace TextBuffer
         public const UInt64 Delete = 1;
     };
 
+    [StructLayout(LayoutKind.Sequential, Pack = 8)]
+    public struct MarshallingCursor(long begin, long end)
+    {
+        public long Begin = begin, End = end;
+    }
 
     internal static class CLibrary
     {
@@ -45,7 +50,16 @@ namespace TextBuffer
         internal static extern int buffer_read_versions_count(IntPtr ptr, out long result);
 
         [DllImport("msrope.dll", CallingConvention = CallingConvention.Cdecl)]
-        internal static extern int buffer_read_versions(IntPtr ptr, long count, long[] parents);
+        internal static extern int buffer_read_versions(IntPtr ptr, long count, [Out] long[] parents);
+
+        [DllImport("msrope.dll", CallingConvention = CallingConvention.Cdecl)]
+        internal static extern int buffer_set_version_cursors(IntPtr ptr, long version, long count, [In] MarshallingCursor[] parents);
+
+        [DllImport("msrope.dll", CallingConvention = CallingConvention.Cdecl)]
+        internal static extern int buffer_get_version_cursors_count(IntPtr ptr, long version, out long count);
+
+        [DllImport("msrope.dll", CallingConvention = CallingConvention.Cdecl)]
+        internal static extern int buffer_get_version_cursors(IntPtr ptr, long version, long count, [Out] MarshallingCursor[] parents);
     }
 
 
@@ -206,6 +220,19 @@ namespace TextBuffer
         public void SaveToFile(string filename)
         {
             File.WriteAllText(filename, Substring(0));
+        }
+
+        public void SaveCursors(long version, MarshallingCursor[] cursors)
+        {
+            CLibrary.buffer_set_version_cursors(handle, version, cursors.LongLength, cursors);
+        }
+
+        public MarshallingCursor[] GetCursors(long version)
+        {
+            CLibrary.buffer_get_version_cursors_count(handle, version, out long cursors_count);
+            MarshallingCursor[] cursors = new MarshallingCursor[cursors_count];
+            CLibrary.buffer_get_version_cursors(handle, version, cursors_count, cursors);
+            return cursors;
         }
     }
 }

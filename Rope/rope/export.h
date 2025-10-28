@@ -55,6 +55,11 @@ ROPE_EXPORT int buffer_read_versions(struct buffer *buf, int64_t count, int64_t 
 
 ROPE_EXPORT int buffer_set_version_cursors(struct buffer *buf, int64_t version, int64_t count, struct cursor_t *cursors);
 
+ROPE_EXPORT int buffer_get_version_cursors_count(struct buffer *buf, int64_t version, int64_t *count);
+
+ROPE_EXPORT int buffer_get_version_cursors(struct buffer *buf, int64_t version, int64_t count, struct cursor_t *cursors);
+
+
 
 #ifdef __cplusplus
 }

@@ -57,7 +57,8 @@ static int buffer_new_version(struct buffer *buf, int64_t parent, int64_t *resul
         void *new_ptr_2 = realloc(buf->version_depth, sizeof(*buf->version_depth) * buf->version_tree_alloc);
         void *new_ptr_3 = realloc(buf->version_skiplist, sizeof(*buf->version_skiplist) * buf->version_tree_alloc);
         void *new_ptr_4 = realloc(buf->version_cursors, sizeof(*buf->version_cursors) * buf->version_tree_alloc);
-        if (new_ptr_1 == NULL || new_ptr_2 == NULL || new_ptr_3 == NULL || new_ptr_4 == NULL)
+        void *new_ptr_5 = realloc(buf->version_cursors_count, sizeof(*buf->version_cursors_count) * buf->version_tree_alloc);
+        if (new_ptr_1 == NULL || new_ptr_2 == NULL || new_ptr_3 == NULL || new_ptr_4 == NULL || new_ptr_5 == NULL)
         {
             return 1;
         }
@@ -65,7 +66,12 @@ static int buffer_new_version(struct buffer *buf, int64_t parent, int64_t *resul
         buf->version_depth = new_ptr_2;
         buf->version_skiplist = new_ptr_3;
         buf->version_cursors = new_ptr_4;
+        buf->version_cursors_count = new_ptr_5;
+        memset(buf->version_tree + old_size, 0, sizeof(*buf->version_tree) * (buf->version_tree_alloc - old_size));
+        memset(buf->version_depth + old_size, 0, sizeof(*buf->version_depth) * (buf->version_tree_alloc - old_size));
+        memset(buf->version_skiplist + old_size, 0, sizeof(*buf->version_skiplist) * (buf->version_tree_alloc - old_size));
         memset(buf->version_cursors + old_size, 0, sizeof(*buf->version_cursors) * (buf->version_tree_alloc - old_size));
+        memset(buf->version_cursors_count + old_size, 0, sizeof(*buf->version_cursors_count) * (buf->version_tree_alloc - old_size));
     }
     buf->version_tree[buf->version_tree_len] = parent;
     buf->version_depth[buf->version_tree_len] = buf->version_depth[parent] + 1;
@@ -75,7 +81,7 @@ static int buffer_new_version(struct buffer *buf, int64_t parent, int64_t *resul
         buf->version_skiplist[buf->version_tree_len] = buf->version_depth[buf->version_skiplist[buf->version_skiplist[parent]]];
     }
     else
-    {    
+    {
         buf->version_skiplist[buf->version_tree_len] = parent;
     }
     *result_version = buf->version_tree_len++;
@@ -109,6 +115,7 @@ int buffer_init(struct buffer *buf)
     buf->version_depth = calloc(1, sizeof(*buf->version_skiplist) * buf->version_tree_alloc);
     buf->version_skiplist = calloc(1, sizeof(*buf->version_skiplist) * buf->version_tree_alloc);
     buf->version_cursors = calloc(1, sizeof(*buf->version_cursors) * buf->version_tree_alloc);
+    buf->version_cursors_count = calloc(1, sizeof(*buf->version_cursors_count) * buf->version_tree_alloc);
     
     buf->blocks_len = 0;
     buf->blocks_alloc = 0;
@@ -116,7 +123,7 @@ int buffer_init(struct buffer *buf)
     
     node_allocator_init(&buf->allocator);
 
-    buf->avr_block_size = 64 * 1024;
+    buf->avr_block_size = 64 * 1024LL;
 
 
     /* create loop on first version! */
@@ -451,19 +458,26 @@ int buffer_read_versions(struct buffer *buf, int64_t count, int64_t *result)
     return 0;
 }
 
-int buffer_set_version_cursors(buffer* buf, int64_t version, int64_t count, cursor_t* cursors)
+int buffer_set_version_cursors(struct buffer* buf, int64_t version, int64_t count, struct cursor_t* cursors)
 {
     free(buf->version_cursors[version]);
     buf->version_cursors_count[version] = count;
     buf->version_cursors[version] = malloc(sizeof(*buf->version_cursors[version]) * count);
     memcpy(buf->version_cursors[version], cursors, sizeof(*buf->version_cursors[version]) * count);
+    printf("Saved cursors: %d items first at %d %d\n", count, cursors[0].begin, cursors[0].end);
     return 0;
 }
 
-int buffer_get_version_cursors_count(buffer* buf, int64_t version, int64_t *count)
+int buffer_get_version_cursors_count(struct buffer *buf, int64_t version, int64_t *count)
 {
-    *count = buf->version_cursors_count[version]
+    *count = buf->version_cursors_count[version];
     return 0;
 }
 
+int buffer_get_version_cursors(struct buffer *buf, int64_t version, int64_t count, struct cursor_t* cursors)
+{
+    memcpy(cursors, buf->version_cursors[version], sizeof(*cursors) * count);
+    printf("Read cursors: %d items first at %d %d\n", count, cursors[0].begin, cursors[0].end);
+    return 0;
+}
 
