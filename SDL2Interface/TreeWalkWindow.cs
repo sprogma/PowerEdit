@@ -71,6 +71,31 @@ namespace SDL2Interface
             CalculateGraphPositions();
         }
 
+        void WalkTree(Node root, Action<Node> callback)
+        {
+            callback(root);
+            foreach (Node node in root.childs)
+            {
+                WalkTree(node, callback);
+            }
+        }
+
+        void UpdateVisibleParent(Node node)
+        {
+            if (node.parent == null)
+            {
+                node.depth = 0;
+                return;
+            }
+            if (node.up != null)
+            {
+                return;
+            }
+            UpdateVisibleParent(node.parent);
+            node.up = (node.parent.hidden == true ? node.parent.up : node.parent);
+            node.depth = node.parent.depth + (node.parent.hidden ? 0 : 1);
+        }
+
         /// <summary>
         /// Calculates nodes position and relatives, handling "hidden" field.
         /// </summary>
@@ -79,22 +104,14 @@ namespace SDL2Interface
             /* clear current graph */
             foreach (Node node in tree)
             {
-                node.childs = [];
+                node.childs.Clear();
                 node.depth = 0;
                 node.up = node.down = node.left = node.right = null;
             }
             /* update parents [up] and depth */
             foreach (Node node in tree.AsEnumerable())
             {
-                node.up = (node.parent?.hidden == true ? node.parent.up : node.parent);
-                if (node.parent != null)
-                {
-                    node.depth = node.parent.depth + (node.parent.hidden ? 0 : 1);
-                }
-                else
-                {
-                    node.depth = 0;
-                }
+                UpdateVisibleParent(node);
             }
             /* calculate childs */
             foreach (Node node in tree.Where(x => !x.hidden).Reverse())
@@ -103,19 +120,19 @@ namespace SDL2Interface
             }
             /* calculate node's positions */
             float currentX = 0.0f;
-            foreach (Node node in tree.Where(x => !x.hidden).Reverse())
-            {
-                node.position.Y = node.depth * LineHeight;
-                if (node.childs.Count == 0)
+            WalkTree(tree[0], (Node x) => { 
+                x.position.Y = x.depth * LineHeight;  
+                if (x.childs.Count == 0)
                 {
-                    node.position.X = currentX;
+                    x.position.X = currentX;
                     currentX += NodeStepWidth;
                 }
                 else
                 {
-                    node.position.X = node.childs.Average(x => x.position.X);
+                    x.position.X = x.childs.Average(x => x.position.X);
                 }
-            }
+            });
+
             /* calculate right, left and down: */
             foreach (Node node in tree.Where(x => !x.hidden))
             {
@@ -173,6 +190,8 @@ namespace SDL2Interface
                 case EventType.Quit:
                     Environment.Exit(1);
                     return false;
+                case EventType.TextInput:
+                    return false;
                 case EventType.KeyDown:
                     if (e.Keyboard.Keysym.Scancode == Scancode.A)
                     {
@@ -184,6 +203,7 @@ namespace SDL2Interface
                         {
                             DestinationScale = 5.0f;
                         }
+                        return false;
                     }
                     else if (e.Keyboard.Keysym.Scancode == Scancode.C)
                     {
@@ -198,27 +218,32 @@ namespace SDL2Interface
                         {
                             foreach (Node node in tree)
                             {
-                                node.hidden = (node.childs.Count != 1 || node.parent == null);
+                                node.hidden = (node.childs.Count == 1 && node.parent != null);
                             }
                         }
                         current.hidden = false;
                         CalculateGraphPositions();
+                        return false;
                     }
                     else if (e.Keyboard.Keysym.Scancode == Scancode.Up)
                     {
                         current = current.up ?? current;
+                        return false;
                     }
                     else if (e.Keyboard.Keysym.Scancode == Scancode.Down)
                     {
                         current = current.down ?? current;
+                        return false;
                     }
                     else if (e.Keyboard.Keysym.Scancode == Scancode.Right)
                     {
                         current = current.right ?? current;
+                        return false;
                     }
                     else if (e.Keyboard.Keysym.Scancode == Scancode.Left)
                     {
                         current = current.left ?? current;
+                        return false;
                     }
                     else if (e.Keyboard.Keysym.Scancode == Scancode.Return)
                     {

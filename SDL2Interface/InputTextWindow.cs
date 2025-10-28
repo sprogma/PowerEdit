@@ -35,7 +35,7 @@ namespace SDL2Interface
             /* align offset to see cursor */
             if (cursor.Selections.Count > 0)
             {
-                long cursorLine = cursor.Selections[0].MinLine;
+                long cursorLine = cursor.Selections[0].EndLine;
                 if (cursorLine < viewOffset + 3)
                 {
                     viewOffset = cursorLine - 3;
@@ -247,7 +247,9 @@ namespace SDL2Interface
                         cursor?.Selections.ForEach(x => x.SetPosition(x.End));
                         return false;
                     }
-                    else if (e.Keyboard.Keysym.Scancode == Scancode.Z && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0 && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Shift) != 0)
+                    else if (e.Keyboard.Keysym.Scancode == Scancode.Z && 
+                            ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0 && 
+                            ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Shift) != 0)
                     {
                         Console.WriteLine("MEGA UN");
                         Program.OpenWindow(new TreeWalkWindow(buffer.Text, position));
