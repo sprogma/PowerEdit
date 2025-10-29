@@ -120,6 +120,10 @@ namespace SDL2Interface
             {
                 node.up?.childs.Add(node);
             }
+            foreach (Node node in tree.Where(x => !x.hidden))
+            {
+                node.childs.Sort((x, y) => x.id - y.id);
+            }
             /* calculate node's positions */
             float currentX = 0.0f;
             WalkTree(tree[0], (Node x) => {
