@@ -16,6 +16,7 @@ namespace SDL2Interface
         static public Window window;
         static public Renderer renderer;
         public TextBufferRenderer textRenderer;
+        public bool deleted = false;
 
         internal Rect position;
 
@@ -74,6 +75,7 @@ namespace SDL2Interface
         public void DeleteSelf()
         {
             Program.windows.Remove(this);
+            this.deleted = true;
         }
     }
 }

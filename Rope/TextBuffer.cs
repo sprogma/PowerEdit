@@ -32,10 +32,10 @@ namespace TextBuffer
         internal static extern int buffer_moditify_star(IntPtr ptr, UInt64 type, long pos, long len, string? text);
 
         [DllImport("msrope.dll", CallingConvention = CallingConvention.Cdecl)]
-        internal static extern int buffer_get_size(IntPtr ptr, out long length);
+        internal static extern int buffer_get_size(IntPtr ptr, long version, out long length);
 
         [DllImport("msrope.dll", CallingConvention = CallingConvention.Cdecl)]
-        internal static extern int buffer_read(IntPtr ptr, long from, long length, IntPtr buffer);
+        internal static extern int buffer_read(IntPtr ptr, long version, long from, long length, IntPtr buffer);
 
         [DllImport("msrope.dll", CallingConvention = CallingConvention.Cdecl)]
         internal static extern int buffer_version_set(IntPtr ptr, long version);
@@ -78,7 +78,7 @@ namespace TextBuffer
             get
             {
                 IntPtr destPtr = Marshal.AllocHGlobal(1);
-                CLibrary.buffer_read(handle, index, 1, destPtr);
+                CLibrary.buffer_read(handle, GetCurrentVersion(), index, 1, destPtr);
                 string res = Marshal.PtrToStringAnsi(destPtr, 1);
                 Marshal.FreeHGlobal(destPtr);
                 return res[0];
@@ -91,16 +91,34 @@ namespace TextBuffer
         }
 
         public int Length { get {
-                CLibrary.buffer_get_size(handle, out long size);
+                CLibrary.buffer_get_size(handle, GetCurrentVersion(), out long size);
                 return (int)size;
             } }
 
+        public long LengthEx(long version)
+        {
+            CLibrary.buffer_get_size(handle, version, out long size);
+            return size;
+        }
+
+
+        public string SubstringEx(long version, long pos, long len)
+        {
+            // Console.WriteLine($"Req SUBSTR of len {len}");
+            IntPtr destPtr = Marshal.AllocHGlobal((int)(len + 10));
+            CLibrary.buffer_read(handle, version, pos, len, destPtr);
+            string res = Marshal.PtrToStringAnsi(destPtr, (int)len);
+            Marshal.FreeHGlobal(destPtr);
+            return res;
+        }
+        
+        public string SubstringEx(long version, long pos) => SubstringEx(version, pos, LengthEx(version) - pos);
 
         public string Substring(long pos, long len)
         {
             // Console.WriteLine($"Req SUBSTR of len {len}");
             IntPtr destPtr = Marshal.AllocHGlobal((int)(len + 10));
-            CLibrary.buffer_read(handle, pos, len, destPtr);
+            CLibrary.buffer_read(handle, GetCurrentVersion(), pos, len, destPtr);
             string res = Marshal.PtrToStringAnsi(destPtr, (int)len);
             Marshal.FreeHGlobal(destPtr);
             return res;

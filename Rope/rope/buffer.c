@@ -312,19 +312,20 @@ int buffer_moditify(struct buffer *buf, struct modification *mod)
     }
 }
 
-int buffer_get_size(struct buffer *buf, int64_t *length)
+int buffer_get_size(struct buffer *buf, int64_t version, int64_t *length)
 {
     int64_t len = 0;
     for (int64_t i = 0; i < buf->blocks_len; ++i)
     {
         int64_t size = 0;
-        textblock_get_size(buf, buf->blocks[i], &size, buf->version);
+        textblock_get_size(buf, buf->blocks[i], &size, version);
         len += size;
     }
     *length = len;
+    return 0;
 }
 
-int buffer_read(struct buffer *buf, int64_t from, int64_t length, char *buffer)
+int buffer_read(struct buffer *buf, int64_t version, int64_t from, int64_t length, char *buffer)
 {
     assert(0 <= from);
     assert(0 <= length); // TODO: fix bugs and make it 0 -> 1
@@ -340,7 +341,7 @@ int buffer_read(struct buffer *buf, int64_t from, int64_t length, char *buffer)
     for (int64_t i = 0; i < buf->blocks_len; ++i, pos += size)
     {
         size = 0;
-        textblock_get_size(buf, buf->blocks[i], &size, buf->version);
+        textblock_get_size(buf, buf->blocks[i], &size, version);
         // printf("SPAN: %zd-%zd READ %zd-%zd\n", pos, size, from, length);
         /* if we read any part of this block */
         if (pos <= from && from < pos + size)
@@ -348,7 +349,7 @@ int buffer_read(struct buffer *buf, int64_t from, int64_t length, char *buffer)
             /* find this part's size and position */
             int64_t start = (from > pos ? from : pos);
             int64_t end = (from + length > pos + size ? pos + size : from + length);
-            textblock_read(buf, buf->blocks[i], start, end - start, buffer, buf->version);
+            textblock_read(buf, buf->blocks[i], start, end - start, buffer, version);
             buffer += end - start;
             total_read += end - start;
         }

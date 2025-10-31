@@ -34,8 +34,8 @@ int main()
     char s[128];
 
     int64_t len;
-    buffer_get_size(&b, &len);
-    buffer_read(&b, 0, len, s);
+    buffer_get_size(&b, b.version, &len);
+    buffer_read(&b, b.version, 0, len, s);
     printf("Char at s[0] = %*.*s\n", (int)len, (int)len, s);
 
     buffer_destroy(&b);

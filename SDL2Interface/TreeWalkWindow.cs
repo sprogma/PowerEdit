@@ -43,8 +43,8 @@ namespace SDL2Interface
 
         List<Node> tree;
         Node current;
-        TextBuffer.TextBuffer buffer;
-        EditorBuffer? ebuffer;
+        public TextBuffer.TextBuffer cBuffer;
+        public EditorBuffer buffer;
         public bool showNumbers = true;
 
         const float NodeHeight = 1.0f;
@@ -57,18 +57,18 @@ namespace SDL2Interface
         float DestinationScale = 30.0f;
         Vector2 Camera = new(){ X=0.0f, Y=0.0f };
 
-        public TreeWalkWindow(EditorBuffer? ebuffer, TextBuffer.TextBuffer buffer, Rect position) : base(position)
+        public TreeWalkWindow(EditorBuffer editBuffer, TextBuffer.TextBuffer textBuffer, Rect position) : base(position)
         {
-            this.ebuffer = ebuffer;
-            this.buffer = buffer;
+            this.buffer = editBuffer;
+            this.cBuffer = textBuffer;
             this.tree = new();
-            long[] parents = this.buffer.GetVersionTree();
+            long[] parents = this.cBuffer.GetVersionTree();
             for (int i = 0; i < parents.Length; i++)
             {
                 int p = (int)parents[i];
                 this.tree.Add(new Node(i, (this.tree.Count > p ? this.tree[p] : null), null));
             }
-            current = this.tree[(int)this.buffer.GetCurrentVersion()];
+            current = this.tree[(int)this.cBuffer.GetCurrentVersion()];
 
             CalculateGraphPositions();
         }
@@ -145,7 +145,8 @@ namespace SDL2Interface
             /* calculate right, left and down: */
             foreach (Node node in tree.Where(x => !x.hidden))
             {
-                node.down = node.childs.MinBy(x => Math.Abs(x.position.X - node.position.X));
+                // add 0.01f to select rightmost from all
+                node.down = node.childs.MinBy(x => Math.Abs(x.position.X - node.position.X - 0.01f));
                 if (node.up != null)
                 {
                     int nodeId = node.up.childs.IndexOf(node);
@@ -169,12 +170,12 @@ namespace SDL2Interface
             foreach (Node node in tree.Where(x => !x.hidden))
             {
                 SDL.SetRenderDrawColor(renderer, 255, 0, 0, 0);
-                Vector2 pos = (node.position - Camera) * Scale + new Vector2(W * 0.5f, H * 0.5f);
+                Vector2 pos = (node.position - Camera) * Scale + new Vector2(position.Width * 0.5f, position.Height * 0.5f);
                 float w, h;
                 w = NodeWidth * Scale;
                 h = NodeHeight * Scale;
-                pos -= new Vector2(w, h);
-                Rect rect = new() { X = (int)pos.X, Y = (int)pos.Y, Width = (int)w, Height = (int)h};
+                pos -= 0.5f * new Vector2(w, h);
+                Rect rect = new() { X = position.X + (int)pos.X, Y = position.Y + (int)pos.Y, Width = (int)w, Height = (int)h};
                 if (node == current)
                 {
                     SDL.RenderFillRect(renderer, ref rect);
@@ -190,6 +191,11 @@ namespace SDL2Interface
                 Camera = Camera * (1.0f - t) + current.position * t;
                 Scale = Scale * (1.0f - t) + DestinationScale * t;
             }
+        }
+
+        public string? CurrentPreview()
+        {
+            return cBuffer.SubstringEx(current.id, 0);
         }
 
         public override bool HandleEvent(Event e)
@@ -256,11 +262,11 @@ namespace SDL2Interface
                     }
                     else if (e.Keyboard.Keysym.Scancode == Scancode.Return)
                     {
-                        buffer.SetVersion(current.id);
-                        if (ebuffer != null)
+                        cBuffer.SetVersion(current.id);
+                        if (buffer != null)
                         {
-                            ebuffer.LoadCursorState();
-                            ebuffer.OnUpdate();
+                            buffer.LoadCursorState();
+                            buffer.OnUpdate();
                         }
                         DeleteSelf();
                         return false;
