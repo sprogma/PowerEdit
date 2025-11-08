@@ -57,7 +57,7 @@ namespace EditorCore.Buffer
             {
                 return;
             }
-            Text.SaveCursors(Text.GetCurrentVersion(), Cursor.Selections.Select(x => new MarshallingCursor(x.Begin, x.End)).ToArray());
+            Text.SaveCursors(Text.GetCurrentVersion(), Cursor.Selections.Select(x => new MarshalingCursor(x.Begin, x.End)).ToArray());
         }
 
         public void LoadCursorState()
