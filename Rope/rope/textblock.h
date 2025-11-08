@@ -8,6 +8,8 @@
 #include "buffer.h"
 #include "modification.h"
 
+#include "newline_splay.h"
+
 
 struct textblock
 {
@@ -17,6 +19,7 @@ struct textblock
     int64_t history_buffer_alloc;
 
     // struct texttree *tree;
+    struct newline_tree *newline_tree;
 };
 
 

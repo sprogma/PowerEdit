@@ -37,7 +37,7 @@ enum
     value [len]
         - content of node, len - it's length.
 */
-struct node
+struct tt_node
 {
     uint64_t flags;
     uint64_t global_time;
@@ -90,10 +90,10 @@ struct texttree
     size_t               actions_len;
     size_t               actions_alloc;
     
-    struct node **root;
-    size_t        root_len;
-    size_t        root_alloc;
-    size_t        root_saved_size;
+    struct tt_node **root;
+    size_t           root_len;
+    size_t           root_alloc;
+    size_t           root_saved_size;
     
     char  *buffer;
     size_t buffer_len;

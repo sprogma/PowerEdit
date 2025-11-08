@@ -13,6 +13,7 @@
 #include "node_allocator.h"
 #include "modification.h"
 
+#include "newline_splay.h"
 
 static int textblock_history_reserve(struct textblock *tb, int64_t size)
 {
