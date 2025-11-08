@@ -15,7 +15,7 @@ namespace TextBuffer
     };
 
     [StructLayout(LayoutKind.Sequential, Pack = 8)]
-    public struct MarshallingCursor(long begin, long end)
+    public struct MarshalingCursor(long begin, long end)
     {
         public long Begin = begin, End = end;
     }
@@ -53,13 +53,13 @@ namespace TextBuffer
         internal static extern int buffer_read_versions(IntPtr ptr, long count, [Out] long[] parents);
 
         [DllImport("msrope.dll", CallingConvention = CallingConvention.Cdecl)]
-        internal static extern int buffer_set_version_cursors(IntPtr ptr, long version, long count, [In] MarshallingCursor[] parents);
+        internal static extern int buffer_set_version_cursors(IntPtr ptr, long version, long count, [In] MarshalingCursor[] parents);
 
         [DllImport("msrope.dll", CallingConvention = CallingConvention.Cdecl)]
         internal static extern int buffer_get_version_cursors_count(IntPtr ptr, long version, out long count);
 
         [DllImport("msrope.dll", CallingConvention = CallingConvention.Cdecl)]
-        internal static extern int buffer_get_version_cursors(IntPtr ptr, long version, long count, [Out] MarshallingCursor[] parents);
+        internal static extern int buffer_get_version_cursors(IntPtr ptr, long version, long count, [Out] MarshalingCursor[] parents);
     }
 
 
@@ -237,15 +237,15 @@ namespace TextBuffer
             File.WriteAllText(filename, Substring(0));
         }
 
-        public void SaveCursors(long version, MarshallingCursor[] cursors)
+        public void SaveCursors(long version, MarshalingCursor[] cursors)
         {
             CLibrary.buffer_set_version_cursors(handle, version, cursors.LongLength, cursors);
         }
 
-        public MarshallingCursor[] GetCursors(long version)
+        public MarshalingCursor[] GetCursors(long version)
         {
             CLibrary.buffer_get_version_cursors_count(handle, version, out long cursors_count);
-            MarshallingCursor[] cursors = new MarshallingCursor[cursors_count];
+            MarshalingCursor[] cursors = new MarshalingCursor[cursors_count];
             CLibrary.buffer_get_version_cursors(handle, version, cursors_count, cursors);
             return cursors;
         }
