@@ -60,7 +60,7 @@ void nltree_free(struct newline_tree *tree)
     free(tree);
 }
 
-__attribute__((always_inline))
+inline __attribute__((always_inline))
 int64_t size(const node *n)
 {
     return (n ? n->size : 0);
@@ -354,7 +354,6 @@ node *node_remove(node *root, int id)
     return merge(res.a, res2.b);
 }
 
-
 void nltree_insert(struct newline_tree *tree, int64_t pos, int64_t value)
 {
     tree->root = node_insert(tree->root, pos, value);
@@ -369,13 +368,24 @@ void nltree_remove(struct newline_tree *tree, int64_t pos)
 
 int64_t nltree_at(struct newline_tree *tree, int64_t pos)
 {
-    return (tree->root = find(tree->root, pos))->value;
+    tree->root = find(tree->root, pos);
+    return (tree->root ? tree->root->value : -1);
 }
 
 void nltree_update(struct newline_tree *tree, int64_t l, int64_t r, int64_t value)
 {
     struct node_pair res = split(tree->root, l);
     struct node_pair res2 = split(res.b, r - l);   
-    res2.a->add += value;
+    if (res2.a != NULL)
+    {
+        res2.a->add += value;
+    }
     tree->root = merge(res.a, merge(res2.a, res2.b));
+}
+
+
+int64_t nltree_lowerbound(struct newline_tree *tree, int64_t value)
+{
+    tree->root = find(tree->root, value);
+    return (tree->root ? size(tree->root->l) : 0);
 }

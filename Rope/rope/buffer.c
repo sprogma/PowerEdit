@@ -482,3 +482,27 @@ int buffer_get_version_cursors(struct buffer *buf, int64_t version, int64_t coun
     return 0;
 }
 
+char const_buffer[1000000];
+int64_t buffer_version = -1;
+
+int buffer_get_offsets(struct buffer *buf, int64_t version, int64_t position, int64_t *result_line, int64_t *result_column)
+{
+    if (buffer_version != version)
+    {
+        int64_t size = 0;
+        buffer_get_size(buf, version, &size);
+        buffer_read(buf, version, 0, size, const_buffer);
+        buffer_version = version;
+    }
+    int64_t last_pos = -1, cnt = 0;
+    for (int64_t i = 0; i < position; ++i)
+    {
+        if (const_buffer[i] == '\n')
+        {
+            last_pos = i;
+            cnt++;
+        }
+    }
+    *result_line = cnt;
+    *result_column = position - last_pos - 1;
+}

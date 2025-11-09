@@ -17,7 +17,7 @@ namespace RegexTokenizer
             while (pos < content.Length)
             {
                 int end;
-                if (content.Substring(pos).StartsWith("#"))
+                if (content.StartsWith(pos, "#"))
                 {
                     end = content.IndexOf('\n', pos);
                     if (end == -1) { end = content.Length; }
@@ -34,7 +34,7 @@ namespace RegexTokenizer
                     result.Add(new Token(TokenType.Comment, pos, end));
                     pos = end + 1;
                 }
-                else if (content.Substring(pos).StartsWith("<#"))
+                else if (content.StartsWith(pos, "<#"))
                 {
                     end = content.IndexOf("#>", pos + 2);
                     if (end == -1) { end = content.Length; }
@@ -42,7 +42,7 @@ namespace RegexTokenizer
                     result.Add(new Token(TokenType.MultilineComment, pos, end + 1));
                     pos = end + 2;
                 }
-                else if (content.Substring(pos).StartsWith("'"))
+                else if (content.StartsWith(pos, "'"))
                 {
                     end = content.IndexOf('\'', pos + 1);
                     if (end == -1) { end = content.Length; }
@@ -57,7 +57,7 @@ namespace RegexTokenizer
                     result.Add(new Token(TokenType.RawString, pos, end));
                     pos = end + 1;
                 }
-                else if (content.Substring(pos).StartsWith("@\'"))
+                else if (content.StartsWith(pos, "@\'"))
                 {
                     end = content.IndexOf("\'@", pos + 2);
                     if (end == -1) { end = content.Length; }
@@ -65,7 +65,7 @@ namespace RegexTokenizer
                     result.Add(new Token(TokenType.RawString, pos, end + 1));
                     pos = end + 2;
                 }
-                else if (content.Substring(pos).StartsWith("\""))
+                else if (content.StartsWith(pos, "\""))
                 {
                     end = content.IndexOf('"', pos + 1);
                     if (end == -1) { end = content.Length; }
@@ -80,7 +80,7 @@ namespace RegexTokenizer
                     result.Add(new Token(TokenType.String, pos, end));
                     pos = end + 1;
                 }
-                else if (content.Substring(pos).StartsWith("@\""))
+                else if (content.StartsWith(pos, "@\""))
                 {
                     end = content.IndexOf("\"@", pos + 2);
                     if (end == -1) { end = content.Length; }

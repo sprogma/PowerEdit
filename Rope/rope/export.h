@@ -59,6 +59,8 @@ ROPE_EXPORT int buffer_get_version_cursors_count(struct buffer *buf, int64_t ver
 
 ROPE_EXPORT int buffer_get_version_cursors(struct buffer *buf, int64_t version, int64_t count, struct cursor_t *cursors);
 
+ROPE_EXPORT int buffer_get_offsets(struct buffer *buf, int64_t version, int64_t position, int64_t *result_line, int64_t *result_column);
+
 
 
 #ifdef __cplusplus

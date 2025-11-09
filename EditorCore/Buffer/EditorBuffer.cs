@@ -193,42 +193,13 @@ namespace EditorCore.Buffer
 
         public (long, string?) GetLine(long line)
         {
-            string text = Text.Substring(0);
-
-            if (line < 0)
-            {
-                return (0, null);
-            }
-
-            int index = 0;
-            for (long i = 0; i < line; ++i)
-            {
-                if (index >= text.Length)
-                {
-                    return (0, null);
-                }
-                index = text.IndexOf('\n', index);
-                if (index == -1)
-                {
-                    return (0, null);
-                }
-                index++;
-            }
-
-            int end = text.IndexOf('\n', index);
-            if (end == -1)
-            {
-                return (index, text.Substring(index));
-            }
-            return (index, text.Substring(index, end - index + 1));
+            return Text.GetLine(line);
         }
+
         public (long, long) GetPositionOffsets(long position)
         {
             Debug.Assert(position >= 0);
-            long line = Text.Substring(0, position).Count(x => x == '\n');
-            long last_newline = Text.LastIndexOf("\n", position - 1);
-            long offset = position - last_newline - 1;
-            return (line, offset);
+            return Text.GetPositionOffsets(position);
         }
     }
 }

@@ -22,9 +22,9 @@ int node_allocator_destroy(struct node_allocator *a)
 }
 
 
-int node_allocator_new(struct node_allocator *a, struct node **result)
+int node_allocator_new(struct node_allocator *a, struct tt_node **result)
 {
-    struct node *node = NULL;
+    struct tt_node *node = NULL;
     if (a->free_len)
     {
         node = a->free[--a->free_len];
@@ -43,7 +43,7 @@ int node_allocator_new(struct node_allocator *a, struct node **result)
     *result = node;
 }
 
-int node_allocator_free(struct node_allocator *a, struct node *ptr)
+int node_allocator_free(struct node_allocator *a, struct tt_node *ptr)
 {
     if (a->free_len == a->free_alloc)
     {

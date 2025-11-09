@@ -39,6 +39,7 @@ namespace SDL2Interface
             //Console.WriteLine(buf.Substring(0, buf.Length));
 
             string? fileToOpen = args.Where(x => !x.StartsWith("-")).ElementAtOrDefault(0);
+            fileToOpen = "D:\\mipt\\a.c";
             Console.WriteLine($"Opening \"{fileToOpen}\"...");
             if (SDL.Init(SdlInitFlags.Everything) != 0)
             {

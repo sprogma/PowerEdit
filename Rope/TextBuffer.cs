@@ -5,6 +5,7 @@ using System.Reflection;
 using System.Resources;
 using System.Runtime.InteropServices;
 using System.Text;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace TextBuffer
 {
@@ -60,6 +61,9 @@ namespace TextBuffer
 
         [DllImport("msrope.dll", CallingConvention = CallingConvention.Cdecl)]
         internal static extern int buffer_get_version_cursors(IntPtr ptr, long version, long count, [Out] MarshalingCursor[] parents);
+
+        [DllImport("msrope.dll", CallingConvention = CallingConvention.Cdecl)]
+        internal static extern int buffer_get_offsets(IntPtr ptr, long version, long position, out long line, out long column);
     }
 
 
@@ -248,6 +252,44 @@ namespace TextBuffer
             MarshalingCursor[] cursors = new MarshalingCursor[cursors_count];
             CLibrary.buffer_get_version_cursors(handle, version, cursors_count, cursors);
             return cursors;
+        }
+
+        public (long, long) GetPositionOffsets(long position)
+        {
+            CLibrary.buffer_get_offsets(handle, GetCurrentVersion(), position, out long line, out long column);
+            return (line, column);
+        }
+
+        public (long, string?) GetLine(long line)
+        {
+            string text = Substring(0);
+
+            if (line < 0)
+            {
+                return (0, null);
+            }
+
+            int index = 0;
+            for (long i = 0; i < line; ++i)
+            {
+                if (index >= text.Length)
+                {
+                    return (0, null);
+                }
+                index = text.IndexOf('\n', index);
+                if (index == -1)
+                {
+                    return (0, null);
+                }
+                index++;
+            }
+
+            int end = text.IndexOf('\n', index);
+            if (end == -1)
+            {
+                return (index, text.Substring(index));
+            }
+            return (index, text.Substring(index, end - index + 1));
         }
     }
 }
