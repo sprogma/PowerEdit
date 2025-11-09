@@ -35,6 +35,8 @@ ROPE_EXPORT int buffer_init(struct buffer *buf);
 
 ROPE_EXPORT int buffer_destroy(struct buffer *buf);
 
+ROPE_EXPORT int buffer_dup_version(struct buffer *buf, int64_t base_version, int64_t *new_version);
+
 ROPE_EXPORT int buffer_moditify(struct buffer *buf, struct modification *mod);
 
 ROPE_EXPORT int buffer_get_size(struct buffer *buf, int64_t version, int64_t *length);

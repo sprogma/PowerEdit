@@ -154,6 +154,17 @@ int buffer_destroy(struct buffer *buf)
     node_allocator_init(&buf->allocator);
 }
 
+int buffer_dup_version(struct buffer *buf, int64_t base_version, int64_t *new_version)
+{
+    int64_t version = 0;
+    if (buffer_new_version(buf, base_version, &version) != 0 || version == 0)
+    {
+        return 4;
+    }
+    *new_version = version;
+    return 0;
+}
+
 int buffer_moditify(struct buffer *buf, struct modification *mod)
 {
     assert(0 <= mod->pos);
@@ -483,7 +494,10 @@ int buffer_get_version_cursors(struct buffer *buf, int64_t version, int64_t coun
 }
 
 char const_buffer[1000000];
+int64_t line[1000000];
+int64_t offset[1000000];
 int64_t buffer_version = -1;
+int64_t buffer_size = -1;
 
 int buffer_get_offsets(struct buffer *buf, int64_t version, int64_t position, int64_t *result_line, int64_t *result_column)
 {
@@ -493,16 +507,16 @@ int buffer_get_offsets(struct buffer *buf, int64_t version, int64_t position, in
         buffer_get_size(buf, version, &size);
         buffer_read(buf, version, 0, size, const_buffer);
         buffer_version = version;
-    }
-    int64_t last_pos = -1, cnt = 0;
-    for (int64_t i = 0; i < position; ++i)
-    {
-        if (const_buffer[i] == '\n')
+        buffer_size = size;
+        line[0] = 0;
+        for (int64_t i = 1; i <= size; ++i)
         {
-            last_pos = i;
-            cnt++;
+            line[i] = line[i - 1] + (int64_t)(const_buffer[i - 1] == '\n');
+            offset[i] = (const_buffer[i - 1] == '\n' ? 0 : offset[i - 1] + 1);
         }
     }
-    *result_line = cnt;
-    *result_column = position - last_pos - 1;
+    assert(position <= buffer_size);
+    *result_line = line[position];
+    *result_column = offset[position];
+    return 0;
 }
