@@ -78,7 +78,7 @@ static int buffer_new_version(struct buffer *buf, int64_t parent, int64_t *resul
     if (buf->version_depth[parent] - buf->version_depth[buf->version_skiplist[parent]] ==
         buf->version_depth[buf->version_skiplist[parent]] - buf->version_depth[buf->version_skiplist[buf->version_skiplist[parent]]])
     {
-        buf->version_skiplist[buf->version_tree_len] = buf->version_depth[buf->version_skiplist[buf->version_skiplist[parent]]];
+        buf->version_skiplist[buf->version_tree_len] = buf->version_skiplist[buf->version_skiplist[parent]];
     }
     else
     {

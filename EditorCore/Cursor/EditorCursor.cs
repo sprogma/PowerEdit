@@ -42,11 +42,9 @@ namespace EditorCore.Cursor
                 case "edit":
                     {
                         string[] args;
-                        bool used_all_text = false;
                         if (Selections.Count == 0 || Selections.All(x => x.TextLength == 0))
                         {
                             args = [Buffer.Text.Substring(0)];
-                            used_all_text = true;
                         }
                         else
                         {
@@ -62,14 +60,7 @@ namespace EditorCore.Cursor
                             return;
                         }
                         Console.WriteLine($"get result: {string.Join(' ', result.Select(x => x.ToString()))}");
-                        if (used_all_text)
-                        {
-                            Buffer.DeleteString(0, Buffer.Text.Length);
-                        }
-                        else
-                        {
-                            Selections.ForEach(x => Buffer.DeleteString(x.Min, x.TextLength));
-                        }
+                        Selections.ForEach(x => Buffer.DeleteString(x.Min, x.TextLength));
                         {
                             int id = 0;
                             if (result.Length == Selections.Count)
