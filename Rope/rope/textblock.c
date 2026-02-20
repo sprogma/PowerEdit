@@ -90,6 +90,27 @@ int textblock_modificate(struct buffer *buf, struct textblock *tb, struct modifi
         return 1;
     }
 
+    /* optimize memory usage */
+    int64_t v16 = parent;
+    for (int i = 0; i < 256; ++i)
+    {
+        v16 = buf->version_tree[v16];
+    }
+    int64_t free_parent = base_of(buf, tb, v16);
+
+    /* TODO: remove this ugly solution of memory optimization */
+    if (tb->history_buffer[free_parent] != NULL)
+    {
+        // printf("free parent: %d [parent=%d, version=%d]\n", (int)free_parent, (int)parent, (int)version);
+        if (tb->history_buffer[free_parent] != tb->history_buffer[0])
+        {
+            free(tb->history_buffer[free_parent]);
+            free(buf->version_cursors[free_parent]);
+            buf->version_cursors_count[free_parent] = 0;
+            tb->history_buffer[free_parent] = tb->history_buffer[0];
+            tb->history_len_buffer[free_parent] = tb->history_len_buffer[0];
+        }
+    }
     
     switch (mod->type)
     {

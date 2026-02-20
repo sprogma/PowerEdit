@@ -95,6 +95,7 @@ namespace EditorCore.Buffer
             {
                 return;
             }
+            SaveCursorState();
             Text.Undo();
             LoadCursorState();
 

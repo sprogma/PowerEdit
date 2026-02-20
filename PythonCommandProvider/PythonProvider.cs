@@ -57,10 +57,17 @@ namespace PythonCommandProvider
                     process.StandardInput.Write(inputCode);
                     process.StandardInput.Close();
 
-                    output = process.StandardOutput.ReadToEnd().Replace("\r", null);
-                    error = process.StandardError.ReadToEnd().Replace("\r", null);
-
-                    process.WaitForExit();
+                    if (process.WaitForExit(5000))
+                    {
+                        error = "Process don't stopped";
+                        output = "ERROR"
+                        process.Kill();
+                    }
+                    else
+                    {
+                        output = process.StandardOutput.ReadToEnd().Replace("\r", null);
+                        error = process.StandardError.ReadToEnd().Replace("\r", null);
+                    }
 
                     Console.WriteLine("Executable Output:");
                     Console.WriteLine(output);

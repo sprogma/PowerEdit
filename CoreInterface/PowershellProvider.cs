@@ -43,7 +43,7 @@ namespace PowershellCommandProvider
 
         public (IEnumerable<object>?, string?) Execute(string command, object[] args)
         {
-            Pipeline pipeline = runSpace.CreatePipeline();
+            using Pipeline pipeline = runSpace.CreatePipeline();
             pipeline.Commands.AddScript(command);
             Collection<PSObject> results;
             try
