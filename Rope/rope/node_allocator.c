@@ -10,6 +10,7 @@ int node_allocator_init(struct node_allocator *a)
     a->free = NULL;
     a->free_len = 0;
     a->free_alloc = 0;
+    return 0;
 }
 
 
@@ -19,6 +20,7 @@ int node_allocator_destroy(struct node_allocator *a)
     a->free = NULL;
     a->free_len = 0;
     a->free_alloc = 0;
+    return 0;
 }
 
 
@@ -41,6 +43,7 @@ int node_allocator_new(struct node_allocator *a, struct tt_node **result)
     node->l = node->r = node->p = NULL;
 
     *result = node;
+    return 0;
 }
 
 int node_allocator_free(struct node_allocator *a, struct tt_node *ptr)
@@ -57,6 +60,7 @@ int node_allocator_free(struct node_allocator *a, struct tt_node *ptr)
     }
 
     a->free[a->free_len++] = ptr;
+    return 0;
 }
 
 

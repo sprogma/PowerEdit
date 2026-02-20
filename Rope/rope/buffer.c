@@ -137,6 +137,7 @@ int buffer_init(struct buffer *buf)
     buf->blocks_len++;
     buf->blocks[0] = malloc(sizeof(*buf->blocks[0]));
     textblock_init(buf->blocks[0]);
+    return 0;
 }
 
 int buffer_destroy(struct buffer *buf)
@@ -152,6 +153,7 @@ int buffer_destroy(struct buffer *buf)
     buf->blocks_alloc = 0;
 
     node_allocator_init(&buf->allocator);
+    return 0;
 }
 
 int buffer_dup_version(struct buffer *buf, int64_t base_version, int64_t *new_version)

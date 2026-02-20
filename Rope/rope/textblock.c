@@ -59,6 +59,7 @@ int textblock_init(struct textblock *tb)
 
     tb->history_buffer[0] = strdup("");
     tb->history_len_buffer[0] = 0;
+    return 0;
 }
 
 int textblock_destroy(struct textblock *tb)
@@ -72,6 +73,7 @@ int textblock_destroy(struct textblock *tb)
     }
     free(tb->history_buffer);
     free(tb->history_len_buffer);
+    return 0;
 }
 
 int textblock_modificate(struct buffer *buf, struct textblock *tb, struct modification *mod, int64_t version)

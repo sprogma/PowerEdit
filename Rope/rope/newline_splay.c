@@ -1,4 +1,5 @@
 #define __USE_MINGW_ANSI_STDIO 1
+#include "stdlib.h"
 #include "stdio.h"
 
 #include "malloc.h"
@@ -41,6 +42,7 @@ struct newline_tree *nltree_create()
     struct newline_tree *x = calloc(1, sizeof(*x));
     x->root = NULL;
     x->size = 0;
+    return x;
 }
 
 void free_tree(node *v)
