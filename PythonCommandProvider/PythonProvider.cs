@@ -60,7 +60,7 @@ namespace PythonCommandProvider
                     if (process.WaitForExit(5000))
                     {
                         error = "Process don't stopped";
-                        output = "ERROR"
+                        output = "ERROR";
                         process.Kill();
                     }
                     else
