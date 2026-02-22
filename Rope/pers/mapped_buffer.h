@@ -8,6 +8,8 @@
 struct mapped_buffer
 {
     char *buffer;
+    int64_t length;
+    int64_t allocated;
 };
 
 

@@ -10,6 +10,9 @@
 #include "threading.h"
 #include "clocks.h"
 
+#define MODIFICATION_INSERT 1
+#define MODIFICATION_DELETE 2
+
 struct segment_info
 {
     struct mapped_buffer *buffer;
@@ -24,8 +27,8 @@ struct segment
     int64_t left, right;
     int64_t height;
     int64_t total_length;
-    int64_t links_count;
     int64_t version_id;
+    _Atomic int64_t links_count;
 };
 
 
@@ -46,32 +49,59 @@ struct state_hash
 };
 
 
+struct cursor
+{
+    int64_t begin, end;
+};
+
+
 struct state
 {
     lock_t lock;
     ptime_t timestamp;
     struct state_hash hash;
-    struct segment *version;
+    struct segment *value;
     int64_t version_id;
+
+    int64_t committed;
+
+    struct cursor *cursors;
+    int64_t cursors_len;
     
     int64_t previous_versions_len;
+    int64_t previous_versions_alloc;
     struct state **previous_versions; // first version is main, others are "merged-in"
+    
+    int64_t next_versions_len;
+    int64_t next_versions_alloc;
+    struct state **next_versions;
     
     int64_t tags_len;
     int64_t *tags;
 };
 
 
-struct buffer
+struct project
 {
-    /* data */
-    struct state *current;
+    lock_t lock;
+    struct state **states;
+    int64_t states_len;
+    int64_t states_alloc;
+    struct mapped_buffer *current_buffer;
     _Atomic int64_t last_version_id;
 };
 
 
-struct segment *GetSegment(struct segment *tree, int64_t position);
+struct segment *GetSegment(struct segment *tree, int64_t position, int64_t *segment_offset);
 struct segment *RemoveSegment(struct segment *tree, int64_t position, int64_t this_version);
 struct segment *InsertSegment(struct segment *tree, struct segment_info info, int64_t position, int64_t this_version);
+void SegmentIncRef(struct segment *tree);
+void SegmentDecRef(struct segment *tree);
+int64_t SegmentLength(struct segment *tree);
+
+struct state *state_create_empty(struct project *project);
+void state_release(struct state *state);
+void _reserve_state(struct project *project, int64_t total_size);
+
 
 #endif

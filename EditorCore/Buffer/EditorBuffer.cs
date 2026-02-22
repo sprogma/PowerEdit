@@ -109,7 +109,7 @@ namespace EditorCore.Buffer
             {
                 return;
             }
-            if (Text.Redo() == null)
+            if (Text.Redo())
             {
                 return;
             }

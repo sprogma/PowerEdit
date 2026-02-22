@@ -20,29 +20,39 @@ namespace SDL2Interface
             public Node? right;
             public Node? left;
             public Node? down;
-            public List<Node> childs;
             /* inner valus */
-            public Node? parent;
+            public List<Node> childs;
+            public List<Node> parents;
+
             public int depth;
-            public int id;
+            public IntPtr id;
             public string? name;
             public bool hidden;
             public string Label => name ?? id.ToString();
             public Vector2 position;
 
-            public Node(int id, Node? parent, string? name)
+            public Node(IntPtr id)
             {
+                this.id = id;
                 this.hidden = false;
                 this.childs = new();
-                this.id = id;
-                this.parent = parent;
-                this.depth = parent?.depth + 1 ?? 0;
-                this.name = name;
+                this.parents = new();
+            }
+
+            public void AddChild(Node child)
+            {
+                childs.Add(child);
+            }
+
+            public void AddParent(Node parent)
+            {
+                parents.Add(parent);
             }
         }
 
-        List<Node> tree;
+        Dictionary<IntPtr, Node> tree;
         Node current;
+        List<Node> roots;
         public TextBuffer.TextBuffer cBuffer;
         public EditorBuffer buffer;
         public bool showNumbers = true;
@@ -61,15 +71,15 @@ namespace SDL2Interface
         {
             this.buffer = editBuffer;
             this.cBuffer = textBuffer;
-            this.tree = new();
-            long[] parents = this.cBuffer.GetVersionTree();
-            for (int i = 0; i < parents.Length; i++)
+            (var states, var links) = this.cBuffer.GetVersionTree();
+            this.tree = states.Select(x => new Node(x)).ToDictionary(x => x.id);
+            foreach ((var parent, var child) in links)
             {
-                int p = (int)parents[i];
-                this.tree.Add(new Node(i, (this.tree.Count > p ? this.tree[p] : null), null));
+                this.tree[parent].AddChild(this.tree[child]);
+                this.tree[child].AddParent(this.tree[parent]);
             }
-            current = this.tree[(int)this.cBuffer.GetCurrentVersion()];
-
+            current = this.tree[this.cBuffer.GetCurrentVersion()];
+            roots = this.tree.Values.Where(x => x.parents.Count() == 0).ToList();
             CalculateGraphPositions();
         }
 
@@ -84,7 +94,7 @@ namespace SDL2Interface
 
         void UpdateVisibleParent(Node node)
         {
-            if (node.parent == null)
+            if (node.parents.Count == 0)
             {
                 node.depth = 0;
                 return;
@@ -93,9 +103,9 @@ namespace SDL2Interface
             {
                 return;
             }
-            UpdateVisibleParent(node.parent);
-            node.up = (node.parent.hidden ? node.parent.up : node.parent);
-            node.depth = node.parent.depth + (node.parent.hidden ? 0 : 1);
+            UpdateVisibleParent(node.parents[0]);
+            node.up = (node.parents[0].hidden ? node.parents[0].up : node.parents[0]);
+            node.depth = node.parents[0].depth + (node.parents[0].hidden ? 0 : 1);
         }
 
         /// <summary>
@@ -104,29 +114,29 @@ namespace SDL2Interface
         public void CalculateGraphPositions()
         {
             /* clear current graph */
-            foreach (Node node in tree)
+            foreach ((IntPtr id, Node node) in tree)
             {
                 node.childs.Clear();
                 node.depth = 0;
                 node.up = node.down = node.left = node.right = null;
             }
             /* update parents [up] and depth */
-            foreach (Node node in tree.AsEnumerable())
+            foreach ((IntPtr id, Node node) in tree.AsEnumerable())
             {
                 UpdateVisibleParent(node);
             }
             /* calculate childs */
-            foreach (Node node in tree.Where(x => !x.hidden))
+            foreach (Node node in tree.Values.Where(x => !x.hidden))
             {
                 node.up?.childs.Add(node);
             }
-            foreach (Node node in tree.Where(x => !x.hidden))
+            foreach (Node node in tree.Values.Where(x => !x.hidden))
             {
-                node.childs.Sort((x, y) => x.id - y.id);
+                node.childs.Sort((x, y) => x.id.CompareTo(y.id));
             }
             /* calculate node's positions */
             float currentX = 0.0f;
-            WalkTree(tree[0], (Node x) => {
+            roots.ForEach(root => WalkTree(root, (Node x) => {
                 if (!x.hidden)
                 {
                     x.position.Y = x.depth * LineHeight;  
@@ -140,10 +150,10 @@ namespace SDL2Interface
                         x.position.X = x.childs.Average(x => x.position.X);
                     }
                 }
-            });
+            }));
 
             /* calculate right, left and down: */
-            foreach (Node node in tree.Where(x => !x.hidden))
+            foreach (Node node in tree.Values.Where(x => !x.hidden))
             {
                 // add 0.01f to select rightmost from all
                 node.down = node.childs.MinBy(x => Math.Abs(x.position.X - node.position.X - 0.01f));
@@ -157,7 +167,7 @@ namespace SDL2Interface
             /* update camera */
             if (this.tree.Count != 0)
             {
-                Camera = this.tree.Where(x => !x.hidden).Select(x => x.position).Aggregate((x, y) => x + y)/this.tree.Count;
+                Camera = this.tree.Values.Where(x => !x.hidden).Select(x => x.position).Aggregate((x, y) => x + y)/this.tree.Count;
             }
         }
 
@@ -167,7 +177,7 @@ namespace SDL2Interface
             SDL.RenderFillRect(renderer, ref position);
 
             /* draw tree, relative to current version */
-            foreach (Node node in tree.Where(x => !x.hidden))
+            foreach (Node node in tree.Values.Where(x => !x.hidden))
             {
                 SDL.SetRenderDrawColor(renderer, 255, 0, 0, 0);
                 Vector2 pos = (node.position - Camera) * Scale + new Vector2(position.Width * 0.5f, position.Height * 0.5f);
@@ -222,18 +232,18 @@ namespace SDL2Interface
                     }
                     else if (e.Keyboard.Keysym.Scancode == Scancode.C)
                     {
-                        if (tree.Any(x => x.hidden))
+                        if (tree.Values.Any(x => x.hidden))
                         {
-                            foreach (Node node in tree)
+                            foreach (Node node in tree.Values)
                             {
                                 node.hidden = false;
                             }
                         }
                         else
                         {
-                            foreach (Node node in tree)
+                            foreach (Node node in tree.Values)
                             {
-                                node.hidden = (node.childs.Count == 1 && node.parent != null);
+                                node.hidden = (node.childs.Count == 1 && node.parents.Count != 0);
                             }
                         }
                         current.hidden = false;

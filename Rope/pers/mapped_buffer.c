@@ -14,6 +14,8 @@ struct mapped_buffer *allocate_buffer(int64_t size)
 {
     struct mapped_buffer_real *buf = malloc(sizeof(*buf));
     buf->buffer = malloc(size);
+    buf->length = 0;
+    buf->allocated = size;
     buf->links_count = 1;
     return (struct mapped_buffer *)buf;
 }

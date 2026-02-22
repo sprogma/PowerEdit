@@ -137,7 +137,7 @@ namespace SDL2Interface
                     {
                         string s = GetTextInputValue(e.Text);
                         /* clear all selection */
-                        cursor?.Selections.ForEach(x => x.Cursor.Buffer.DeleteString(x.Min, x.TextLength));
+                        cursor?.Selections.ForEach(x => { if (x.TextLength != 0) { x.Cursor.Buffer.DeleteString(x.Min, x.TextLength); } });
                         cursor?.Selections.ForEach(x => x.InsertText(s));
                         cursor?.Commit();
                     }

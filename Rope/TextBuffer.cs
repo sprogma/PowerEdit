@@ -11,8 +11,8 @@ namespace TextBuffer
 {
     public static class Modification
     {
-        public const UInt64 Insert = 0;
-        public const UInt64 Delete = 1;
+        public const UInt64 Insert = 1;
+        public const UInt64 Delete = 2;
     };
 
     [StructLayout(LayoutKind.Sequential, Pack = 8)]
@@ -21,60 +21,77 @@ namespace TextBuffer
         public long Begin = begin, End = end;
     }
 
+    [StructLayout(LayoutKind.Sequential, Pack = 8)]
+    public struct MarshalingLink(IntPtr parent, IntPtr child)
+    {
+        public IntPtr Parent = parent, Child = child;
+
+        public void Deconstruct(out IntPtr parent, out IntPtr child)
+        {
+            parent = Parent;
+            child = Child;
+        }
+    }
+
     internal static class CLibrary
     {
-        [DllImport("msrope.dll", CallingConvention = CallingConvention.Cdecl)]
-        internal static extern int buffer_create(out IntPtr ptr);
+        [DllImport("msrope.dll")]
+        internal static extern IntPtr project_create();
 
-        [DllImport("msrope.dll", CallingConvention = CallingConvention.Cdecl)]
-        internal static extern int buffer_destroy(IntPtr ptr);
+        [DllImport("msrope.dll")]
+        internal static extern void project_destroy(IntPtr project);
 
-        [DllImport("msrope.dll", CallingConvention = CallingConvention.Cdecl)]
-        internal static extern int buffer_moditify_star(IntPtr ptr, UInt64 type, long pos, long len, string? text);
+        [DllImport("msrope.dll")]
+        internal static extern IntPtr project_new_state(IntPtr project);
 
-        [DllImport("msrope.dll", CallingConvention = CallingConvention.Cdecl)]
-        internal static extern int buffer_get_size(IntPtr ptr, long version, out long length);
+        [DllImport("msrope.dll")]
+        internal static extern IntPtr state_create_dup(IntPtr project, IntPtr state);
 
-        [DllImport("msrope.dll", CallingConvention = CallingConvention.Cdecl)]
-        internal static extern int buffer_read(IntPtr ptr, long version, long from, long length, IntPtr buffer);
+        [DllImport("msrope.dll")]
+        internal static extern int state_moditify(IntPtr project, IntPtr state, long pos, UInt64 type, long len, string? text);
 
-        [DllImport("msrope.dll", CallingConvention = CallingConvention.Cdecl)]
-        internal static extern int buffer_version_set(IntPtr ptr, long version);
+        [DllImport("msrope.dll")]
+        internal static extern void state_commit(IntPtr project, IntPtr state);
 
-        [DllImport("msrope.dll", CallingConvention = CallingConvention.Cdecl)]
-        internal static extern int buffer_version_get(IntPtr ptr, out long version);
+        [DllImport("msrope.dll")]
+        internal static extern long state_get_size(IntPtr state);
 
-        [DllImport("msrope.dll", CallingConvention = CallingConvention.Cdecl)]
-        internal static extern int buffer_version_before(IntPtr ptr, long version, long steps, out long result);
+        [DllImport("msrope.dll")]
+        internal static extern void state_read(IntPtr state, long position, long length, IntPtr buffer);
 
-        [DllImport("msrope.dll", CallingConvention = CallingConvention.Cdecl)]
-        internal static extern int buffer_read_versions_count(IntPtr ptr, out long result);
+        [DllImport("msrope.dll")]
+        internal static extern IntPtr state_version_before(IntPtr state, long steps);
 
-        [DllImport("msrope.dll", CallingConvention = CallingConvention.Cdecl)]
-        internal static extern int buffer_read_versions(IntPtr ptr, long count, [Out] long[] parents);
+        [DllImport("msrope.dll")]
+        internal static extern void project_get_states_len(IntPtr project, out long states_count, out long links_count);
 
-        [DllImport("msrope.dll", CallingConvention = CallingConvention.Cdecl)]
-        internal static extern int buffer_set_version_cursors(IntPtr ptr, long version, long count, [In] MarshalingCursor[] parents);
+        [DllImport("msrope.dll")]
+        internal static extern void project_get_states(IntPtr project, long states_count, [Out] IntPtr[] states, long links_count, [Out] MarshalingLink[] links);
 
-        [DllImport("msrope.dll", CallingConvention = CallingConvention.Cdecl)]
-        internal static extern int buffer_get_version_cursors_count(IntPtr ptr, long version, out long count);
+        [DllImport("msrope.dll")]
+        internal static extern void state_set_cursors(IntPtr state, long count, [In] MarshalingCursor[] cursors);
 
-        [DllImport("msrope.dll", CallingConvention = CallingConvention.Cdecl)]
-        internal static extern int buffer_get_version_cursors(IntPtr ptr, long version, long count, [Out] MarshalingCursor[] parents);
+        [DllImport("msrope.dll")]
+        internal static extern long state_get_cursors_count(IntPtr state);
 
-        [DllImport("msrope.dll", CallingConvention = CallingConvention.Cdecl)]
-        internal static extern int buffer_get_offsets(IntPtr ptr, long version, long position, out long line, out long column);
+        [DllImport("msrope.dll")]
+        internal static extern void state_get_cursors(IntPtr state, long count, [Out] MarshalingCursor[] cursors);
+
+        [DllImport("msrope.dll")]
+        internal static extern void state_get_offsets(IntPtr ptr, long position, out long line, out long column);
     }
 
 
     public class TextBuffer
     {
-        IntPtr handle;
-        Stack<long> undos;
+        IntPtr project;
+        IntPtr curr_state;
+        Stack<IntPtr> undos;
 
         public TextBuffer()
         {
-            CLibrary.buffer_create(out handle);
+            project = CLibrary.project_create();
+            curr_state = CLibrary.project_new_state(project);
             undos = [];
         }
 
@@ -82,47 +99,38 @@ namespace TextBuffer
             get
             {
                 IntPtr destPtr = Marshal.AllocHGlobal(1);
-                CLibrary.buffer_read(handle, GetCurrentVersion(), index, 1, destPtr);
+                CLibrary.state_read(curr_state, index, 1, destPtr);
                 string res = Marshal.PtrToStringAnsi(destPtr, 1);
                 Marshal.FreeHGlobal(destPtr);
                 return res[0];
             } 
             set
             {
-                CLibrary.buffer_moditify_star(handle, Modification.Delete, index, 1, null);
-                CLibrary.buffer_moditify_star(handle, Modification.Insert, index, 1, value.ToString());
+                CLibrary.state_moditify(project, curr_state, index, Modification.Delete, 1, null);
+                CLibrary.state_moditify(project, curr_state, index, Modification.Insert, 1, value.ToString());
             }
         }
 
-        public int Length { get {
-                CLibrary.buffer_get_size(handle, GetCurrentVersion(), out long size);
-                return (int)size;
-            } }
+        public int Length => (int)CLibrary.state_get_size(curr_state);
+        public long LengthEx(IntPtr state) => CLibrary.state_get_size(state);
 
-        public long LengthEx(long version)
+        public string SubstringEx(IntPtr state, long pos, long len)
         {
-            CLibrary.buffer_get_size(handle, version, out long size);
-            return size;
-        }
-
-
-        public string SubstringEx(long version, long pos, long len)
-        {
-            // Console.WriteLine($"Req SUBSTR of len {len}");
             IntPtr destPtr = Marshal.AllocHGlobal((int)(len + 10));
-            CLibrary.buffer_read(handle, version, pos, len, destPtr);
+            CLibrary.state_read(state, pos, len, destPtr);
             string res = Marshal.PtrToStringAnsi(destPtr, (int)len);
             Marshal.FreeHGlobal(destPtr);
             return res;
         }
         
-        public string SubstringEx(long version, long pos) => SubstringEx(version, pos, LengthEx(version) - pos);
+        public string SubstringEx(IntPtr state, long pos) => SubstringEx(state, pos, LengthEx(state) - pos);
 
         public string Substring(long pos, long len)
         {
             // Console.WriteLine($"Req SUBSTR of len {len}");
             IntPtr destPtr = Marshal.AllocHGlobal((int)(len + 10));
-            CLibrary.buffer_read(handle, GetCurrentVersion(), pos, len, destPtr);
+
+            CLibrary.state_read(curr_state, pos, len, destPtr);
             string res = Marshal.PtrToStringAnsi(destPtr, (int)len);
             Marshal.FreeHGlobal(destPtr);
             return res;
@@ -179,35 +187,37 @@ namespace TextBuffer
             return -1;
         }
 
-        public long Undo()
+        public void Undo()
         {
-            CLibrary.buffer_version_get(handle, out long version);
-            CLibrary.buffer_version_before(handle, version, 1, out long result);
-            CLibrary.buffer_version_set(handle, result);
-            undos.Push(version);
-            return result;
+            undos.Push(curr_state);
+            curr_state = CLibrary.state_version_before(curr_state, 1);
         }
 
-        public long? Redo()
+        public bool Redo()
         {
-            if (undos.TryPop(out long version))
+            if (undos.TryPop(out IntPtr version))
             {
-                CLibrary.buffer_version_set(handle, version);
-                return version;
+                curr_state = version;
+                return true;
             }
-            return null;
+            return false;
         }
 
         public void Insert(long index, string item)
         {
             undos.Clear();
-            CLibrary.buffer_moditify_star(handle, Modification.Insert, index, item.Length, item);
+            CLibrary.state_moditify(project, curr_state, index, Modification.Insert, item.Length, item);
+            CLibrary.state_commit(project, curr_state);
+            curr_state = CLibrary.state_create_dup(project, curr_state);
         }
 
         public void RemoveAt(long index, long count = 1)
         {
+            if (count == 0) return;
             undos.Clear();
-            CLibrary.buffer_moditify_star(handle, Modification.Delete, index, count, null);
+            CLibrary.state_moditify(project, curr_state, index, Modification.Delete, count, null);
+            CLibrary.state_commit(project, curr_state);
+            curr_state = CLibrary.state_create_dup(project, curr_state);
         }
 
         public void Clear() => RemoveAt(0, Length);
@@ -217,23 +227,23 @@ namespace TextBuffer
             // TODO: this
         }
 
-        public void SetVersion(long version)
+        public void SetVersion(IntPtr version)
         {
-            CLibrary.buffer_version_set(handle, version);
+            curr_state = version;
         }
 
-        public long GetCurrentVersion()
+        public IntPtr GetCurrentVersion()
         {
-            CLibrary.buffer_version_get(handle, out long version);
-            return version;
+            return curr_state;
         }
 
-        public long[] GetVersionTree()
+        public (IntPtr[] states, MarshalingLink[] links) GetVersionTree()
         {
-            CLibrary.buffer_read_versions_count(handle, out long versions_count);
-            long[] result = new long[versions_count];
-            CLibrary.buffer_read_versions(handle, versions_count, result);
-            return result;
+            CLibrary.project_get_states_len(project, out long versions_count, out long links_count);
+            IntPtr[] states = new IntPtr[versions_count];
+            MarshalingLink[] links = new MarshalingLink[links_count];
+            CLibrary.project_get_states(project, versions_count, states, links_count, links);
+            return (states, links);
         }
 
         public void SaveToFile(string filename)
@@ -241,22 +251,22 @@ namespace TextBuffer
             File.WriteAllText(filename, Substring(0));
         }
 
-        public void SaveCursors(long version, MarshalingCursor[] cursors)
+        public void SaveCursors(IntPtr state, MarshalingCursor[] cursors)
         {
-            CLibrary.buffer_set_version_cursors(handle, version, cursors.LongLength, cursors);
+            CLibrary.state_set_cursors(state, cursors.LongLength, cursors);
         }
 
-        public MarshalingCursor[] GetCursors(long version)
+        public MarshalingCursor[] GetCursors(IntPtr state)
         {
-            CLibrary.buffer_get_version_cursors_count(handle, version, out long cursors_count);
+            long cursors_count = CLibrary.state_get_cursors_count(state);
             MarshalingCursor[] cursors = new MarshalingCursor[cursors_count];
-            CLibrary.buffer_get_version_cursors(handle, version, cursors_count, cursors);
+            CLibrary.state_get_cursors(state, cursors_count, cursors);
             return cursors;
         }
 
         public (long, long) GetPositionOffsets(long position)
         {
-            CLibrary.buffer_get_offsets(handle, GetCurrentVersion(), position, out long line, out long column);
+            CLibrary.state_get_offsets(curr_state, position, out long line, out long column);
             return (line, column);
         }
 
