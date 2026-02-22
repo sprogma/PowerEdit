@@ -78,7 +78,19 @@ namespace TextBuffer
         internal static extern void state_get_cursors(IntPtr state, long count, [Out] MarshalingCursor[] cursors);
 
         [DllImport("msrope.dll")]
-        internal static extern void state_get_offsets(IntPtr ptr, long position, out long line, out long column);
+        internal static extern void state_get_offsets(IntPtr state, long position, out long line, out long column);
+
+        [DllImport("msrope.dll")]
+        internal static extern long state_nearest_left(IntPtr state, long position);
+
+        [DllImport("msrope.dll")]
+        internal static extern long state_nearest_right(IntPtr state, long position);
+
+        [DllImport("msrope.dll")]
+        internal static extern long state_line_number(IntPtr state, long position);
+
+        [DllImport("msrope.dll")]
+        internal static extern long state_nth_newline(IntPtr state, long position);
     }
 
 
@@ -106,8 +118,10 @@ namespace TextBuffer
             } 
             set
             {
+                curr_state = CLibrary.state_create_dup(project, curr_state);
                 CLibrary.state_moditify(project, curr_state, index, Modification.Delete, 1, null);
                 CLibrary.state_moditify(project, curr_state, index, Modification.Insert, 1, value.ToString());
+                CLibrary.state_commit(project, curr_state);
             }
         }
 
@@ -175,16 +189,14 @@ namespace TextBuffer
             return -1;
         }
 
-        public long LastIndexOf(string item, long offset)
+        public long NearestNewlineLeft(long offset)
         {
-            for (long i = Math.Min(offset - item.Length + 1, Length - item.Length); i >= 0; --i)
-            {
-                if (Substring(i, item.Length) == item)
-                {
-                    return i;
-                }
-            }
-            return -1;
+            return CLibrary.state_nearest_left(curr_state, offset);
+        }
+
+        public long NearestNewlineRight(long offset)
+        {
+            return CLibrary.state_nearest_right(curr_state, offset);
         }
 
         public void Undo()
@@ -206,18 +218,19 @@ namespace TextBuffer
         public void Insert(long index, string item)
         {
             undos.Clear();
+            curr_state = CLibrary.state_create_dup(project, curr_state);
             CLibrary.state_moditify(project, curr_state, index, Modification.Insert, item.Length, item);
             CLibrary.state_commit(project, curr_state);
-            curr_state = CLibrary.state_create_dup(project, curr_state);
         }
 
         public void RemoveAt(long index, long count = 1)
         {
             if (count == 0) return;
+            if (index + count > Length) return;
             undos.Clear();
+            curr_state = CLibrary.state_create_dup(project, curr_state);
             CLibrary.state_moditify(project, curr_state, index, Modification.Delete, count, null);
             CLibrary.state_commit(project, curr_state);
-            curr_state = CLibrary.state_create_dup(project, curr_state);
         }
 
         public void Clear() => RemoveAt(0, Length);
@@ -270,36 +283,34 @@ namespace TextBuffer
             return (line, column);
         }
 
-        public (long, string?) GetLine(long line)
+        public (long index, string? text) GetLine(long line)
         {
-            string text = Substring(0);
+            if (line < 0) return (0, null);
 
-            if (line < 0)
+            long startPos = 0;
+            if (line > 0)
+            {
+                long prevNewline = CLibrary.state_nth_newline(curr_state, line - 1);
+                if (prevNewline == -1) return (0, null);
+                startPos = prevNewline + 1;
+            }
+
+            if (startPos >= Length)
             {
                 return (0, null);
             }
 
-            int index = 0;
-            for (long i = 0; i < line; ++i)
+            long nextNewline = CLibrary.state_nth_newline(curr_state, line);
+            string resultText;
+            if (nextNewline == -1)
             {
-                if (index >= text.Length)
-                {
-                    return (0, null);
-                }
-                index = text.IndexOf('\n', index);
-                if (index == -1)
-                {
-                    return (0, null);
-                }
-                index++;
+                resultText = Substring(startPos, Length - startPos);
             }
-
-            int end = text.IndexOf('\n', index);
-            if (end == -1)
+            else
             {
-                return (index, text.Substring(index));
+                resultText = Substring(startPos, (nextNewline - startPos) + 1);
             }
-            return (index, text.Substring(index, end - index + 1));
+            return (startPos, resultText);
         }
     }
 }

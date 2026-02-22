@@ -24,7 +24,7 @@ namespace EditorCore.Selection
 
         public void UpdateFromLineOffset()
         {
-            long last_newline = Cursor.Buffer.Text.LastIndexOf("\n", End - 1);
+            long last_newline = Cursor.Buffer.Text.NearestNewlineLeft(End - 1);
             FromLineOffset = End - last_newline - 1;
         }
 
@@ -259,13 +259,13 @@ namespace EditorCore.Selection
                 offset = -offset;
                 for (long i = 0; i < offset; i++)
                 {
-                    long endOfPrevLine = Cursor.Buffer.Text.LastIndexOf('\n', (int)(End - 1));
+                    long endOfPrevLine = Cursor.Buffer.Text.NearestNewlineLeft(End - 1);
                     if (endOfPrevLine == -1)
                     {
                         End = 0;
                         goto update_begin_pointer;
                     }
-                    long endOfBeforePrevLine = Cursor.Buffer.Text.LastIndexOf('\n', (int)(endOfPrevLine - 1));
+                    long endOfBeforePrevLine = Cursor.Buffer.Text.NearestNewlineLeft(endOfPrevLine - 1);
                     End = Math.Min(endOfPrevLine, endOfBeforePrevLine + 1 + FromLineOffset);
                 }
             }
@@ -273,13 +273,13 @@ namespace EditorCore.Selection
             {
                 for (long i = 0; i < offset; i++)
                 {
-                    long nextLine = Cursor.Buffer.Text.IndexOf('\n', (int)End);
+                    long nextLine = Cursor.Buffer.Text.NearestNewlineRight(End);
                     if (nextLine == -1)
                     {
                         End = Cursor.Buffer.Text.Length;
                         goto update_begin_pointer;
                     }
-                    long afterNextLine = Cursor.Buffer.Text.IndexOf('\n', (int)(nextLine + 1));
+                    long afterNextLine = Cursor.Buffer.Text.NearestNewlineRight(nextLine + 1);
                     if (afterNextLine == -1)
                     {
                         afterNextLine = Cursor.Buffer.Text.Length;

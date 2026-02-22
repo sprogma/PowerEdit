@@ -36,6 +36,11 @@ struct project *project_create()
 	project->states = NULL;
 	project->current_buffer = allocate_buffer(1024 * 1024);
 	_reserve_state(project, 1024);
+
+
+	project->HashWorker = StartNewThread(HashEvaluationWorker, project);
+	project->StatesMerger = StartNewThread(StatesMergeWorker, project);
+
 	return project;
 }
 
@@ -75,7 +80,6 @@ void project_get_states_len(struct project *project, int64_t *states_count, int6
 	{
 		count += project->states[i]->next_versions_len;
 	}
-	printf("found %lld links\n", count);
 	freeShared(&project->lock);
 	*links_count = count;
 }
@@ -95,6 +99,5 @@ void project_get_states(struct project *project, int64_t states_count, struct st
 			*links++ = (struct link){ st, st->next_versions[j] };
 		}
 	}
-	printf("exported %lld links\n", links_end - links_begin);
 	freeShared(&project->lock);
 }

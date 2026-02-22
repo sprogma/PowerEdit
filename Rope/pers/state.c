@@ -77,7 +77,8 @@ struct state *state_create_dup(struct project *project, struct state *state)
     state->next_versions[state->next_versions_len++] = res;
 
     res->value = state->value;
-    SegmentIncRef(state->value);
+    res->committed = 0;
+    res->hash.calculated = 0;
 
     lockExclusive(&project->lock);
 
@@ -90,9 +91,29 @@ struct state *state_create_dup(struct project *project, struct state *state)
     return res;
 }
 
+void merge_state(struct state *base, struct state *child)
+{
+    /* set all child childs to base childs */
+    _reserve_next_versions(base, base->next_versions_len + child->next_versions_len);
+    for (int64_t i = 0; i < child->next_versions_len; ++i)
+    {
+        base->next_versions[base->next_versions_len++] = child->next_versions[i];
+    }
+
+    /* set all parents of child to out parents */
+    _reserve_previous_versions(base, base->previous_versions_len + child->previous_versions_len);
+    for (int64_t i = 0; i < child->previous_versions_len; ++i)
+    {
+        base->previous_versions[base->previous_versions_len++] = child->previous_versions[i];
+    }
+
+    /* clear all child links */
+    child->previous_versions_len = 0;
+    child->next_versions_len = 0;
+}
+
 void state_release(struct state *state)
 {
-    SegmentDecRef(state->value);
     free(state->previous_versions);
     free(state->next_versions);
     free(state->cursors);
@@ -158,7 +179,17 @@ void _state_insert(struct project *project, struct state *state, int64_t positio
         state->value = InsertSegment(state->value, (struct segment_info) { info.buffer, info.offset, position - segment_position }, segment_position, state->version_id);
     }
     /* insert new segment */
-    state->value = InsertSegment(state->value, (struct segment_info) { buffer, offset, length }, position, state->version_id);
+    int64_t insert_position = position;
+    int64_t insert_length = length;
+    while (insert_length > 0)
+    {
+        int64_t to_insert = length;
+        if (to_insert > SEGMENT_SIZE) { to_insert = SEGMENT_SIZE; }
+        state->value = InsertSegment(state->value, (struct segment_info) { buffer, offset, to_insert }, insert_position, state->version_id);
+        insert_length -= to_insert;
+        offset += to_insert;
+        insert_position += to_insert;
+    }
     /* insert back this segment's suffix */
     if (position - segment_position < info.length)
     {
@@ -274,28 +305,49 @@ void state_get_cursors(struct state *state, int64_t count, struct cursor *result
     freeShared(&state->lock);
 }
 
-// TODO: rewrite this
-char const_buffer[1000000];
-int64_t line[1000000];
-int64_t offset[1000000];
-struct state *state_version = NULL;
-int64_t buffer_size = -1;
 void state_get_offsets(struct state *state, int64_t position, int64_t *result_line, int64_t *result_column)
 {
-    if (state_version != state)
+    int64_t node_id = state->value - glb_nodes;
+    if (!node_id || position <= 0)
     {
-        int64_t size = 0;
-        size = state_get_size(state);
-        state_read(state, 0, size, const_buffer);
-        state_version = state;
-        buffer_size = size;
-        line[0] = 0;
-        for (int64_t i = 1; i <= size; ++i)
-        {
-            line[i] = line[i - 1] + (int64_t)(const_buffer[i - 1] == '\n');
-            offset[i] = (const_buffer[i - 1] == '\n' ? 0 : offset[i - 1] + 1);
-        }
+        *result_line = 0;
+        *result_column = 0;
+        return;
     }
-    *result_line = line[position];
-    *result_column = offset[position];
+    *result_line = SegmentGetLineNumber(node_id, position);
+    int64_t last_nl_pos = FindNearestLeft(node_id, position - 1);
+    if (last_nl_pos == -1)
+    {
+        *result_column = position;
+    }
+    else
+    {
+        *result_column = position - (last_nl_pos + 1);
+    }
 }
+
+
+int64_t state_nearest_left(struct state *state, int64_t position)
+{
+    int64_t id = (state->value ? state->value - glb_nodes : 0);
+    return FindNearestLeft(id, position);
+}
+
+int64_t state_nearest_right(struct state *state, int64_t position)
+{
+    int64_t id = (state->value ? state->value - glb_nodes : 0);
+    return FindNearestRight(id, position);
+}
+
+int64_t state_line_number(struct state *state, int64_t position)
+{
+    int64_t id = (state->value ? state->value - glb_nodes : 0);
+    return SegmentGetLineNumber(id, position);
+}
+
+int64_t state_nth_newline(struct state *state, int64_t n)
+{
+    int64_t id = (state->value ? state->value - glb_nodes : 0);
+    return SegmentNthNewline(id, n);
+}
+

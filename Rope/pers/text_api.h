@@ -2,6 +2,8 @@
 #define EXPORT_API
 
 
+#define SEGMENT_SIZE (64*1024)
+
 // #define BAN_READ_WRONG_PIECES
 
 
@@ -63,6 +65,15 @@ ROPE_EXPORT void state_get_cursors(struct state *state, int64_t count, struct cu
 
 ROPE_EXPORT void state_get_offsets(struct state *state, int64_t position, int64_t *result_line, int64_t *result_column);
 
+/* speeding functions */
+
+ROPE_EXPORT int64_t state_nearest_left(struct state *state, int64_t position);
+
+ROPE_EXPORT int64_t state_nearest_right(struct state *state, int64_t position);
+
+ROPE_EXPORT int64_t state_line_number(struct state *state, int64_t position);
+
+ROPE_EXPORT int64_t state_nth_newline(struct state *state, int64_t n);
 
 
 #ifdef __cplusplus

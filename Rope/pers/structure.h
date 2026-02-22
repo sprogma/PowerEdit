@@ -18,17 +18,19 @@ struct segment_info
     struct mapped_buffer *buffer;
     int64_t offset; // offset buffer
     int64_t length; // length of segment 
+    int64_t newlines; // count of newlines in buffer
 };
 
 struct segment
 {
     struct segment_info;
     // tree info
-    int64_t left, right;
-    int64_t height;
+    int64_t left;
+    int64_t right;
     int64_t total_length;
     int64_t version_id;
-    _Atomic int64_t links_count;
+    int64_t height;
+    int64_t total_newlines;
 };
 
 
@@ -89,19 +91,30 @@ struct project
     int64_t states_alloc;
     struct mapped_buffer *current_buffer;
     _Atomic int64_t last_version_id;
+
+    thread_t HashWorker;
+    thread_t StatesMerger;
 };
 
 
 struct segment *GetSegment(struct segment *tree, int64_t position, int64_t *segment_offset);
 struct segment *RemoveSegment(struct segment *tree, int64_t position, int64_t this_version);
 struct segment *InsertSegment(struct segment *tree, struct segment_info info, int64_t position, int64_t this_version);
-void SegmentIncRef(struct segment *tree);
-void SegmentDecRef(struct segment *tree);
 int64_t SegmentLength(struct segment *tree);
+int64_t FindNearestLeft(int64_t node_id, int64_t position);
+int64_t FindNearestRight(int64_t node_id, int64_t position);
+int64_t SegmentNthNewline(int64_t node, int64_t n);
+
 
 struct state *state_create_empty(struct project *project);
 void state_release(struct state *state);
 void _reserve_state(struct project *project, int64_t total_size);
+void merge_state(struct state *base, struct state *child);
+int64_t SegmentGetLineNumber(int64_t root_idx, int64_t position);
 
+extern struct segment glb_nodes[];
+
+int HashEvaluationWorker(void *param);
+int StatesMergeWorker(void *param);
 
 #endif
