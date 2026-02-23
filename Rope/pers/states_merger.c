@@ -113,7 +113,7 @@ void rem(HashTable *table, Key128 k)
 }
 
 
-static void TryMerge(HashTable *table, struct state *base, struct state *child)
+static struct state *TryMerge(HashTable *table, struct state *base, struct state *child)
 {
 	/* full compare of them */
 	int64_t len1 = SegmentLength(base->value), len2 = SegmentLength(child->value);
@@ -121,7 +121,7 @@ static void TryMerge(HashTable *table, struct state *base, struct state *child)
 	{
 		/* differs - remove this hash for now [ignore this states] */
 		rem(table, Key128(base->hash.total_hash));
-		return;
+		return NULL;
 	}
 	{
 		int64_t i = 0;
@@ -134,7 +134,7 @@ static void TryMerge(HashTable *table, struct state *base, struct state *child)
 			{
 				/* differs - remove this hash for now [ignore this states] */
 				rem(table, Key128(base->hash.total_hash));
-				return;
+				return NULL;
 			}
 		}
 		if (i< len1)
@@ -145,14 +145,15 @@ static void TryMerge(HashTable *table, struct state *base, struct state *child)
 			{
 				/* differs - remove this hash for now [ignore this states] */
 				rem(table, Key128(base->hash.total_hash));
-				return;
+				return NULL;
 			}
 		}
 	}
 	/* found same states: merge them */
 	printf("states %p and %p are same!\n", base, child);
 	merge_state(base, child);
-	//child->committed = 0;
+	printf("merged into %p\n", (base->merged_to ? child : base));
+	return (base->merged_to ? child : base);
 }
 
 
@@ -161,13 +162,13 @@ int StatesMergeWorker(void *param)
 	struct project *project = param;
 	HashTable table = {};
 
-	while (1)
+	while (WaitForSingleObject(project->StopEvent, 1) == WAIT_TIMEOUT)
 	{
 		struct state *base = NULL, *child = NULL;
 		lockShared(&project->lock);
 		for (int64_t i = 0; i < project->states_len; ++i)
 		{
-			if (project->states[i]->hash.calculated && project->states[i]->committed)
+			if (project->states[i]->hash.calculated && project->states[i]->committed && !project->states[i]->merged_to)
 			{
 				struct state *this = get(&table, Key128(project->states[i]->hash.total_hash));
 				if (this == NULL)
@@ -185,11 +186,16 @@ int StatesMergeWorker(void *param)
 		freeShared(&project->lock);
 		if (base != NULL && child != NULL)
 		{
-			TryMerge(&table, base, child);
+			struct state *result = TryMerge(&table, base, child);
+			if (result != NULL)
+			{
+				insert(&table, Key128(result->hash.total_hash), result);
+			}
 		}
 		else
 		{
 			msleep(50);
 		}
 	}
+	return 0;
 }

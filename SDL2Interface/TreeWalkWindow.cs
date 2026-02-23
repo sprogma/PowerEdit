@@ -8,6 +8,7 @@ using System.Numerics;
 using System.Runtime;
 using System.Text;
 using System.Threading.Tasks;
+using TextBuffer;
 
 namespace SDL2Interface
 {
@@ -136,6 +137,11 @@ namespace SDL2Interface
             }
             /* calculate node's positions */
             float currentX = 0.0f;
+            for (int i = 0; i < roots.Count; i++)
+            {
+                roots[i].right = i + 1 < roots.Count ? roots[i + 1] : null;
+                roots[i].left = i - 1 >= 0 ? roots[i - 1] : null;
+            }
             roots.ForEach(root => WalkTree(root, (Node x) => {
                 if (!x.hidden)
                 {
@@ -193,6 +199,14 @@ namespace SDL2Interface
                 else
                 {
                     SDL.RenderDrawRect(renderer, ref rect);
+                }
+                pos += 0.5f * new Vector2(w, h);
+                rect = new() { X = position.X + (int)pos.X, Y = position.Y + (int)pos.Y, Width = (int)w, Height = (int)h};
+                foreach (Node next in new[]{ node.up, node.right }.OfType<Node>())
+                {
+                    Vector2 nextPos = (next.position - Camera) * Scale + new Vector2(position.Width * 0.5f, position.Height * 0.5f);
+                    int x = position.X + (int)nextPos.X, y = position.Y + (int)nextPos.Y;
+                    SDL.RenderDrawLine(renderer, rect.X, rect.Y, x, y);
                 }
             }
 

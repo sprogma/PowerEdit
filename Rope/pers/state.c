@@ -49,9 +49,9 @@ void _reserve_next_versions(struct state *state, int64_t total_size)
 
 struct state *state_create_empty(struct project *project)
 {
-
     struct state *res = calloc(1, sizeof(*res));
     res->timestamp = get_time_us();
+    res->depth = 0;
 
     lockExclusive(&project->lock);
     res->version_id = project->last_version_id++;
@@ -66,7 +66,9 @@ struct state *state_create_empty(struct project *project)
 
 struct state *state_create_dup(struct project *project, struct state *state)
 {
+    while (state->merged_to) state = state->merged_to;
     struct state *res = calloc(1, sizeof(*res));
+    res->depth = state->depth + 1;
     res->hash = state->hash;
     res->timestamp = get_time_us();
 
@@ -93,10 +95,16 @@ struct state *state_create_dup(struct project *project, struct state *state)
 
 void merge_state(struct state *base, struct state *child)
 {
+    if (base->depth > child->depth)
+    {
+        child = base;
+    }
+
     /* set all child childs to base childs */
     _reserve_next_versions(base, base->next_versions_len + child->next_versions_len);
     for (int64_t i = 0; i < child->next_versions_len; ++i)
     {
+        printf("New parent\n");
         base->next_versions[base->next_versions_len++] = child->next_versions[i];
     }
 
@@ -104,12 +112,53 @@ void merge_state(struct state *base, struct state *child)
     _reserve_previous_versions(base, base->previous_versions_len + child->previous_versions_len);
     for (int64_t i = 0; i < child->previous_versions_len; ++i)
     {
+        printf("New child\n");
         base->previous_versions[base->previous_versions_len++] = child->previous_versions[i];
     }
 
+    /* remove all links on this child */
+    for (int64_t i = 0; i < child->next_versions_len; ++i)
+    {
+        struct state *node = child->next_versions[i];
+        if (node != base)
+        {
+            for (int64_t j = 0; j < node->previous_versions_len; ++j)
+            {
+                if (node->previous_versions[j] == child)
+                {
+                    printf("Change link A\n");
+                    node->previous_versions[j] = base;
+                }
+                else if (node->previous_versions[j] == base)
+                {
+                    node->previous_versions[j] = node->previous_versions[--node->previous_versions_len];
+                }
+            }
+        }
+    }
+    for (int64_t i = 0; i < child->previous_versions_len; ++i)
+    {
+        struct state *node = child->previous_versions[i];
+        if (node != base)
+        {
+            for (int64_t j = 0; j < node->next_versions_len; ++j)
+            {
+                if (node->next_versions[j] == child)
+                {
+                    printf("Change link B\n");
+                    node->next_versions[j] = base;
+                }
+                else if (node->next_versions[j] == base)
+                {
+                    node->next_versions[j] = node->next_versions[--node->next_versions_len];
+                }
+            }
+        }
+    }
     /* clear all child links */
     child->previous_versions_len = 0;
     child->next_versions_len = 0;
+    child->merged_to = base;
 }
 
 void state_release(struct state *state)
@@ -231,6 +280,7 @@ void _state_delete(struct project *project, struct state *state, int64_t positio
 
 void state_moditify(struct project *project, struct state *state, int64_t position, int64_t type, int64_t length, char *buffer)
 {
+    while (state->merged_to) state = state->merged_to;
     lockExclusive(&state->lock);
     if (state->committed)
     {
@@ -253,6 +303,8 @@ void state_moditify(struct project *project, struct state *state, int64_t positi
 
 void state_commit(struct project *project, struct state *state)
 {
+    while (state->merged_to) state = state->merged_to;
+
     (void)project;
 
     lockExclusive(&state->lock);
@@ -263,11 +315,13 @@ void state_commit(struct project *project, struct state *state)
 
 int64_t state_get_size(struct state *state)
 {
+    while (state->merged_to) state = state->merged_to;
     return SegmentLength(state->value);
 }
 
 void state_read(struct state *state, int64_t position, int64_t length, char *buffer)
 {
+    while (state->merged_to) state = state->merged_to;
     while (length > 0)
     {
         int64_t segment_position;
@@ -285,6 +339,7 @@ void state_read(struct state *state, int64_t position, int64_t length, char *buf
 
 void state_set_cursors(struct state *state, int64_t count, struct cursor *cursors)
 {
+    while (state->merged_to) state = state->merged_to;
     lockExclusive(&state->lock);
     free(state->cursors);
     state->cursors_len = count;
@@ -295,11 +350,13 @@ void state_set_cursors(struct state *state, int64_t count, struct cursor *cursor
 
 int64_t state_get_cursors_count(struct state *state)
 {
+    while (state->merged_to) state = state->merged_to;
     return state->cursors_len;
 }
 
 void state_get_cursors(struct state *state, int64_t count, struct cursor *result)
 {
+    while (state->merged_to) state = state->merged_to;
     lockShared(&state->lock);
     memcpy(result, state->cursors, sizeof(*state->cursors) * count);
     freeShared(&state->lock);
@@ -307,6 +364,7 @@ void state_get_cursors(struct state *state, int64_t count, struct cursor *result
 
 void state_get_offsets(struct state *state, int64_t position, int64_t *result_line, int64_t *result_column)
 {
+    while (state->merged_to) state = state->merged_to;
     int64_t node_id = state->value - glb_nodes;
     if (!node_id || position <= 0)
     {
@@ -329,24 +387,28 @@ void state_get_offsets(struct state *state, int64_t position, int64_t *result_li
 
 int64_t state_nearest_left(struct state *state, int64_t position)
 {
+    while (state->merged_to) state = state->merged_to;
     int64_t id = (state->value ? state->value - glb_nodes : 0);
     return FindNearestLeft(id, position);
 }
 
 int64_t state_nearest_right(struct state *state, int64_t position)
 {
+    while (state->merged_to) state = state->merged_to;
     int64_t id = (state->value ? state->value - glb_nodes : 0);
     return FindNearestRight(id, position);
 }
 
 int64_t state_line_number(struct state *state, int64_t position)
 {
+    while (state->merged_to) state = state->merged_to;
     int64_t id = (state->value ? state->value - glb_nodes : 0);
     return SegmentGetLineNumber(id, position);
 }
 
 int64_t state_nth_newline(struct state *state, int64_t n)
 {
+    while (state->merged_to) state = state->merged_to;
     int64_t id = (state->value ? state->value - glb_nodes : 0);
     return SegmentNthNewline(id, n);
 }

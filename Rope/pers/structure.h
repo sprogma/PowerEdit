@@ -64,6 +64,7 @@ struct state
     struct state_hash hash;
     struct segment *value;
     int64_t version_id;
+    int64_t depth;
 
     int64_t committed;
 
@@ -77,6 +78,8 @@ struct state
     int64_t next_versions_len;
     int64_t next_versions_alloc;
     struct state **next_versions;
+
+    struct state *merged_to;
     
     int64_t tags_len;
     int64_t *tags;
@@ -91,6 +94,7 @@ struct project
     int64_t states_alloc;
     struct mapped_buffer *current_buffer;
     _Atomic int64_t last_version_id;
+    HANDLE StopEvent;
 
     thread_t HashWorker;
     thread_t StatesMerger;

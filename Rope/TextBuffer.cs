@@ -69,6 +69,9 @@ namespace TextBuffer
         internal static extern void project_get_states(IntPtr project, long states_count, [Out] IntPtr[] states, long links_count, [Out] MarshalingLink[] links);
 
         [DllImport("msrope.dll")]
+        internal static extern IntPtr state_resolve(IntPtr state);
+
+        [DllImport("msrope.dll")]
         internal static extern void state_set_cursors(IntPtr state, long count, [In] MarshalingCursor[] cursors);
 
         [DllImport("msrope.dll")]
@@ -105,6 +108,11 @@ namespace TextBuffer
             project = CLibrary.project_create();
             curr_state = CLibrary.project_new_state(project);
             undos = [];
+        }
+
+        ~TextBuffer()
+        {
+            CLibrary.project_destroy(project);
         }
 
         public char this[long index] { 
@@ -252,6 +260,7 @@ namespace TextBuffer
 
         public (IntPtr[] states, MarshalingLink[] links) GetVersionTree()
         {
+            curr_state = CLibrary.state_resolve(curr_state);
             CLibrary.project_get_states_len(project, out long versions_count, out long links_count);
             IntPtr[] states = new IntPtr[versions_count];
             MarshalingLink[] links = new MarshalingLink[links_count];

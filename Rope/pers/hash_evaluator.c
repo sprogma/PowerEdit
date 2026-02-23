@@ -8,9 +8,9 @@ static void CalculateHash(struct state *state)
 {
 	int64_t h_hi = 0xCBF29CE484222325, h_lo = 0xCBF29CE484222325, buffer[2], i = 0, len = SegmentLength(state->value);
 	/* calculate hash */
-	for (; i + 32 < len; i += 32)
+	for (; i + sizeof(buffer) < len; i += sizeof(buffer))
 	{
-		state_read(state, i, 32, (char *)buffer);
+		state_read(state, i, sizeof(buffer), (char *)buffer);
 		h_hi ^= buffer[0];
 		h_lo ^= buffer[1];
 		h_hi *= 0x100000001B3;
@@ -38,14 +38,14 @@ int HashEvaluationWorker(void *param)
 {
 	struct project *project = param;
 
-	while (1)
+	while (WaitForSingleObject(project->StopEvent, 1) == WAIT_TIMEOUT)
 	{
 		/* iterate throug states, if there is any without hash - calculate this hash */
 		struct state *state = NULL;
 		lockShared(&project->lock);
 		for (int64_t i = 0; i < project->states_len; ++i)
 		{
-			if (!project->states[i]->hash.calculated && project->states[i]->committed)
+			if (!project->states[i]->hash.calculated && project->states[i]->committed && !project->states[i]->merged_to)
 			{
 				state = project->states[i];
 				break;
@@ -61,4 +61,5 @@ int HashEvaluationWorker(void *param)
 			msleep(50);
 		}
 	}
+	return 0;
 }

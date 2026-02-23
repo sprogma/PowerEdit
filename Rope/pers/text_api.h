@@ -57,6 +57,8 @@ struct link
 };
 ROPE_EXPORT void project_get_states(struct project *project, int64_t states_count, struct state **result, int64_t links_count, struct link *links);
 
+ROPE_EXPORT struct state *state_resolve(struct state *state);
+
 ROPE_EXPORT void state_set_cursors(struct state *state, int64_t count, struct cursor *cursors);
 
 ROPE_EXPORT int64_t state_get_cursors_count(struct state *state);

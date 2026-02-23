@@ -35,6 +35,9 @@ struct project *project_create()
 	project->states_alloc = 0;
 	project->states = NULL;
 	project->current_buffer = allocate_buffer(1024 * 1024);
+#ifdef _WIN32
+	project->StopEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
+#endif
 	_reserve_state(project, 1024);
 
 
@@ -46,10 +49,15 @@ struct project *project_create()
 
 void project_destroy(struct project *project)
 {
+	SetEvent(project->StopEvent);
+	WaitForSingleObject(project->HashWorker, INFINITE);
+	WaitForSingleObject(project->StatesMerger, INFINITE);
 	for (int64_t i = 0; i < project->states_len; ++i)
 	{
 		state_release(project->states[i]);
 	}
+	free(project->states);
+	free(project);
 }
 
 struct state *project_new_state(struct project *project)
@@ -61,6 +69,7 @@ struct state *project_new_state(struct project *project)
 
 struct state *state_version_before(struct state *state, int64_t steps)
 {
+	while (state->merged_to) state = state->merged_to;
 	for (int64_t i = 0; i < steps; ++i)
 	{
 		if (state->previous_versions_len > 0)
@@ -100,4 +109,10 @@ void project_get_states(struct project *project, int64_t states_count, struct st
 		}
 	}
 	freeShared(&project->lock);
+}
+
+struct state *state_resolve(struct state *state)
+{
+	while (state->merged_to) state = state->merged_to;
+	return state;
 }
