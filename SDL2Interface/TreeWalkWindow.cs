@@ -51,6 +51,7 @@ namespace SDL2Interface
             }
         }
 
+        HashSet<Node> used = [];
         Dictionary<IntPtr, Node> tree;
         Node current;
         List<Node> roots;
@@ -86,6 +87,10 @@ namespace SDL2Interface
 
         void WalkTree(Node root, Action<Node> callback)
         {
+            if (!used.Add(root))
+            {
+                return;
+            }
             foreach (Node node in root.childs)
             {
                 WalkTree(node, callback);
@@ -95,6 +100,10 @@ namespace SDL2Interface
 
         void UpdateVisibleParent(Node node)
         {
+            if (!used.Add(node))
+            {
+                return;
+            }
             if (node.parents.Count == 0)
             {
                 node.depth = 0;
@@ -122,6 +131,7 @@ namespace SDL2Interface
                 node.up = node.down = node.left = node.right = null;
             }
             /* update parents [up] and depth */
+            used.Clear();
             foreach ((IntPtr id, Node node) in tree.AsEnumerable())
             {
                 UpdateVisibleParent(node);
@@ -142,6 +152,7 @@ namespace SDL2Interface
                 roots[i].right = i + 1 < roots.Count ? roots[i + 1] : null;
                 roots[i].left = i - 1 >= 0 ? roots[i - 1] : null;
             }
+            used.Clear();
             roots.ForEach(root => WalkTree(root, (Node x) => {
                 if (!x.hidden)
                 {

@@ -32,5 +32,33 @@ namespace RegexTokenizer
             }
             return new SimpleTokenizer();
         }
+
+        static public List<Token> UpdateTokensAsUTF8(string input, List<Token> tokens)
+        {
+            int currentUtf16Pos = 0;
+            long currentUtf8BytePos = 0;
+            var encoding = System.Text.Encoding.UTF8;
+
+            for (int i = 0; i < tokens.Count; i++)
+            {
+                var token = tokens[i];
+                int diffBegin = (int)token.begin - currentUtf16Pos;
+                if (diffBegin > 0)
+                {
+                    currentUtf8BytePos += encoding.GetByteCount(input, currentUtf16Pos, diffBegin);
+                    currentUtf16Pos = (int)token.begin;
+                }
+                long utf8Begin = currentUtf8BytePos;
+                int diffEnd = (int)token.end - currentUtf16Pos;
+                if (diffEnd > 0)
+                {
+                    currentUtf8BytePos += encoding.GetByteCount(input, currentUtf16Pos, diffEnd);
+                    currentUtf16Pos = (int)token.end;
+                }
+                long utf8End = currentUtf8BytePos;
+                tokens[i] = new Token(token.type, utf8Begin, utf8End);
+            }
+            return tokens;
+        }
     }
 }

@@ -6,6 +6,7 @@ using System.Resources;
 using System.Runtime.InteropServices;
 using System.Text;
 using static System.Net.Mime.MediaTypeNames;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace TextBuffer
 {
@@ -48,7 +49,7 @@ namespace TextBuffer
         internal static extern IntPtr state_create_dup(IntPtr project, IntPtr state);
 
         [DllImport("msrope.dll")]
-        internal static extern int state_moditify(IntPtr project, IntPtr state, long pos, UInt64 type, long len, string? text);
+        internal static extern int state_moditify(IntPtr project, IntPtr state, long pos, UInt64 type, long len, byte[]? text);
 
         [DllImport("msrope.dll")]
         internal static extern void state_commit(IntPtr project, IntPtr state);
@@ -128,7 +129,8 @@ namespace TextBuffer
             {
                 curr_state = CLibrary.state_create_dup(project, curr_state);
                 CLibrary.state_moditify(project, curr_state, index, Modification.Delete, 1, null);
-                CLibrary.state_moditify(project, curr_state, index, Modification.Insert, 1, value.ToString());
+                byte[] utf8Bytes = System.Text.Encoding.UTF8.GetBytes(value.ToString());
+                CLibrary.state_moditify(project, curr_state, index, Modification.Insert, 1, utf8Bytes);
                 CLibrary.state_commit(project, curr_state);
             }
         }
@@ -153,7 +155,7 @@ namespace TextBuffer
             IntPtr destPtr = Marshal.AllocHGlobal((int)(len + 10));
 
             CLibrary.state_read(curr_state, pos, len, destPtr);
-            string res = Marshal.PtrToStringAnsi(destPtr, (int)len);
+            string res = Marshal.PtrToStringUTF8(destPtr, (int)len);
             Marshal.FreeHGlobal(destPtr);
             return res;
         }
@@ -223,12 +225,23 @@ namespace TextBuffer
             return false;
         }
 
-        public void Insert(long index, string item)
+        public long Insert(long index, string item)
+        {
+            undos.Clear();
+            curr_state = CLibrary.state_create_dup(project, curr_state);
+            byte[] utf8Bytes = System.Text.Encoding.UTF8.GetBytes(item);
+            CLibrary.state_moditify(project, curr_state, index, Modification.Insert, item.Length, utf8Bytes);
+            CLibrary.state_commit(project, curr_state);
+            return utf8Bytes.Length;
+        }
+
+        public long InsertBytes(long index, byte[] item)
         {
             undos.Clear();
             curr_state = CLibrary.state_create_dup(project, curr_state);
             CLibrary.state_moditify(project, curr_state, index, Modification.Insert, item.Length, item);
             CLibrary.state_commit(project, curr_state);
+            return item.Length;
         }
 
         public void RemoveAt(long index, long count = 1)
@@ -292,34 +305,35 @@ namespace TextBuffer
             return (line, column);
         }
 
-        public (long index, string? text) GetLine(long line)
+        public (long index, string? text, long length) GetLine(long line)
         {
-            if (line < 0) return (0, null);
+            if (line < 0) return (0, null, 0);
 
             long startPos = 0;
             if (line > 0)
             {
                 long prevNewline = CLibrary.state_nth_newline(curr_state, line - 1);
-                if (prevNewline == -1) return (0, null);
+                if (prevNewline == -1) return (0, null, 0);
                 startPos = prevNewline + 1;
             }
 
             if (startPos >= Length)
             {
-                return (0, null);
+                return (0, null, 0);
             }
 
-            long nextNewline = CLibrary.state_nth_newline(curr_state, line);
+            long nextNewline = CLibrary.state_nth_newline(curr_state, line), len;
             string resultText;
             if (nextNewline == -1)
             {
-                resultText = Substring(startPos, Length - startPos);
+                len = Length - startPos;
             }
             else
             {
-                resultText = Substring(startPos, (nextNewline - startPos) + 1);
+                len = (nextNewline - startPos) + 1;
             }
-            return (startPos, resultText);
+            resultText = Substring(startPos, len);
+            return (startPos, resultText, len);
         }
     }
 }

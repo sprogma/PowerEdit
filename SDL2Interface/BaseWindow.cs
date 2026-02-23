@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Drawing.Configuration;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -57,6 +58,23 @@ namespace SDL2Interface
             int len = 0;
             while (p[len] != 0) len++;
             return Encoding.UTF8.GetString(p, len);
+        }
+
+        /// <summary>
+        /// Helping function to get TextInputEvent value
+        /// </summary>
+        /// <param name="e">TextInputEvent value to read</param>
+        /// <returns> input bytes</returns>
+        internal unsafe byte[] GetTextInputBytes(TextInputEvent e)
+        {
+            byte* p = e.Text;
+            if (p == null) return [];
+            int len = 0;
+            while (p[len] != 0) len++;
+            byte[] result = new byte[len];
+            Marshal.Copy((IntPtr)p, result, 0, len);
+            return result;
+
         }
 
         /// <summary>

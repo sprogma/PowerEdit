@@ -99,6 +99,13 @@ namespace EditorCore.Selection
             return res;
         }
 
+        public long InsertBytes(byte[] text)
+        {
+            long res = Cursor.Buffer.InsertBytes(End, text);
+            UpdateFromLineOffset();
+            return res;
+        }
+
         public void MoveToLineBegin(bool withSelect = false)
         {
             var res = Cursor.Buffer.GetLine(EndLine);
@@ -142,7 +149,7 @@ namespace EditorCore.Selection
             {
                 return;
             }
-            End = res.Item1 + res.Item2.Length - (res.Item2.EndsWith("\n") ? 1 : 0);
+            End = res.Item1 + res.Item3 - (res.Item2.EndsWith("\n") ? 1 : 0);
             if (End < 0)
             {
                 End = 0;
