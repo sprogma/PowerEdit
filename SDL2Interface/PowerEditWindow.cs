@@ -31,8 +31,16 @@ namespace SDL2Interface
                 {
                     text = [usingCursor.Buffer.Text.Substring(0)];
                 }
-                var res = buffer.Server.CommandProvider.Execute(buffer.Text.Substring(0), text);
-                return (res.Item1?.Select(x => x.ToString()).Where(x => x != null).Cast<string>(), res.Item2);
+                (IEnumerable<object?>?, string?) res;
+                if (text.Sum(x => x.Length) > 1000)
+                {
+                    res = (["Too big arguments. preview disabled"], "Too big arguments. preview disabled");
+                }
+                else
+                {    
+                    res = buffer.Server.CommandProvider.Execute(buffer.Text.Substring(0), text);
+                }
+                return (res.Item1?.Select(x => x?.ToString()).Where(x => x != null).Cast<string>(), res.Item2);
             }
         }
 

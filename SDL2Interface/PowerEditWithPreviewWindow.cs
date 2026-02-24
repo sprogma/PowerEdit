@@ -52,7 +52,15 @@ namespace SDL2Interface
                     }
                     else
                     {
-                        preview.buffer.SetText(string.Join('\n', res));
+                        string text = string.Join('\n', res);
+                        if (text.Length > 1000)
+                        {
+                            preview.buffer.SetText("Too big result [>1KB]");
+                        }
+                        else
+                        {
+                            preview.buffer.SetText(text);
+                        }
                     }
                 });
                 thread.Start();
