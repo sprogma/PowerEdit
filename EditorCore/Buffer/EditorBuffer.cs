@@ -109,7 +109,7 @@ namespace EditorCore.Buffer
             {
                 return;
             }
-            if (Text.Redo() == null)
+            if (Text.Redo())
             {
                 return;
             }
@@ -120,10 +120,9 @@ namespace EditorCore.Buffer
             Tokens = Tokenizer.ParseContent(Text.Substring(0));
         }
 
-        public long InsertString(long position, string data)
+
+        public void MoveCursors(long position, long length)
         {
-            long length = data.Length;
-            Text.Insert(position, data);
             /* move all cursors */
             if (Cursor != null)
             {
@@ -141,6 +140,19 @@ namespace EditorCore.Buffer
             }
             SaveCursorState();
             OnSimpleUpdate();
+        }
+
+        public long InsertString(long position, string data)
+        {
+            long length = Text.Insert(position, data);
+            MoveCursors(position, length);
+            return position + length;
+        }
+
+        public long InsertBytes(long position, byte[] data)
+        {
+            long length = Text.InsertBytes(position, data);
+            MoveCursors(position, length);
             return position + length;
         }
 
@@ -192,7 +204,7 @@ namespace EditorCore.Buffer
             return res;
         }
 
-        public (long, string?) GetLine(long line)
+        public (long offset, string? value, long length) GetLine(long line)
         {
             return Text.GetLine(line);
         }

@@ -186,7 +186,7 @@ namespace RegexTokenizer
 
             result.Sort((x, y) => x.begin.CompareTo(y.begin));
 
-            return result;
+            return UpdateTokensAsUTF8(content, result);
         }
 
         [GeneratedRegex(@"^R""([^(]*)\(")]

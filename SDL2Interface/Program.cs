@@ -24,19 +24,8 @@ namespace SDL2Interface
 
         static void Main(string[] args)
         {
-            ///* ropes check */
-            //TextBuffer.TextBuffer buf = new();
-
-            //buf.Insert(0, "ABCDEFGabcdefg");
-            //buf.RemoveAt(2);
-            //buf.RemoveAt(4, 3);
-            //Console.WriteLine(buf.Substring(0, buf.Length));
-            //buf.Undo();
-            //Console.WriteLine(buf.Substring(0, buf.Length));
-            //buf.Undo();
-            //Console.WriteLine(buf.Substring(0, buf.Length));
-            //buf.Redo();
-            //Console.WriteLine(buf.Substring(0, buf.Length));
+            Console.OutputEncoding = Encoding.UTF8;
+            Console.InputEncoding = Encoding.UTF8;
 
             string? fileToOpen = args.Where(x => !x.StartsWith("-")).ElementAtOrDefault(0);
             //fileToOpen = "D:\\mipt\\a.c";

@@ -65,7 +65,7 @@ namespace SDL2Interface
                     for (int t = 0; t < H / textRenderer.FontLineStep; ++t)
                     {
                         int i = t + (int)viewOffset;
-                        (long index, string? s) = buffer.GetLine(i);
+                        (long index, string? s, _) = buffer.GetLine(i);
                         if (s != null)
                         {
                             long num = i;
@@ -135,10 +135,11 @@ namespace SDL2Interface
                 case EventType.TextInput:
                     if (!jumpInput)
                     {
-                        string s = GetTextInputValue(e.Text);
+                        byte[] s = GetTextInputBytes(e.Text);
+                        Console.WriteLine($"Input text: {s}");
                         /* clear all selection */
-                        cursor?.Selections.ForEach(x => x.Cursor.Buffer.DeleteString(x.Min, x.TextLength));
-                        cursor?.Selections.ForEach(x => x.InsertText(s));
+                        cursor?.Selections.ForEach(x => { if (x.TextLength != 0) { x.Cursor.Buffer.DeleteString(x.Min, x.TextLength); } });
+                        cursor?.Selections.ForEach(x => x.InsertBytes(s));
                         cursor?.Commit();
                     }
                     return false;
@@ -477,7 +478,7 @@ namespace SDL2Interface
                             long endLine = x.MaxLine;
                             for (long line = x.MinLine; line <= endLine; ++line)
                             {
-                                (long pos, string? str) = x.Cursor.Buffer.GetLine(line);
+                                (long pos, string? str, _) = x.Cursor.Buffer.GetLine(line);
                                 if (str != null)
                                 {
                                     x.Cursor.Buffer.DeleteString(pos, Math.Min(4, str.TakeWhile(char.IsWhiteSpace).Count()));

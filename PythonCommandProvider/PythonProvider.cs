@@ -59,14 +59,13 @@ namespace PythonCommandProvider
 
                     if (process.WaitForExit(5000))
                     {
-                        error = "Process don't stopped";
-                        output = "ERROR";
-                        process.Kill();
+                        output = process.StandardOutput.ReadToEnd().Replace("\r", null);
+                        error = process.StandardError.ReadToEnd().Replace("\r", null);
                     }
                     else
                     {
-                        output = process.StandardOutput.ReadToEnd().Replace("\r", null);
-                        error = process.StandardError.ReadToEnd().Replace("\r", null);
+                        process.Kill();
+                        return (null, "ERROR: Process don't completed in 5 seconds\n");
                     }
 
                     Console.WriteLine("Executable Output:");

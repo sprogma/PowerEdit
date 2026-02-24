@@ -28,7 +28,7 @@ namespace SDL2Interface
             for (int t = 0; t < H / textRenderer.FontLineStep; ++t)
             {
                 int i = t + (int)viewOffset;
-                (long index, string? s) = buffer.GetLine(i);
+                (long index, string? s, _) = buffer.GetLine(i);
                 if (s != null)
                 {
                     textRenderer.DrawTextLine(leftBarSize + position.X + 5, position.Y + t * textRenderer.FontLineStep, s, index, buffer.Tokens, ref lastToken);
@@ -44,7 +44,7 @@ namespace SDL2Interface
             for (int t = 0; t < H / textRenderer.FontLineStep; ++t)
             {
                 int i = t + (int)viewOffset;
-                (long index, string? s) = buffer.GetLine(i);
+                (long index, string? s, _) = buffer.GetLine(i);
                 if (s != null)
                 {
                     int num = i;

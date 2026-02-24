@@ -3,6 +3,7 @@ using SDL_Sharp;
 using SDL_Sharp.Ttf;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -31,7 +32,9 @@ namespace SDL2Interface
             {
                 renderer = input_renderer;
                 asciiMapRectangles = new Rect[128];
-                font = TTF.OpenFont(@"D:\cs\PowerEdit\CascadiaMono.ttf", 32);
+                // font = TTF.OpenFont(@"D:\cs\PowerEdit\CascadiaMono.ttf", 32);
+                // font = TTF.OpenFont(@"D:\cs\PowerEdit\MergedFont.ttf", 32);
+                font = TTF.OpenFont(@"C:\Windows\Fonts\seguiemj.ttf", 32);
                 if (font.IsNull)
                 {
                     throw new Exception("Font is not loaded");
@@ -88,8 +91,11 @@ namespace SDL2Interface
         }
         public void DrawTextLine(int x, int y, string line, long position, List<Token> tokens, ref long lastToken)
         {
-            foreach (char c in line)
+            var elements = StringInfo.GetTextElementEnumerator(line);
+            while (elements.MoveNext())
             {
+                string grapheme = elements.GetTextElement();
+
                 Token? currentToken = null;
                 while (lastToken < tokens.Count && tokens[(int)lastToken].end < position)
                 {
@@ -100,51 +106,59 @@ namespace SDL2Interface
                     currentToken = tokens[(int)lastToken];
                 }
 
-
                 Color color = new(255, 255, 255, 255);
                 if (currentToken != null)
                 {
                     color = ColorTheme.GetColor(currentToken.Value.type); 
                 }
 
+                int graphemeWidth = (grapheme.Length > 1 || (grapheme[0] >= 0x1100)) ? 2 : 1;
+
                 /* render glyph */
-                if (c < ' ' && c != '\n')
+                if (grapheme.Length == 1 && grapheme[0] < 128)
                 {
-                    Rect r = asciiMapRectangles[(byte)c];
-                    r.X = x;
-                    r.Y = y;
-                    r.Width = FontStep;
-                    r.Height = FontLineStep;
-                    SDL.SetRenderDrawColor(renderer, color.R, color.G, color.B, color.A);
-                    SDL.RenderDrawRect(renderer, ref r);
-                }
-                else if (c < 128)
-                {
-                    Rect r = asciiMapRectangles[(byte)c];
-                    r.X = x;
-                    r.Y = y;
-                    r.Width = FontStep;
-                    r.Height = FontLineStep;
-                    SDL.SetTextureColorMod(asciiMap, color.R, color.G, color.B);
-                    SDL.RenderCopy(renderer, asciiMap, ref asciiMapRectangles[(byte)c], ref r);
+                    char c = grapheme[0];
+                    if (c < ' ' && c != '\n')
+                    {
+                        Rect r = asciiMapRectangles[(byte)c];
+                        r.X = x;
+                        r.Y = y;
+                        r.Width = FontStep;
+                        r.Height = FontLineStep;
+                        SDL.SetRenderDrawColor(renderer, color.R, color.G, color.B, color.A);
+                        SDL.RenderDrawRect(renderer, ref r);
+                    }
+                    else
+                    {
+                        Rect r = asciiMapRectangles[(byte)c];
+                        r.X = x;
+                        r.Y = y;
+                        r.Width = FontStep;
+                        r.Height = FontLineStep;
+                        SDL.SetTextureColorMod(asciiMap, color.R, color.G, color.B);
+                        SDL.RenderCopy(renderer, asciiMap, ref asciiMapRectangles[(byte)c], ref r);
+                    }
                 }
                 else
                 {
-                    TTF.SizeText(font, new string(c, 1), out int w, out int h);
-                    TTF.RenderText_Blended(font, new string(c, 1), color, out PSurface glythMap);
-                    Texture temp = SDL.CreateTextureFromSurface(renderer, glythMap);
-                    if (temp.IsNull)
+                    TTF.SizeUTF8(font, grapheme, out int w, out int h);
+                    TTF.RenderUTF8_Blended(font, grapheme, color, out PSurface glythMap);
+                    if (!glythMap.IsNull)
                     {
-                        throw new Exception($"Temporary texture is null: {SDL.GetError()}");
+                        Texture temp = SDL.CreateTextureFromSurface(renderer, glythMap);
+                        if (temp.IsNull)
+                        {
+                            throw new Exception($"Temporary texture is null: {SDL.GetError()}");
+                        }
+                        Rect src = new(0, 0, w, h);
+                        Rect dest = new(x, y, FontStep * graphemeWidth, FontLineStep);
+                        SDL.RenderCopy(renderer, temp, ref src, ref dest);
+                        SDL.FreeSurface(glythMap);
+                        SDL.DestroyTexture(temp);
                     }
-                    Rect src = new(0, 0, w, h);
-                    Rect dest = new(x, y, FontStep, FontLineStep);
-                    SDL.RenderCopy(renderer, temp, ref src, ref dest);
-                    SDL.FreeSurface(glythMap);
-                    SDL.DestroyTexture(temp);
                 }
-                x += FontStep;
-                position++;
+                x += FontStep * graphemeWidth;
+                position += grapheme.Length;
             }
         }
 

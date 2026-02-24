@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "SDL2Interface": {
+      "commandName": "Project",
+      "nativeDebugging": true
+    }
+  }
+}
