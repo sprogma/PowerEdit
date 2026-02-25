@@ -95,9 +95,12 @@ struct state *state_create_dup(struct project *project, struct state *state)
 
 void merge_state(struct state *base, struct state *child)
 {
+    assert(base != child);
     if (base->depth > child->depth)
     {
+        void *tmp = child;
         child = base;
+        base = tmp;
     }
 
     /* set all child childs to base childs */
@@ -211,8 +214,9 @@ void _state_insert(struct project *project, struct state *state, int64_t positio
     }
     if (position < 0 || position > SegmentLength(state->value))
     {
-        logError("Position is out of bounds\n");
-        return;
+        position = SegmentLength(state->value);
+        //logError("Position is out of bounds\n");
+        //return;
     }
     /* split current buffer by this position */
     int64_t segment_position;
