@@ -51,8 +51,6 @@ namespace SDL2Interface
                         lock (preview)
                         {
                             preview.buffer.SetText(previewString);
-                            Console.WriteLine($"set {previewString}");
-                            Console.WriteLine($"result len: {preview.buffer.Text.Length}/{previewString.Length}");
                         }
                     }
                 });

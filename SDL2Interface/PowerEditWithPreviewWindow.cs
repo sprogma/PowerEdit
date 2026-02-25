@@ -54,9 +54,9 @@ namespace SDL2Interface
                     else
                     {
                         string text = string.Join('\n', res);
-                        if (text.Length > 1000)
+                        if (text.Length > 4096)
                         {
-                            preview.buffer.SetText("Too big result [>1KB]");
+                            preview.buffer.SetText("Too big result [>4KB]");
                         }
                         else
                         {
