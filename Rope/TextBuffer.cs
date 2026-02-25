@@ -130,7 +130,7 @@ namespace TextBuffer
                 curr_state = CLibrary.state_create_dup(project, curr_state);
                 CLibrary.state_moditify(project, curr_state, index, Modification.Delete, 1, null);
                 byte[] utf8Bytes = System.Text.Encoding.UTF8.GetBytes(value.ToString());
-                CLibrary.state_moditify(project, curr_state, index, Modification.Insert, 1, utf8Bytes);
+                CLibrary.state_moditify(project, curr_state, index, Modification.Insert, utf8Bytes.Length, utf8Bytes);
                 CLibrary.state_commit(project, curr_state);
             }
         }
@@ -230,7 +230,7 @@ namespace TextBuffer
             undos.Clear();
             curr_state = CLibrary.state_create_dup(project, curr_state);
             byte[] utf8Bytes = System.Text.Encoding.UTF8.GetBytes(item);
-            CLibrary.state_moditify(project, curr_state, index, Modification.Insert, item.Length, utf8Bytes);
+            CLibrary.state_moditify(project, curr_state, index, Modification.Insert, utf8Bytes.Length, utf8Bytes);
             CLibrary.state_commit(project, curr_state);
             return utf8Bytes.Length;
         }
