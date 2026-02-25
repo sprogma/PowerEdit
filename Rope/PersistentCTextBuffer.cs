@@ -98,20 +98,20 @@ namespace TextBuffer
     }
 
 
-    public class TextBuffer
+    public class PersistentCTextBuffer : IUndoTextBuffer, INavigatableTextBuffer, IEditableTextBuffer
     {
         IntPtr project;
         IntPtr curr_state;
         Stack<IntPtr> undos;
 
-        public TextBuffer()
+        public PersistentCTextBuffer()
         {
             project = CLibrary.project_create();
             curr_state = CLibrary.project_new_state(project);
             undos = [];
         }
 
-        ~TextBuffer()
+        ~PersistentCTextBuffer()
         {
             CLibrary.project_destroy(project);
         }
@@ -235,7 +235,7 @@ namespace TextBuffer
             return utf8Bytes.Length;
         }
 
-        public long InsertBytes(long index, byte[] item)
+        public long Insert(long index, byte[] item)
         {
             undos.Clear();
             curr_state = CLibrary.state_create_dup(project, curr_state);
@@ -334,6 +334,18 @@ namespace TextBuffer
             }
             resultText = Substring(startPos, len);
             return (startPos, resultText, len);
+        }
+
+        public long SetText(string text)
+        {
+            Clear();
+            return Insert(0, text);
+        }
+
+        public long SetBytes(byte[] text)
+        {
+            Clear();
+            return Insert(0, text);
         }
     }
 }

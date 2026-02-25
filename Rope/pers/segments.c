@@ -211,6 +211,7 @@ struct segment *RemoveSegment(struct segment *tree, int64_t position, int64_t th
 */
 struct segment *GetSegment(struct segment *tree, int64_t position, int64_t *segment_start_pos)
 {
+    assert(position >= 0);
     int64_t treeent_offset = 0;
     while (tree)
     {

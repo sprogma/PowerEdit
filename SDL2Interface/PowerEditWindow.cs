@@ -9,6 +9,7 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using TextBuffer;
 
 namespace SDL2Interface
 {
@@ -45,7 +46,7 @@ namespace SDL2Interface
         }
 
         public PowerEditWindow(EditorServer server, EditorCursor usingCursor, Rect position, string editType) : 
-                               base(new EditorBuffer(server, server.CommandProvider.Tokenizer), position)
+                               base(new EditorBuffer(server, server.CommandProvider.Tokenizer, new PersistentCTextBuffer()), position)
         {
             (long begin, long end, string text) = server.CommandProvider.ExampleScript(editType);
             buffer.SetText(text);

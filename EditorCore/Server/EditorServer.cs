@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using TextBuffer;
 
 namespace EditorCore.Server
 {
@@ -20,7 +21,7 @@ namespace EditorCore.Server
 
         public File.EditorFile OpenFile(string filename)
         {
-            File.EditorFile new_file = new File.EditorFile(this, filename);
+            File.EditorFile new_file = new File.EditorFile(this, filename, new PersistentCTextBuffer());
             Files.Add(new_file);
             return new_file;
         }

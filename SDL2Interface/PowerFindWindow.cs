@@ -8,6 +8,7 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using TextBuffer;
 
 namespace SDL2Interface
 {
@@ -17,7 +18,7 @@ namespace SDL2Interface
 
 
         public PowerFindWindow(EditorServer server, EditorCursor usingCursor, Rect position) : 
-                               base(new EditorBuffer(server, usingCursor.Buffer.Tokenizer), position)
+                               base(new EditorBuffer(server, usingCursor.Buffer.Tokenizer, new PersistentCTextBuffer()), position)
         {
             buffer.SetText("");
             this.usingCursor = usingCursor;

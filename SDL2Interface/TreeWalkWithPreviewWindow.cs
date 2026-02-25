@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using TextBuffer;
 
 namespace SDL2Interface
 {
@@ -26,7 +27,7 @@ namespace SDL2Interface
             tree.position = left_position;
 
             this.tree = tree;
-            this.preview = new(new EditorBuffer(tree.buffer.Server, "loading ...", tree.buffer.Tokenizer), right_position);
+            this.preview = new(new EditorBuffer(tree.buffer.Server, "loading ...", tree.buffer.Tokenizer, new ReadonlyTextBuffer()), right_position);
             this.lastDrawTime = DateTime.UtcNow;
         }
 

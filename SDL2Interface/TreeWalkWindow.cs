@@ -55,7 +55,7 @@ namespace SDL2Interface
         Dictionary<IntPtr, Node> tree;
         Node current;
         List<Node> roots;
-        public TextBuffer.TextBuffer cBuffer;
+        public IUndoTextBuffer cBuffer;
         public EditorBuffer buffer;
         public bool showNumbers = true;
 
@@ -69,7 +69,7 @@ namespace SDL2Interface
         float DestinationScale = 30.0f;
         Vector2 Camera = new(){ X=0.0f, Y=0.0f };
 
-        public TreeWalkWindow(EditorBuffer editBuffer, TextBuffer.TextBuffer textBuffer, Rect position) : base(position)
+        public TreeWalkWindow(EditorBuffer editBuffer, IUndoTextBuffer textBuffer, Rect position) : base(position)
         {
             this.buffer = editBuffer;
             this.cBuffer = textBuffer;
