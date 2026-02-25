@@ -17,6 +17,7 @@ namespace SDL2Interface
         internal int baseFontLineStep;
         static internal Renderer renderer;
         static internal Font font;
+        static internal Font fontEmoji;
         static internal Rect[] asciiMapRectangles = [];
         static internal Texture asciiMap;
         internal ColorTheme colorTheme;
@@ -32,12 +33,15 @@ namespace SDL2Interface
             {
                 renderer = input_renderer;
                 asciiMapRectangles = new Rect[128];
-                // font = TTF.OpenFont(@"D:\cs\PowerEdit\CascadiaMono.ttf", 32);
-                // font = TTF.OpenFont(@"D:\cs\PowerEdit\MergedFont.ttf", 32);
-                font = TTF.OpenFont(@"C:\Windows\Fonts\seguiemj.ttf", 32);
+                font = TTF.OpenFont(@"D:\cs\PowerEdit\CascadiaMono.ttf", 32);
+                fontEmoji = TTF.OpenFont(@"C:\Windows\Fonts\seguiemj.ttf", 32);
                 if (font.IsNull)
                 {
                     throw new Exception("Font is not loaded");
+                }
+                if (fontEmoji.IsNull)
+                {
+                    throw new Exception("fontEmoji is not loaded");
                 }
                 /* generate rectangles */
                 int x = 0;
@@ -141,8 +145,8 @@ namespace SDL2Interface
                 }
                 else
                 {
-                    TTF.SizeUTF8(font, grapheme, out int w, out int h);
-                    TTF.RenderUTF8_Blended(font, grapheme, color, out PSurface glythMap);
+                    TTF.SizeUTF8(fontEmoji, grapheme, out int w, out int h);
+                    TTF.RenderUTF8_Blended(fontEmoji, grapheme, color, out PSurface glythMap);
                     if (!glythMap.IsNull)
                     {
                         Texture temp = SDL.CreateTextureFromSurface(renderer, glythMap);
