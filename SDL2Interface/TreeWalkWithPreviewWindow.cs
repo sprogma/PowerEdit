@@ -33,7 +33,7 @@ namespace SDL2Interface
 
         public override void PreDraw()
         {
-            if ((DateTime.UtcNow - lastDrawTime).TotalSeconds > 1 && moditifed)
+            if ((DateTime.UtcNow - lastDrawTime).TotalSeconds > 0.1 && moditifed)
             {
                 lastDrawTime = DateTime.UtcNow;
                 moditifed = false;

@@ -103,12 +103,15 @@ namespace TextBuffer
         IntPtr project;
         IntPtr curr_state;
         Stack<IntPtr> undos;
+        List<IntPtr> InitialVersions;
 
         public PersistentCTextBuffer()
         {
             project = CLibrary.project_create();
             curr_state = CLibrary.project_new_state(project);
+            CLibrary.state_commit(project, curr_state);
             undos = [];
+            InitialVersions = [curr_state];
         }
 
         ~PersistentCTextBuffer()
@@ -264,6 +267,11 @@ namespace TextBuffer
         public void SetVersion(IntPtr version)
         {
             curr_state = version;
+        }
+
+        public IntPtr[] GetInitialVersions()
+        {
+            return InitialVersions.ToArray();
         }
 
         public IntPtr GetCurrentVersion()

@@ -17,6 +17,8 @@ namespace TextBuffer
 
         public IntPtr GetCurrentVersion();
 
+        public IntPtr[] GetInitialVersions();
+
         public (IntPtr[] states, MarshalingLink[] links) GetVersionTree();
     }
 
