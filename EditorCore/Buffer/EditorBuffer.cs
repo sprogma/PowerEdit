@@ -1,8 +1,10 @@
 ﻿using EditorCore.Selection;
+using Lsp;
 using RegexTokenizer;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO.Enumeration;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -23,11 +25,15 @@ namespace EditorCore.Buffer
         public Cursor.EditorCursor? Cursor { get; internal set; }
         public BaseTokenizer Tokenizer { get; internal set; }
         public List<Token> Tokens { get; internal set; } = [];
+        public LspClient? Client { get; internal set; }
+        public string FilePath { get; internal set; }
 
-        public EditorBuffer(Server.EditorServer server, BaseTokenizer tokenizer, ITextBuffer buffer)
+        public EditorBuffer(Server.EditorServer server, BaseTokenizer tokenizer, LspClient? client, string filepath, ITextBuffer buffer)
         {
             Tokenizer = tokenizer;
             Text = buffer;
+            FilePath = filepath;
+            Client = client;
             Cursor = new(this);
             Cursor.Selections.Add(new EditorSelection(Cursor, 0));
             Server = server;
@@ -36,10 +42,12 @@ namespace EditorCore.Buffer
             OnUpdate();
         }
 
-        public EditorBuffer(Server.EditorServer server, string content, BaseTokenizer tokenizer, ITextBuffer buffer)
+        public EditorBuffer(Server.EditorServer server, string content, BaseTokenizer tokenizer, LspClient? client, string filepath, ITextBuffer buffer)
         {
             Tokenizer = tokenizer;
             Text = buffer;
+            FilePath = filepath;
+            Client = client;
             Cursor = new(this);
             Cursor.Selections.Add(new EditorSelection(Cursor, 0));
             Server = server;
@@ -84,6 +92,7 @@ namespace EditorCore.Buffer
                 return;
             }
             ActionOnUpdate?.Invoke(this);
+            _ = Task.Run(() => Client?.ChangeFileAsync("aboba/aboba", Text.Substring(0)));
             Tokens = Tokenizer.ParseContent(Text.Substring(0));
         }
 

@@ -11,6 +11,7 @@ using SDL_Sharp.Ttf;
 using System.Runtime.InteropServices;
 using System.Text;
 using TextBuffer;
+using Lsp;
 
 namespace SDL2Interface
 {
@@ -44,6 +45,7 @@ namespace SDL2Interface
                 throw new Exception("SDL initialization failed");
             }
             SDL.GetWindowSize(BaseWindow.window, out BaseWindow.W, out BaseWindow.H);
+
 
             /* create application instance */
             {

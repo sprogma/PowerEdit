@@ -1,4 +1,5 @@
 ﻿using EditorCore.Buffer;
+using Lsp;
 using RegexTokenizer;
 using System;
 using System.Collections.Generic;
@@ -26,6 +27,7 @@ namespace EditorCore.File
             Buffer = new EditorBuffer(server, 
                                       System.IO.File.ReadAllText(filename), 
                                       BaseTokenizer.CreateTokenizer(Path.GetExtension(filename).Substring(1) ?? ""),
+                                      server.GetLsp(Path.GetExtension(filename).Substring(1) ?? ""),
                                       buffer);
             Server = server;
         }
