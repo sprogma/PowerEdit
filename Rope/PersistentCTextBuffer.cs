@@ -313,6 +313,26 @@ namespace TextBuffer
             return (line, column);
         }
 
+        public long GetPosition(long line, long col)
+        {
+            if (line < 0) return 0;
+
+            long startPos = 0;
+            if (line > 0)
+            {
+                long prevNewline = CLibrary.state_nth_newline(curr_state, line - 1);
+                if (prevNewline == -1) return 0;
+                startPos = prevNewline + 1;
+            }
+
+            if (startPos >= Length)
+            {
+                return 0;
+            }
+
+            return startPos + col;
+        }
+
         public (long index, string? text, long length) GetLine(long line)
         {
             if (line < 0) return (0, null, 0);

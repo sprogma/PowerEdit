@@ -1,4 +1,5 @@
-﻿using EditorCore.Selection;
+﻿using EditorCore.File;
+using EditorCore.Selection;
 using Lsp;
 using RegexTokenizer;
 using System;
@@ -7,12 +8,19 @@ using System.Diagnostics;
 using System.IO.Enumeration;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 using TextBuffer;
 
 namespace EditorCore.Buffer
 {
+    public struct ErrorMark(string message, long position)
+    {
+        public string message = message;
+        public long position = position;
+    }
+
     public delegate void EditorBufferOnUpdate(EditorBuffer buffer);
     public class EditorBuffer
     {
@@ -25,6 +33,7 @@ namespace EditorCore.Buffer
         public Cursor.EditorCursor? Cursor { get; internal set; }
         public BaseTokenizer Tokenizer { get; internal set; }
         public List<Token> Tokens { get; internal set; } = [];
+        public List<ErrorMark> ErrorMarks { get; internal set; } = [];
         public LspClient? Client { get; internal set; }
         public string FilePath { get; internal set; }
 
@@ -38,6 +47,8 @@ namespace EditorCore.Buffer
             Cursor.Selections.Add(new EditorSelection(Cursor, 0));
             Server = server;
             SaveCursorState();
+
+            ActionOnUpdate += server.ActionOnBufferUpdate;
 
             OnUpdate();
         }
@@ -138,7 +149,7 @@ namespace EditorCore.Buffer
         }
 
 
-        public void MoveCursors(long position, long length)
+        public void MoveCursorsInsert(long position, long length)
         {
             /* move all cursors */
             if (Cursor != null)
@@ -155,6 +166,15 @@ namespace EditorCore.Buffer
                     }
                 }
             }
+            Span<ErrorMark> span = CollectionsMarshal.AsSpan(ErrorMarks);
+            for (int i = 0; i < span.Length; i++)
+            {
+                ref var err = ref span[i];
+                if (err.position >= position)
+                {
+                    err.position += length;
+                }
+            }
             SaveCursorState();
             OnSimpleUpdate();
         }
@@ -164,7 +184,7 @@ namespace EditorCore.Buffer
             if (Text is IEditableTextBuffer editableText)
             {
                 long length = editableText.Insert(position, data);
-                MoveCursors(position, length);
+                MoveCursorsInsert(position, length);
                 return position + length;
             }
             return position;
@@ -175,7 +195,7 @@ namespace EditorCore.Buffer
             if (Text is IEditableTextBuffer editableText)
             {
                 long length = editableText.Insert(position, data);
-                MoveCursors(position, length);
+                MoveCursorsInsert(position, length);
                 return position + length;
             }
             return position;
@@ -184,7 +204,7 @@ namespace EditorCore.Buffer
         public void DeleteString(long position, long count)
         {
             if (Text is IEditableTextBuffer editableText)
-            {   
+            {
                 if (position + count <= 0)
                 {
                     return;
@@ -195,32 +215,51 @@ namespace EditorCore.Buffer
                     position = 0;
                 }
                 editableText.RemoveAt(position, count);
-                /* move all cursors */
-                if (Cursor != null)
+                MoveCursorsDelete(position, count);
+            }
+        }
+
+        private void MoveCursorsDelete(long position, long length)
+        {
+
+            /* move all cursors */
+            if (Cursor != null)
+            {
+                foreach (var selection in Cursor.Selections)
                 {
-                    foreach (var selection in Cursor.Selections)
+                    if (selection.Begin >= position + length)
                     {
-                        if (selection.Begin >= position + count)
-                        {
-                            selection.Begin -= count;
-                        }
-                        else if (selection.Begin >= position)
-                        {
-                            selection.Begin = position;
-                        }
-                        if (selection.End >= position + count)
-                        {
-                            selection.End -= count;
-                        }
-                        else if (selection.End >= position)
-                        {
-                            selection.End = position;
-                        }
+                        selection.Begin -= length;
+                    }
+                    else if (selection.Begin >= position)
+                    {
+                        selection.Begin = position;
+                    }
+                    if (selection.End >= position + length)
+                    {
+                        selection.End -= length;
+                    }
+                    else if (selection.End >= position)
+                    {
+                        selection.End = position;
                     }
                 }
-                SaveCursorState();
-                OnSimpleUpdate();
             }
+            Span<ErrorMark> span = CollectionsMarshal.AsSpan(ErrorMarks);
+            for (int i = 0; i < span.Length; i++)
+            {
+                ref var err = ref span[i];
+                if (err.position >= position + length)
+                {
+                    err.position -= length;
+                }
+                else if (err.position >= position)
+                {
+                    err.position = position;
+                }
+            }
+            SaveCursorState();
+            OnSimpleUpdate();
         }
 
         public long SetText(string data)
@@ -239,6 +278,11 @@ namespace EditorCore.Buffer
         {
             Debug.Assert(position >= 0);
             return Text.GetPositionOffsets(position);
+        }
+
+        public long GetPosition(long line, long col)
+        {
+            return Text.GetPosition(line, col);
         }
     }
 }

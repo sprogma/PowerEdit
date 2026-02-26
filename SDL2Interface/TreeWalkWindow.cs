@@ -246,20 +246,20 @@ namespace SDL2Interface
                     int x = position.X + (int)nextPos.X, y = position.Y + (int)nextPos.Y;
                     SDL.RenderDrawLine(renderer, rect.X, rect.Y, x, y);
                 }
-                SDL.SetRenderDrawColor(renderer, 64, 0, 0, 0);
-                foreach (Node next in node.childs)
-                {
-                    Vector2 nextPos = (next.position - Camera) * Scale + new Vector2(position.Width * 0.5f, position.Height * 0.5f);
-                    int x = position.X + (int)nextPos.X, y = position.Y + (int)nextPos.Y;
-                    SDL.RenderDrawLine(renderer, rect.X, rect.Y, x, y);
-                }
-                SDL.SetRenderDrawColor(renderer, 0, 64, 0, 0);
-                foreach (Node next in node.parents)
-                {
-                    Vector2 nextPos = (next.position - Camera) * Scale + new Vector2(position.Width * 0.5f, position.Height * 0.5f);
-                    int x = position.X + (int)nextPos.X, y = position.Y + (int)nextPos.Y;
-                    SDL.RenderDrawLine(renderer, rect.X, rect.Y, x, y);
-                }
+                //SDL.SetRenderDrawColor(renderer, 64, 0, 0, 0);
+                //foreach (Node next in node.childs)
+                //{
+                //    Vector2 nextPos = (next.position - Camera) * Scale + new Vector2(position.Width * 0.5f, position.Height * 0.5f);
+                //    int x = position.X + (int)nextPos.X, y = position.Y + (int)nextPos.Y;
+                //    SDL.RenderDrawLine(renderer, rect.X, rect.Y, x, y);
+                //}
+                //SDL.SetRenderDrawColor(renderer, 0, 64, 0, 0);
+                //foreach (Node next in node.parents)
+                //{
+                //    Vector2 nextPos = (next.position - Camera) * Scale + new Vector2(position.Width * 0.5f, position.Height * 0.5f);
+                //    int x = position.X + (int)nextPos.X, y = position.Y + (int)nextPos.Y;
+                //    SDL.RenderDrawLine(renderer, rect.X, rect.Y, x, y);
+                //}
             }
 
             {

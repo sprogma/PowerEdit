@@ -46,7 +46,7 @@ namespace SDL2Interface
         }
 
         public PowerEditWindow(EditorServer server, EditorCursor usingCursor, Rect position, string editType) : 
-                               base(new EditorBuffer(server, server.CommandProvider.Tokenizer, new PersistentCTextBuffer()), position)
+                               base(new EditorBuffer(server, server.CommandProvider.Tokenizer, null, "", new PersistentCTextBuffer()), position)
         {
             (long begin, long end, string text) = server.CommandProvider.ExampleScript(editType);
             buffer.SetText(text);

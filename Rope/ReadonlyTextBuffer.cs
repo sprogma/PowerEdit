@@ -62,6 +62,12 @@ namespace TextBuffer
             return (start, text, text.Length);
         }
 
+        public long GetPosition(long line, long col)
+        {
+            if (line < 0 || line >= lineOffsets.Count) return 0;
+            return lineOffsets[(int)line] + col;
+        }
+
         public long NearestNewlineLeft(long offset)
         {
             if (offset <= 0) return 0;

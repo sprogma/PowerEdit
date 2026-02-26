@@ -27,7 +27,7 @@ namespace SDL2Interface
             tree.position = left_position;
 
             this.tree = tree;
-            this.preview = new(new EditorBuffer(tree.buffer.Server, "loading ...", tree.buffer.Tokenizer, new ReadonlyTextBuffer()), right_position);
+            this.preview = new(new EditorBuffer(tree.buffer.Server, "loading ...", tree.buffer.Tokenizer, null, "", new ReadonlyTextBuffer()), right_position);
             this.lastDrawTime = DateTime.UtcNow;
         }
 

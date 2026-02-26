@@ -8,6 +8,7 @@ using System.Diagnostics.Eventing.Reader;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using static System.Collections.Specialized.BitVector32;
 
 namespace SDL2Interface
 {
@@ -34,6 +35,22 @@ namespace SDL2Interface
                     textRenderer.DrawTextLine(leftBarSize + position.X + 5, position.Y + t * textRenderer.FontLineStep, s, index, buffer.Tokens, ref lastToken);
                 }
             }
+            long selectionWidth = (long)(8 * textRenderer.currentScale);
+            SDL.SetRenderDrawColor(renderer, 255, 0, 0, 255);
+            foreach (var err in buffer.ErrorMarks)
+            {
+                (long line, long col) = buffer.GetPositionOffsets(err.position);
+                long y = position.Y + (line - viewOffset) * textRenderer.FontLineStep - selectionWidth;
+                long x = position.X + 5 + leftBarSize + col * textRenderer.FontStep - textRenderer.FontStep / 2;
+                Rect r = new((int)x, (int)y, 2 * textRenderer.FontStep, (int)selectionWidth);
+                SDL.RenderFillRect(renderer, ref r);
+            }
+
+            // draw errors count
+            long dummyValue = 0;
+            textRenderer.Scale(0.8);
+            textRenderer.DrawTextLine(position.X + 5, position.Y + H - 5 - textRenderer.FontLineStep, $"{buffer.ErrorMarks.Count} errors in file", 0, [], ref dummyValue);
+            textRenderer.Scale(1.25);
         }
 
         public void SimpleTextWindowDrawSimpleNumbers(ref int leftBarSize)

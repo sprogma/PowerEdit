@@ -6,6 +6,8 @@ using System.Text;
 using System.Threading.Tasks;
 using TextBuffer;
 using Lsp;
+using EditorCore.Buffer;
+using EditorCore.File;
 
 namespace EditorCore.Server
 {
@@ -14,6 +16,8 @@ namespace EditorCore.Server
         public ICommandProvider CommandProvider { get; internal set; }
         public List<File.EditorFile> Files { get; internal set; }
         Dictionary<string, LspClient> clients = [];
+        public EditorBufferOnUpdate? ActionOnBufferUpdate;
+        public EditorFileOnSave? ActionOnFileSave;
 
         public EditorServer(ICommandProvider commandProvider)
         {
@@ -35,7 +39,7 @@ namespace EditorCore.Server
                 return value;
             }
             clients[v] = new();
-            Task.Run(() => clients[v].StartAsync("clangd", "--stdio"));
+            //Task.Run(() => clients[v].StartAsync("clangd", "--stdio"));
             return clients[v];
         }
 
