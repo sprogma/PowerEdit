@@ -1,4 +1,5 @@
 ﻿using EditorCore.Buffer;
+using Lsp;
 using RegexTokenizer;
 using System;
 using System.Collections.Generic;
@@ -8,6 +9,7 @@ using System.Reflection.PortableExecutable;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
+using TextBuffer;
 using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace EditorCore.File
@@ -19,12 +21,14 @@ namespace EditorCore.File
 
         string? filename;
 
-        public EditorFile(Server.EditorServer server, string filename)
+        public EditorFile(Server.EditorServer server, string filename, ITextBuffer buffer)
         {
             this.filename = filename;
             Buffer = new EditorBuffer(server, 
                                       System.IO.File.ReadAllText(filename), 
-                                      BaseTokenizer.CreateTokenizer(Path.GetExtension(filename).Substring(1) ?? ""));
+                                      BaseTokenizer.CreateTokenizer(Path.GetExtension(filename).Substring(1) ?? ""),
+                                      server.GetLsp(Path.GetExtension(filename).Substring(1) ?? ""),
+                                      buffer);
             Server = server;
         }
 

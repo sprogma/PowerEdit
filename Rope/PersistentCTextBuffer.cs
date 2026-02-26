@@ -98,20 +98,23 @@ namespace TextBuffer
     }
 
 
-    public class TextBuffer
+    public class PersistentCTextBuffer : IUndoTextBuffer, INavigatableTextBuffer, IEditableTextBuffer
     {
         IntPtr project;
         IntPtr curr_state;
         Stack<IntPtr> undos;
+        List<IntPtr> InitialVersions;
 
-        public TextBuffer()
+        public PersistentCTextBuffer()
         {
             project = CLibrary.project_create();
             curr_state = CLibrary.project_new_state(project);
+            CLibrary.state_commit(project, curr_state);
             undos = [];
+            InitialVersions = [curr_state];
         }
 
-        ~TextBuffer()
+        ~PersistentCTextBuffer()
         {
             CLibrary.project_destroy(project);
         }
@@ -130,7 +133,7 @@ namespace TextBuffer
                 curr_state = CLibrary.state_create_dup(project, curr_state);
                 CLibrary.state_moditify(project, curr_state, index, Modification.Delete, 1, null);
                 byte[] utf8Bytes = System.Text.Encoding.UTF8.GetBytes(value.ToString());
-                CLibrary.state_moditify(project, curr_state, index, Modification.Insert, 1, utf8Bytes);
+                CLibrary.state_moditify(project, curr_state, index, Modification.Insert, utf8Bytes.Length, utf8Bytes);
                 CLibrary.state_commit(project, curr_state);
             }
         }
@@ -230,12 +233,12 @@ namespace TextBuffer
             undos.Clear();
             curr_state = CLibrary.state_create_dup(project, curr_state);
             byte[] utf8Bytes = System.Text.Encoding.UTF8.GetBytes(item);
-            CLibrary.state_moditify(project, curr_state, index, Modification.Insert, item.Length, utf8Bytes);
+            CLibrary.state_moditify(project, curr_state, index, Modification.Insert, utf8Bytes.Length, utf8Bytes);
             CLibrary.state_commit(project, curr_state);
             return utf8Bytes.Length;
         }
 
-        public long InsertBytes(long index, byte[] item)
+        public long Insert(long index, byte[] item)
         {
             undos.Clear();
             curr_state = CLibrary.state_create_dup(project, curr_state);
@@ -264,6 +267,11 @@ namespace TextBuffer
         public void SetVersion(IntPtr version)
         {
             curr_state = version;
+        }
+
+        public IntPtr[] GetInitialVersions()
+        {
+            return InitialVersions.ToArray();
         }
 
         public IntPtr GetCurrentVersion()
@@ -334,6 +342,18 @@ namespace TextBuffer
             }
             resultText = Substring(startPos, len);
             return (startPos, resultText, len);
+        }
+
+        public long SetText(string text)
+        {
+            Clear();
+            return Insert(0, text);
+        }
+
+        public long SetBytes(byte[] text)
+        {
+            Clear();
+            return Insert(0, text);
         }
     }
 }

@@ -13,5 +13,15 @@ namespace RegexTokenizer
         {
             return string.Compare(s, from, prefix, 0, prefix.Length, StringComparison.Ordinal) == 0;
         }
+        public static int SafeIndexOf(this string str, string value, int startIndex)
+        {
+            if (startIndex > str.Length) return -1;
+            return str.IndexOf(value, startIndex);
+        }
+        public static int SafeIndexOf(this string str, char value, int startIndex)
+        {
+            if (startIndex > str.Length) return -1;
+            return str.IndexOf(value, startIndex);
+        }
     }
 }

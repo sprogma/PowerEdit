@@ -16,7 +16,7 @@ namespace RegexTokenizer
                 int end;
                 if (content.StartsWith(pos, "//"))
                 {
-                    end = content.IndexOf('\n', pos);
+                    end = content.SafeIndexOf('\n', pos);
                     if (end == -1) { end = content.Length; }
 
                     while (( end >= 1 &&
@@ -25,7 +25,7 @@ namespace RegexTokenizer
                              content[end - 1] == '\r' &&
                              content[end - 2] == '\\' ))
                     {
-                        end = content.IndexOf('\n', end + 1);
+                        end = content.SafeIndexOf('\n', end + 1);
                         if (end == -1) { end = content.Length; break; }
                     }
                     result.Add(new Token(TokenType.Comment, pos, end));
@@ -33,7 +33,7 @@ namespace RegexTokenizer
                 }
                 else if (content.StartsWith(pos, "/*"))
                 {
-                    end = content.IndexOf("*/", pos + 2);
+                    end = content.SafeIndexOf("*/", pos + 2);
                     if (end == -1) { end = content.Length; }
 
                     result.Add(new Token(TokenType.MultilineComment, pos, end + 1));
@@ -41,13 +41,13 @@ namespace RegexTokenizer
                 }
                 else if (content.StartsWith(pos, "'"))
                 {
-                    end = content.IndexOf('\'', pos + 1);
+                    end = content.SafeIndexOf('\'', pos + 1);
                     if (end == -1) { end = content.Length; }
 
                     while (end >= 1 &&
                            content[end - 1] == '\\')
                     {
-                        end = content.IndexOf('\'', end + 1);
+                        end = content.SafeIndexOf('\'', end + 1);
                         if (end == -1) { end = content.Length; break; }
                     }
 
@@ -56,13 +56,13 @@ namespace RegexTokenizer
                 }
                 else if (content.StartsWith(pos, "\""))
                 {
-                    end = content.IndexOf('"', pos + 1);
+                    end = content.SafeIndexOf('"', pos + 1);
                     if (end == -1) { end = content.Length; }
 
                     while (end >= 1 &&
                            content[end - 1] == '\\')
                     {
-                        end = content.IndexOf('"', end + 1);
+                        end = content.SafeIndexOf('"', end + 1);
                         if (end == -1) { end = content.Length; break; }
                     }
 
@@ -81,7 +81,7 @@ namespace RegexTokenizer
                     {
                         string name = match.Groups[1].Value;
 
-                        end = content.IndexOf($"){name}\"", pos + 2 + name.Length + 1);
+                        end = content.SafeIndexOf($"){name}\"", pos + 2 + name.Length + 1);
                         if (end == -1) { end = content.Length; }
 
                         result.Add(new Token(TokenType.RawString, pos, end + 1 + name.Length + 1));
@@ -100,7 +100,7 @@ namespace RegexTokenizer
             pos = 0;
             while (pos < content.Length)
             {
-                int end = content.IndexOf('\n', pos + 1);
+                int end = content.SafeIndexOf('\n', pos + 1);
                 if (end == -1)
                 {
                     end = content.Length;

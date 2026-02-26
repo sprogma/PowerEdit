@@ -8,6 +8,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
+using TextBuffer;
 
 namespace SDL2Interface
 {
@@ -30,7 +31,7 @@ namespace SDL2Interface
             editor.position = left_position;
             editor.buffer.ActionOnUpdate +=  buf => {moditifed = true; };
             this.editor = editor;
-            this.preview = new(new EditorBuffer(editor.buffer.Server, "processing ...", editor.usingCursor.Buffer.Tokenizer), right_position);
+            this.preview = new(new EditorBuffer(editor.buffer.Server, "processing ...", editor.usingCursor.Buffer.Tokenizer, new ReadonlyTextBuffer()), right_position);
             this.lastDrawTime = DateTime.UtcNow;
             Console.WriteLine("Created");
         }
@@ -53,9 +54,9 @@ namespace SDL2Interface
                     else
                     {
                         string text = string.Join('\n', res);
-                        if (text.Length > 1000)
+                        if (text.Length > 4096)
                         {
-                            preview.buffer.SetText("Too big result [>1KB]");
+                            preview.buffer.SetText("Too big result [>4KB]");
                         }
                         else
                         {

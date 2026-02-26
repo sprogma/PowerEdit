@@ -4,6 +4,7 @@ using SDL_Sharp;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Management.Automation;
 using System.Numerics;
 using System.Runtime;
 using System.Text;
@@ -55,7 +56,8 @@ namespace SDL2Interface
         Dictionary<IntPtr, Node> tree;
         Node current;
         List<Node> roots;
-        public TextBuffer.TextBuffer cBuffer;
+        List<Node> initials;
+        public IUndoTextBuffer cBuffer;
         public EditorBuffer buffer;
         public bool showNumbers = true;
 
@@ -69,7 +71,7 @@ namespace SDL2Interface
         float DestinationScale = 30.0f;
         Vector2 Camera = new(){ X=0.0f, Y=0.0f };
 
-        public TreeWalkWindow(EditorBuffer editBuffer, TextBuffer.TextBuffer textBuffer, Rect position) : base(position)
+        public TreeWalkWindow(EditorBuffer editBuffer, IUndoTextBuffer textBuffer, Rect position) : base(position)
         {
             this.buffer = editBuffer;
             this.cBuffer = textBuffer;
@@ -81,7 +83,18 @@ namespace SDL2Interface
                 this.tree[child].AddParent(this.tree[parent]);
             }
             current = this.tree[this.cBuffer.GetCurrentVersion()];
-            roots = this.tree.Values.Where(x => x.parents.Count() == 0).ToList();
+            initials = this.cBuffer.GetInitialVersions().Select(x => this.tree[x]).ToList();
+            roots = this.tree.Values.Where(x => x.parents.Count == 0).ToList();
+
+
+            used.Clear();
+            initials.ForEach(root => WalkTree(root, (Node x) => {
+                foreach (Node child in x.childs)
+                {
+                    child.parents = child.parents.OrderBy(x => x != root).ToList();
+                }
+            }));
+
             CalculateGraphPositions();
         }
 
@@ -98,6 +111,20 @@ namespace SDL2Interface
             callback(root);
         }
 
+        void SpreadDepth(Node root, int depth = 0)
+        {
+            if (!used.Add(root))
+            {
+                return;
+            }
+            Console.WriteLine($"Set {root}.depth = {depth}");
+            root.depth = depth;
+            foreach (Node node in root.childs)
+            {
+                SpreadDepth(node, depth + 1);
+            }
+        }
+
         void UpdateVisibleParent(Node node)
         {
             if (!used.Add(node))
@@ -106,7 +133,6 @@ namespace SDL2Interface
             }
             if (node.parents.Count == 0)
             {
-                node.depth = 0;
                 return;
             }
             if (node.up != null)
@@ -115,7 +141,6 @@ namespace SDL2Interface
             }
             UpdateVisibleParent(node.parents[0]);
             node.up = (node.parents[0].hidden ? node.parents[0].up : node.parents[0]);
-            node.depth = node.parents[0].depth + (node.parents[0].hidden ? 0 : 1);
         }
 
         /// <summary>
@@ -127,10 +152,8 @@ namespace SDL2Interface
             foreach ((IntPtr id, Node node) in tree)
             {
                 node.childs.Clear();
-                node.depth = 0;
                 node.up = node.down = node.left = node.right = null;
             }
-            /* update parents [up] and depth */
             used.Clear();
             foreach ((IntPtr id, Node node) in tree.AsEnumerable())
             {
@@ -145,6 +168,10 @@ namespace SDL2Interface
             {
                 node.childs.Sort((x, y) => x.id.CompareTo(y.id));
             }
+            /* update parents [up] and depth */
+            used.Clear();
+            roots.ForEach(root => SpreadDepth(root));
+
             /* calculate node's positions */
             float currentX = 0.0f;
             for (int i = 0; i < roots.Count; i++)
@@ -214,6 +241,20 @@ namespace SDL2Interface
                 pos += 0.5f * new Vector2(w, h);
                 rect = new() { X = position.X + (int)pos.X, Y = position.Y + (int)pos.Y, Width = (int)w, Height = (int)h};
                 foreach (Node next in new[]{ node.up, node.right }.OfType<Node>())
+                {
+                    Vector2 nextPos = (next.position - Camera) * Scale + new Vector2(position.Width * 0.5f, position.Height * 0.5f);
+                    int x = position.X + (int)nextPos.X, y = position.Y + (int)nextPos.Y;
+                    SDL.RenderDrawLine(renderer, rect.X, rect.Y, x, y);
+                }
+                SDL.SetRenderDrawColor(renderer, 64, 0, 0, 0);
+                foreach (Node next in node.childs)
+                {
+                    Vector2 nextPos = (next.position - Camera) * Scale + new Vector2(position.Width * 0.5f, position.Height * 0.5f);
+                    int x = position.X + (int)nextPos.X, y = position.Y + (int)nextPos.Y;
+                    SDL.RenderDrawLine(renderer, rect.X, rect.Y, x, y);
+                }
+                SDL.SetRenderDrawColor(renderer, 0, 64, 0, 0);
+                foreach (Node next in node.parents)
                 {
                     Vector2 nextPos = (next.position - Camera) * Scale + new Vector2(position.Width * 0.5f, position.Height * 0.5f);
                     int x = position.X + (int)nextPos.X, y = position.Y + (int)nextPos.Y;

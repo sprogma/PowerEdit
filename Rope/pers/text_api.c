@@ -82,14 +82,24 @@ struct state *state_version_before(struct state *state, int64_t steps)
 
 void project_get_states_len(struct project *project, int64_t *states_count, int64_t *links_count)
 {
-	*states_count = project->states_len;
 	lockShared(&project->lock);
-	int64_t count = 0;
+	int64_t count = 0, len = 0;
 	for (int64_t i = 0; i < project->states_len; ++i)
 	{
-		count += project->states[i]->next_versions_len;
+		if (!project->states[i]->merged_to)
+		{
+			len++;
+			for (int64_t j = 0; j < project->states[i]->next_versions_len; ++j)
+			{
+				if (!project->states[j]->merged_to)
+				{
+					count++;
+				}
+			}
+		}
 	}
 	freeShared(&project->lock);
+	*states_count = len;
 	*links_count = count;
 }
 
@@ -97,15 +107,20 @@ void project_get_states_len(struct project *project, int64_t *states_count, int6
 void project_get_states(struct project *project, int64_t states_count, struct state **result, int64_t links_count, struct link *links)
 {
 	lockShared(&project->lock);
-	memcpy(result, project->states, sizeof(*project->states) * states_count);
 	struct link *links_end = links + links_count, *links_begin = links;
 	for (int64_t i = 0; i < project->states_len; ++i)
 	{
-		struct state *st = project->states[i];
-		for (int64_t j = 0; j < st->next_versions_len && links < links_end; ++j)
+		if (!project->states[i]->merged_to)
 		{
-			assert(st->next_versions[j]);
-			*links++ = (struct link){ st, st->next_versions[j] };
+			struct state *st = project->states[i];
+			*result++ = st;
+			for (int64_t j = 0; j < st->next_versions_len && links < links_end; ++j)
+			{
+				if (!project->states[j]->merged_to)
+				{
+					*links++ = (struct link){ st, st->next_versions[j] };
+				}
+			}
 		}
 	}
 	freeShared(&project->lock);

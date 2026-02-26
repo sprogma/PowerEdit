@@ -95,9 +95,12 @@ struct state *state_create_dup(struct project *project, struct state *state)
 
 void merge_state(struct state *base, struct state *child)
 {
+    assert(base != child);
     if (base->depth > child->depth)
     {
+        void *tmp = child;
         child = base;
+        base = tmp;
     }
 
     /* set all child childs to base childs */
@@ -202,6 +205,27 @@ void _state_insert(struct project *project, struct state *state, int64_t positio
 
     memcpy(buffer->buffer + offset, source, length);
 
+    if (position < 0 || position > SegmentLength(state->value))
+    {
+        position = SegmentLength(state->value);
+        //logError("Position is out of bounds\n");
+        //return;
+    }
+
+    /* if left symbol is this, simply update node */
+    if (position != 0)
+    {
+        int64_t segoffset;
+        struct segment *seg = GetSegment(state->value, position - 1, &segoffset);
+        if (seg && segoffset + seg->length == position && seg->buffer == buffer && seg->offset + seg->length == offset)
+        {
+            state->value = RemoveSegment(state->value, position - 1, state->version_id);
+            state->value = InsertSegment(state->value, (struct segment_info) { seg->buffer, seg->offset, seg->length + length}, segoffset, state->version_id);
+            printf("Z: Increase length of previous segment\n");
+            return;
+        }
+    }
+
     /* if position is out of range - add text to end */
     if (position == SegmentLength(state->value))
     {
@@ -209,11 +233,7 @@ void _state_insert(struct project *project, struct state *state, int64_t positio
         state->value = InsertSegment(state->value, (struct segment_info) { buffer, offset, length }, position, state->version_id);
         return;
     }
-    if (position < 0 || position > SegmentLength(state->value))
-    {
-        logError("Position is out of bounds\n");
-        return;
-    }
+
     /* split current buffer by this position */
     int64_t segment_position;
     struct segment *segment = GetSegment(state->value, position, &segment_position);

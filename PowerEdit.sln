@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 17
-VisualStudioVersion = 17.14.36408.4
+# Visual Studio Version 18
+VisualStudioVersion = 18.2.11430.68 d18.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EditorCore", "EditorCore\EditorCore.csproj", "{A371DFE7-F62D-46F6-B829-FDB4E59E84B3}"
 EndProject
@@ -16,6 +16,8 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RegexTokenizer", "RegexTokenizer\RegexTokenizer.csproj", "{5863A886-0A56-4D6D-BEEC-B5BB1FE31FA9}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TextBuffer", "Rope\TextBuffer.csproj", "{51F0DB3B-2706-430A-B705-8E3AB654BDFF}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lsp", "Lsp\Lsp.csproj", "{AED338FC-9034-42A2-BDE3-7CE74560F3D8}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -51,6 +53,10 @@ Global
 		{51F0DB3B-2706-430A-B705-8E3AB654BDFF}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{51F0DB3B-2706-430A-B705-8E3AB654BDFF}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{51F0DB3B-2706-430A-B705-8E3AB654BDFF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AED338FC-9034-42A2-BDE3-7CE74560F3D8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AED338FC-9034-42A2-BDE3-7CE74560F3D8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AED338FC-9034-42A2-BDE3-7CE74560F3D8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AED338FC-9034-42A2-BDE3-7CE74560F3D8}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

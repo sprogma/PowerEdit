@@ -9,6 +9,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
+using TextBuffer;
 
 namespace SDL2Interface
 {
@@ -253,8 +254,11 @@ namespace SDL2Interface
                             ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Shift) != 0)
                     {
                         Console.WriteLine("MEGA UN");
-                        TreeWalkWindow treeWin = new (buffer, buffer.Text, position);
-                        Program.OpenWindow(new TreeWalkWithPreviewWindow(position, treeWin));
+                        if (buffer.Text is IUndoTextBuffer undoText)
+                        {
+                            TreeWalkWindow treeWin = new (buffer, undoText, position);
+                            Program.OpenWindow(new TreeWalkWithPreviewWindow(position, treeWin));
+                        }
                         return false;
                     }
                     else if (e.Keyboard.Keysym.Scancode == Scancode.Z && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0)

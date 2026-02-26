@@ -16,9 +16,9 @@ static void CalculateHash(struct state *state)
 		h_hi *= 0x100000001B3;
 		h_lo *= 0x100000001B3;
 	}
-	memset(buffer, 0, sizeof(buffer));
 	if (i < len) 
 	{
+		memset(buffer, 0, sizeof(buffer));
 		state_read(state, i, len - i, (char *)buffer);
 		h_hi ^= buffer[0];
 		h_lo ^= buffer[1];

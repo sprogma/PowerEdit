@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using TextBuffer;
 
 namespace SDL2Interface
 {
@@ -26,13 +27,13 @@ namespace SDL2Interface
             tree.position = left_position;
 
             this.tree = tree;
-            this.preview = new(new EditorBuffer(tree.buffer.Server, "loading ...", tree.buffer.Tokenizer), right_position);
+            this.preview = new(new EditorBuffer(tree.buffer.Server, "loading ...", tree.buffer.Tokenizer, new ReadonlyTextBuffer()), right_position);
             this.lastDrawTime = DateTime.UtcNow;
         }
 
         public override void PreDraw()
         {
-            if ((DateTime.UtcNow - lastDrawTime).TotalSeconds > 1 && moditifed)
+            if ((DateTime.UtcNow - lastDrawTime).TotalSeconds > 0.1 && moditifed)
             {
                 lastDrawTime = DateTime.UtcNow;
                 moditifed = false;
@@ -50,8 +51,6 @@ namespace SDL2Interface
                         lock (preview)
                         {
                             preview.buffer.SetText(previewString);
-                            Console.WriteLine($"set {previewString}");
-                            Console.WriteLine($"result len: {preview.buffer.Text.Length}/{previewString.Length}");
                         }
                     }
                 });

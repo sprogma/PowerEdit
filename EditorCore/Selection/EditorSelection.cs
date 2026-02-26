@@ -94,6 +94,7 @@ namespace EditorCore.Selection
 
         public long InsertText(string text)
         {
+            Console.WriteLine($"Insert {text}");
             long res = Cursor.Buffer.InsertString(End, text);
             UpdateFromLineOffset();
             return res;

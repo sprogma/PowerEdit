@@ -137,7 +137,7 @@ static struct state *TryMerge(HashTable *table, struct state *base, struct state
 				return NULL;
 			}
 		}
-		if (i< len1)
+		if (i < len1)
 		{
 			state_read(base, i, len1 - i, bufferA);
 			state_read(child, i, len1 - i, bufferB);

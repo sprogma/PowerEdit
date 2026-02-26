@@ -1,15 +1,17 @@
 ﻿using CommandProviderInterface;
-using PowershellCommandProvider;
+using EditorCore.Buffer;
 using EditorCore.File;
 using EditorCore.Selection;
 using EditorCore.Server;
+using PowershellCommandProvider;
+using PythonCommandProvider;
+using RegexTokenizer;
 using SDL_Sharp;
 using SDL_Sharp.Ttf;
 using System.Runtime.InteropServices;
 using System.Text;
-using PythonCommandProvider;
-using EditorCore.Buffer;
-using RegexTokenizer;
+using TextBuffer;
+using Lsp;
 
 namespace SDL2Interface
 {
@@ -44,6 +46,7 @@ namespace SDL2Interface
             }
             SDL.GetWindowSize(BaseWindow.window, out BaseWindow.W, out BaseWindow.H);
 
+
             /* create application instance */
             {
                 ICommandProvider? provider;
@@ -65,12 +68,12 @@ namespace SDL2Interface
                 EditorServer server = new(provider);
                 if (fileToOpen != null)
                 {
-                    EditorFile file = new(server, fileToOpen);
+                    EditorFile file = new(server, fileToOpen, new PersistentCTextBuffer());
                     windows.Add(new FileEditorWindow(file, new Rect(0, 0, BaseWindow.W, BaseWindow.H)));
                 }
                 else
                 {
-                    windows.Add(new InputTextWindow(new EditorBuffer(server, BaseTokenizer.CreateTokenizer("c")), new Rect(0, 0, BaseWindow.W, BaseWindow.H)));
+                    windows.Add(new InputTextWindow(new EditorBuffer(server, BaseTokenizer.CreateTokenizer("c"), new PersistentCTextBuffer()), new Rect(0, 0, BaseWindow.W, BaseWindow.H)));
                 }
             }
 
