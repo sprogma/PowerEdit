@@ -53,13 +53,20 @@ namespace TextBuffer
             }
         }
 
-        public (long index, string? text, long length) GetLine(long line)
+        public (long index, long length) GetLineOffsets(long line)
         {
-            if (line < 0 || line >= lineOffsets.Count) return (0, null, 0);
+            if (line < 0 || line >= lineOffsets.Count) return (0, 0);
             long start = lineOffsets[(int)line];
             long end = (line + 1 < lineOffsets.Count) ? lineOffsets[(int)line + 1] : content.Length;
-            string text = content.Substring((int)start, (int)(end - start));
-            return (start, text, text.Length);
+            return (start, end - start);
+        }
+
+        public (long index, string? text, long length) GetLine(long line)
+        {
+            (long index, long length) = GetLineOffsets(line);
+            if (length == 0) return (0, null, 0);
+            string text = content.Substring((int)index, (int)length);
+            return (index, text, length);
         }
 
         public long GetPosition(long line, long col)

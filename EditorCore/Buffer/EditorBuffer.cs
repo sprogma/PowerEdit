@@ -166,13 +166,16 @@ namespace EditorCore.Buffer
                     }
                 }
             }
-            Span<ErrorMark> span = CollectionsMarshal.AsSpan(ErrorMarks);
-            for (int i = 0; i < span.Length; i++)
+            lock (ErrorMarks)
             {
-                ref var err = ref span[i];
-                if (err.position >= position)
+                Span<ErrorMark> span = CollectionsMarshal.AsSpan(ErrorMarks);
+                for (int i = 0; i < span.Length; i++)
                 {
-                    err.position += length;
+                    ref var err = ref span[i];
+                    if (err.position >= position)
+                    {
+                        err.position += length;
+                    }
                 }
             }
             SaveCursorState();
@@ -245,17 +248,20 @@ namespace EditorCore.Buffer
                     }
                 }
             }
-            Span<ErrorMark> span = CollectionsMarshal.AsSpan(ErrorMarks);
-            for (int i = 0; i < span.Length; i++)
+            lock (ErrorMarks)
             {
-                ref var err = ref span[i];
-                if (err.position >= position + length)
+                Span<ErrorMark> span = CollectionsMarshal.AsSpan(ErrorMarks);
+                for (int i = 0; i < span.Length; i++)
                 {
-                    err.position -= length;
-                }
-                else if (err.position >= position)
-                {
-                    err.position = position;
+                    ref var err = ref span[i];
+                    if (err.position >= position + length)
+                    {
+                        err.position -= length;
+                    }
+                    else if (err.position >= position)
+                    {
+                        err.position = position;
+                    }
                 }
             }
             SaveCursorState();
@@ -283,6 +289,11 @@ namespace EditorCore.Buffer
         public long GetPosition(long line, long col)
         {
             return Text.GetPosition(line, col);
+        }
+
+        public (long begin, long length) GetLineOffsets(long line)
+        {
+            return Text.GetLineOffsets(line);
         }
     }
 }

@@ -75,6 +75,8 @@ namespace TextBuffer
 
         public (long index, string? text, long length) GetLine(long line);
 
+        public (long index, long length) GetLineOffsets(long line);
+
         public long GetPosition(long line, long col);
     }
 }

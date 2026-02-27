@@ -5,11 +5,13 @@ using Microsoft.ApplicationInsights.Metrics.Extensibility;
 using SDL_Sharp;
 using System;
 using System.Collections.Generic;
+using System.Configuration;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 using TextBuffer;
+using static System.Collections.Specialized.BitVector32;
 
 namespace SDL2Interface
 {
@@ -98,7 +100,48 @@ namespace SDL2Interface
                 }
             }
 
+            /* find current error */
+            string? message = null;
+            long errorPosition = 0;
+            if (cursor?.Selections.Count == 1) 
+            {
+                var selection = cursor?.Selections[0]!;
+                (long line, _) = buffer.GetPositionOffsets(selection.End);
+                (long begin, long length) = buffer.GetLineOffsets(line);
+                long end = begin + length;
+                Console.WriteLine($"line={line} from {begin} to {end}");
+                lock (buffer.ErrorMarks)
+                {
+                    long mindiff = long.MaxValue;
+                    for (int i = 0; i < buffer.ErrorMarks.Count; ++i)
+                    {
+                        if (begin <= buffer.ErrorMarks[i].position && buffer.ErrorMarks[i].position < end)
+                        {
+                            long diff = Math.Abs(buffer.ErrorMarks[i].position - selection.End);
+                            if (diff < mindiff)
+                            {
+                                mindiff = diff;
+                                message = buffer.ErrorMarks[i].message;
+                                errorPosition = buffer.ErrorMarks[i].position;
+                            }
+                        }
+                    }
+                }
+            }
+
             SimpleTextWindowDrawText(leftBarSize);
+
+            /* underline error */
+            if (message != null)
+            {
+                int selectionWidth = (int)(4 * textRenderer.currentScale);
+                SDL.SetRenderDrawColor(renderer, 255, 166, 0, 255);
+                (long line, long offset) = buffer.GetPositionOffsets(errorPosition);
+                int x = leftBarSize + position.X + 5 + (int)offset * textRenderer.FontStep - textRenderer.FontStep / 2;
+                int y = position.Y + (int)(line - viewOffset) * textRenderer.FontLineStep + textRenderer.FontLineStep - selectionWidth;
+                Rect r = new(x, y, 2 * textRenderer.FontStep, selectionWidth);
+                SDL.RenderFillRect(renderer, ref r);
+            }
 
             /* draw cursor */
             SDL.SetRenderDrawColor(renderer, 255, 255, 255, 255);
@@ -119,6 +162,15 @@ namespace SDL2Interface
                         SDL.RenderFillRect(renderer, ref r);
                     }
                 }
+            }
+
+            /* draw current error */
+            if (message != null)
+            {
+                long dummyValue = 0;
+                textRenderer.Scale(0.8);
+                textRenderer.DrawTextLine(position.X + 200, position.Y + H - 5 - textRenderer.FontLineStep, message, 0, [], ref dummyValue);
+                textRenderer.Scale(1.25);
             }
         }
 

@@ -333,25 +333,22 @@ namespace TextBuffer
             return startPos + col;
         }
 
-        public (long index, string? text, long length) GetLine(long line)
+        public (long index, long length) GetLineOffsets(long line)
         {
-            if (line < 0) return (0, null, 0);
+            if (line < 0) return (0, 0);
 
             long startPos = 0;
             if (line > 0)
             {
                 long prevNewline = CLibrary.state_nth_newline(curr_state, line - 1);
-                if (prevNewline == -1) return (0, null, 0);
+                if (prevNewline == -1) return (0, 0);
                 startPos = prevNewline + 1;
             }
-
             if (startPos >= Length)
             {
-                return (0, null, 0);
+                return (0, 0);
             }
-
             long nextNewline = CLibrary.state_nth_newline(curr_state, line), len;
-            string resultText;
             if (nextNewline == -1)
             {
                 len = Length - startPos;
@@ -360,8 +357,14 @@ namespace TextBuffer
             {
                 len = (nextNewline - startPos) + 1;
             }
-            resultText = Substring(startPos, len);
-            return (startPos, resultText, len);
+            return (startPos, len);
+        }
+
+        public (long index, string? text, long length) GetLine(long line)
+        {
+            (long index, long length) = GetLineOffsets(line);
+            if (length == 0) return (0, null, 0);
+            return (index, Substring(index, length), length);
         }
 
         public long SetText(string text)

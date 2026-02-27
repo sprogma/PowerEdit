@@ -25,6 +25,25 @@ namespace SDL2Interface
 
         public void SimpleTextWindowDrawText(int leftBarSize)
         {
+            long selectionWidth = (long)(8 * textRenderer.currentScale);
+            SDL.SetRenderDrawColor(renderer, 50, 0, 0, 255);
+            foreach (var err in buffer.ErrorMarks)
+            {
+                (long line, long col) = buffer.GetPositionOffsets(err.position);
+                long y = position.Y + (line - viewOffset) * textRenderer.FontLineStep;
+                long x = position.X + 5 + leftBarSize + col * textRenderer.FontStep - textRenderer.FontStep / 2;
+                Rect r = new((int)x, (int)y, 2 * textRenderer.FontStep, (int)textRenderer.FontLineStep);
+                SDL.RenderFillRect(renderer, ref r);
+            }
+            SDL.SetRenderDrawColor(renderer, 255, 0, 0, 255);
+            foreach (var err in buffer.ErrorMarks)
+            {
+                (long line, long col) = buffer.GetPositionOffsets(err.position);
+                long y = position.Y + (line - viewOffset + 1) * textRenderer.FontLineStep - selectionWidth;
+                long x = position.X + 5 + leftBarSize + col * textRenderer.FontStep - textRenderer.FontStep / 2;
+                Rect r = new((int)x, (int)y, 2 * textRenderer.FontStep, (int)selectionWidth);
+                SDL.RenderFillRect(renderer, ref r);
+            }
             long lastToken = 0;
             for (int t = 0; t < H / textRenderer.FontLineStep; ++t)
             {
@@ -34,16 +53,6 @@ namespace SDL2Interface
                 {
                     textRenderer.DrawTextLine(leftBarSize + position.X + 5, position.Y + t * textRenderer.FontLineStep, s, index, buffer.Tokens, ref lastToken);
                 }
-            }
-            long selectionWidth = (long)(8 * textRenderer.currentScale);
-            SDL.SetRenderDrawColor(renderer, 255, 0, 0, 255);
-            foreach (var err in buffer.ErrorMarks)
-            {
-                (long line, long col) = buffer.GetPositionOffsets(err.position);
-                long y = position.Y + (line - viewOffset) * textRenderer.FontLineStep - selectionWidth;
-                long x = position.X + 5 + leftBarSize + col * textRenderer.FontStep - textRenderer.FontStep / 2;
-                Rect r = new((int)x, (int)y, 2 * textRenderer.FontStep, (int)selectionWidth);
-                SDL.RenderFillRect(renderer, ref r);
             }
 
             // draw errors count
