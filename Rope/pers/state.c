@@ -222,7 +222,7 @@ void _state_insert(struct project *project, struct state *state, int64_t positio
             struct segment_info info = { seg->buffer, seg->offset, seg->length + length };
             state->value = RemoveSegment(state->value, position - 1, state->version_id);
             state->value = InsertSegment(state->value, info, segoffset, state->version_id);
-            printf("Z: Increase length of previous segment [seg->offset=%lld]\n", seg->offset);
+            // printf("Z: Increase length of previous segment [seg->offset=%lld]\n", seg->offset);
             return;
         }
     }
@@ -230,8 +230,17 @@ void _state_insert(struct project *project, struct state *state, int64_t positio
     /* if position is out of range - add text to end */
     if (position == SegmentLength(state->value))
     {
-        printf("A: Insert %lld length at %lld\n", length, position);
-        state->value = InsertSegment(state->value, (struct segment_info) { buffer, offset, length }, position, state->version_id);
+        // printf("A: Insert %lld length at %lld\n", length, position);
+        int64_t insert_position = position;
+        while (length > 0)
+        {
+            int64_t to_insert = length;
+            if (to_insert > SEGMENT_SIZE) to_insert = SEGMENT_SIZE;
+            length -= to_insert;
+            state->value = InsertSegment(state->value, (struct segment_info) { buffer, offset, to_insert }, insert_position, state->version_id);
+            insert_position += to_insert;
+            offset += to_insert;
+        }
         return;
     }
 
@@ -245,7 +254,7 @@ void _state_insert(struct project *project, struct state *state, int64_t positio
     /* insert back this segment's prefix */
     if (segment_position < position)
     {
-        printf("B: Insert %lld length at %lld\n", length, position);
+        // printf("B: Insert %lld length at %lld\n", length, position);
         state->value = InsertSegment(state->value, (struct segment_info) { info.buffer, info.offset, position - segment_position }, segment_position, state->version_id);
     }
     /* insert new segment */
@@ -280,7 +289,7 @@ void _state_delete(struct project *project, struct state *state, int64_t positio
         segment = GetSegment(state->value, position, &segment_position);
         memcpy(&info, segment, sizeof(info));
         state->value = RemoveSegment(state->value, position, state->version_id);
-        printf("Requested %lld -> get %lld of len %lld\n", position, segment_position, info.length);
+        // printf("Requested %lld -> get %lld of len %lld\n", position, segment_position, info.length);
         /* insert back prefix */
         prefix = position - segment_position;
         if (prefix > 0)

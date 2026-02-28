@@ -2,7 +2,7 @@
 #define EXPORT_API
 
 
-#define SEGMENT_SIZE (64*1024)
+#define SEGMENT_SIZE (4*1024)
 
 // #define BAN_READ_WRONG_PIECES
 

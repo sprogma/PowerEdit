@@ -224,14 +224,12 @@ namespace TextBuffer
         {
             undos.Clear();
             byte[] utf8Bytes = System.Text.Encoding.UTF8.GetBytes(item);
-            Console.WriteLine($"Insert bytes: {BitConverter.ToString(utf8Bytes)} from string {item}");
             CLibrary.state_moditify(project, curr_state, index, Modification.Insert, utf8Bytes.Length, utf8Bytes);
             return utf8Bytes.Length;
         }
 
         public long Insert(long index, byte[] item)
         {
-            Console.WriteLine($"Insert bytes: {BitConverter.ToString(item)}");
             undos.Clear();
             CLibrary.state_moditify(project, curr_state, index, Modification.Insert, item.Length, item);
             return item.Length;
@@ -241,7 +239,6 @@ namespace TextBuffer
         {
             if (count == 0) return;
             if (index + count > Length) return;
-            Console.WriteLine($"Remove from {index} {count}");
             undos.Clear();
             CLibrary.state_moditify(project, curr_state, index, Modification.Delete, count, null);
         }

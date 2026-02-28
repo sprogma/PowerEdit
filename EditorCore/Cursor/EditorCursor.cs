@@ -112,14 +112,21 @@ namespace EditorCore.Cursor
                         textFields.Add((0, Buffer.Text.Substring(0)));
                     }
                     Selections.Clear();
-                    foreach (var (index, value) in textFields)
+                    try
                     {
-                        var result = Regex.Matches(value, command, RegexOptions.Singleline);
-                        Selections.EnsureCapacity(result.Count);
-                        foreach (Match x in result)
+                        foreach (var (index, value) in textFields)
                         {
-                            Selections.Add(new EditorSelection(this, index + x.Index, index + x.Index + x.Length));
+                            var result = Regex.Matches(value, command, RegexOptions.Singleline);
+                            Selections.EnsureCapacity(result.Count);
+                            foreach (Match x in result)
+                            {
+                                Selections.Add(new EditorSelection(this, index + x.Index, index + x.Index + x.Length));
+                            }
                         }
+                    }
+                    catch 
+                    {
+                        Selections.Clear();
                     }
                     break;
             }
