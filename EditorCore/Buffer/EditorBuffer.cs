@@ -22,9 +22,11 @@ namespace EditorCore.Buffer
     }
 
     public delegate void EditorBufferOnUpdate(EditorBuffer buffer);
+    public delegate bool EditorBufferOnTextInput(EditorBuffer buffer);
     public class EditorBuffer
     {
         public EditorBufferOnUpdate? ActionOnUpdate = null;
+        public EditorBufferOnTextInput? ActionOnTextInput = null;
 
         public const long MaxHistorySize = 1024;
 
@@ -49,6 +51,7 @@ namespace EditorCore.Buffer
             SaveCursorState();
 
             ActionOnUpdate += server.ActionOnBufferUpdate;
+            ActionOnTextInput += server.ActionOnBufferTextInput;
 
             OnUpdate();
         }
@@ -64,10 +67,7 @@ namespace EditorCore.Buffer
             Server = server;
             SaveCursorState();
 
-            Text.SetText(content);
-            SaveCursorState();
-
-            OnUpdate();
+            SetText(content);
         }
 
         public void SaveCursorState()
@@ -96,7 +96,7 @@ namespace EditorCore.Buffer
             }
         }
 
-        public void OnUpdate(bool pushHistory = true)
+        internal void OnUpdate(bool pushHistory = true)
         {
             if (Cursor == null)
             {
@@ -105,10 +105,6 @@ namespace EditorCore.Buffer
             ActionOnUpdate?.Invoke(this);
             _ = Task.Run(() => Client?.ChangeFileAsync("aboba/aboba", Text.Substring(0)));
             Tokens = Tokenizer.ParseContent(Text.Substring(0));
-        }
-
-        public void OnSimpleUpdate()
-        {
         }
 
         public void Undo()
@@ -149,7 +145,7 @@ namespace EditorCore.Buffer
         }
 
 
-        public void MoveCursorsInsert(long position, long length)
+        private void MoveCursorsInsert(long position, long length)
         {
             /* move all cursors */
             if (Cursor != null)
@@ -178,11 +174,9 @@ namespace EditorCore.Buffer
                     }
                 }
             }
-            SaveCursorState();
-            OnSimpleUpdate();
         }
 
-        public long InsertString(long position, string data)
+        internal long InsertString(long position, string data)
         {
             if (Text is IEditableTextBuffer editableText)
             {
@@ -193,7 +187,7 @@ namespace EditorCore.Buffer
             return position;
         }
 
-        public long InsertBytes(long position, byte[] data)
+        internal long InsertBytes(long position, byte[] data)
         {
             if (Text is IEditableTextBuffer editableText)
             {
@@ -204,7 +198,7 @@ namespace EditorCore.Buffer
             return position;
         }
 
-        public void DeleteString(long position, long count)
+        internal void DeleteString(long position, long count)
         {
             if (Text is IEditableTextBuffer editableText)
             {
@@ -264,14 +258,13 @@ namespace EditorCore.Buffer
                     }
                 }
             }
-            SaveCursorState();
-            OnSimpleUpdate();
         }
 
         public long SetText(string data)
         {
+            Fork();
             long res = Text.SetText(data);
-            OnUpdate();
+            Commit();
             return res;
         }
 
@@ -294,6 +287,34 @@ namespace EditorCore.Buffer
         public (long begin, long length) GetLineOffsets(long line)
         {
             return Text.GetLineOffsets(line);
+        }
+
+        public void Commit()
+        {
+            if (Text is IEditableTextBuffer editableText)
+            {
+                editableText.Commit();
+            }
+            SaveCursorState();
+            OnUpdate();
+        }
+
+        internal void Fork()
+        {
+            if (Text is IEditableTextBuffer editableText)
+            {
+                editableText.Fork();
+            }
+        }
+
+        public void SetVersion(nint id)
+        {
+            if (Text is IUndoTextBuffer undoText)
+            {
+                undoText.SetVersion(id);
+                LoadCursorState();
+                OnUpdate();
+            }
         }
     }
 }

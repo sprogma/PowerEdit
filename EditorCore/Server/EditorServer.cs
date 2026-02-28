@@ -15,8 +15,10 @@ namespace EditorCore.Server
     {
         public ICommandProvider CommandProvider { get; internal set; }
         public List<File.EditorFile> Files { get; internal set; }
+
         Dictionary<string, LspClient> clients = [];
         public EditorBufferOnUpdate? ActionOnBufferUpdate;
+        public EditorBufferOnTextInput? ActionOnBufferTextInput;
         public EditorFileOnSave? ActionOnFileSave;
 
         public EditorServer(ICommandProvider commandProvider)

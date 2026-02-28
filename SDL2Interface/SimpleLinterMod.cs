@@ -1,5 +1,6 @@
 ﻿using EditorCore.Buffer;
 using EditorCore.File;
+using EditorCore.Server;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -10,6 +11,11 @@ namespace SDL2Interface
 {
     internal class SimpleLinterMod
     {
+        internal static void Init(EditorServer server)
+        {
+            server.ActionOnFileSave += OnFileSave;
+        }
+
         internal static void OnFileSave(EditorFile file)
         {
             Task.Run(async () =>

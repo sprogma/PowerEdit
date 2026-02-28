@@ -21,7 +21,6 @@ namespace TextBuffer
         public char this[long index]
         {
             get => content[(int)index];
-            set => throw new NotSupportedException();
         }
 
         public int Length => content.Length;

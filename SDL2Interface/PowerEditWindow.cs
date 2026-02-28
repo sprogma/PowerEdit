@@ -57,6 +57,7 @@ namespace SDL2Interface
 
         internal void Apply()
         {
+            usingCursor.Fork();
             if (editType == "powerEdit")
             {
                 usingCursor.ApplyCommand("powerEdit", buffer.Text.Substring(0));

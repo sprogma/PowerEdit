@@ -190,7 +190,8 @@ namespace SDL2Interface
                         byte[] s = GetTextInputBytes(e.Text);
                         Console.WriteLine($"Input text: {s}");
                         /* clear all selection */
-                        cursor?.Selections.ForEach(x => { if (x.TextLength != 0) { x.Cursor.Buffer.DeleteString(x.Min, x.TextLength); } });
+                        cursor?.Fork();
+                        cursor?.Selections.ForEach(x => { if (x.TextLength != 0) { x.DeleteString(x.Min, x.TextLength); } });
                         cursor?.Selections.ForEach(x => x.InsertBytes(s));
                         cursor?.Commit();
                     }
@@ -237,14 +238,16 @@ namespace SDL2Interface
                     }
                     else if (e.Keyboard.Keysym.Scancode == Scancode.X && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0)
                     {
+                        cursor?.Fork();
                         cursor?.Selections.ForEach(x => x.Copy());
-                        cursor?.Selections.ForEach(x => x.Cursor.Buffer.DeleteString(x.Min, x.TextLength));
+                        cursor?.Selections.ForEach(x => x.DeleteString(x.Min, x.TextLength));
                         cursor?.Commit();
                         return false;
                     }
                     else if (e.Keyboard.Keysym.Scancode == Scancode.V && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0)
                     {
-                        cursor?.Selections.ForEach(x => x.Cursor.Buffer.DeleteString(x.Min, x.TextLength));
+                        cursor?.Fork();
+                        cursor?.Selections.ForEach(x => x.DeleteString(x.Min, x.TextLength));
                         cursor?.Selections.ForEach(x => x.Paste());
                         cursor?.Commit();
                         return false;
@@ -261,6 +264,7 @@ namespace SDL2Interface
                     }
                     else if (e.Keyboard.Keysym.Scancode == Scancode.D && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0)
                     {
+                        cursor?.Fork();
                         cursor?.Selections.ForEach(x =>
                         {
                             if (x.Text.Length == 0)
@@ -268,14 +272,14 @@ namespace SDL2Interface
                                 var line = x.Cursor.Buffer.GetLine(x.EndLine);
                                 if (line.Item2 != null)
                                 {
-                                    x.Cursor.Buffer.InsertString(line.Item1, line.Item2 + (line.Item2.EndsWith("\n") ? "" : "\n"));
+                                    x.InsertString(line.Item1, line.Item2 + (line.Item2.EndsWith("\n") ? "" : "\n"));
                                     x.UpdateFromLineOffset();
                                 }
                             }
                             else
                             {
                                 long a = x.Begin, b = x.End;
-                                x.Cursor.Buffer.InsertString(x.Min, x.Text);
+                                x.InsertString(x.Min, x.Text);
                                 x.UpdateFromLineOffset();
                             }
                         });
@@ -438,6 +442,7 @@ namespace SDL2Interface
                     {
                         if (cursor?.Selections.Count == 1)
                         {
+                            cursor?.Fork();
                             cursor?.Selections.ForEach(x => {
                                 long MaxLine = x.MaxLine;
                                 var after = x.Cursor.Buffer.GetLine(MaxLine + 1);
@@ -445,13 +450,13 @@ namespace SDL2Interface
                                 {
                                     return;
                                 }
-                                x.Cursor.Buffer.DeleteString(after.Item1, after.Item2.Length);
+                                x.DeleteString(after.Item1, after.Item2.Length);
                                 var before = x.Cursor.Buffer.GetLine(x.MinLine);
                                 if (before.Item2 == null)
                                 {
                                     return;
                                 }
-                                x.Cursor.Buffer.InsertString(before.Item1, after.Item2);
+                                x.InsertString(before.Item1, after.Item2);
                             });
                             cursor?.Commit();
                         }
@@ -461,6 +466,7 @@ namespace SDL2Interface
                     {
                         if (cursor?.Selections.Count == 1)
                         {
+                            cursor?.Fork();
                             cursor?.Selections.ForEach(x => {
                                 long MinLine = x.MinLine;
                                 var before = x.Cursor.Buffer.GetLine(MinLine - 1);
@@ -468,13 +474,13 @@ namespace SDL2Interface
                                 {
                                     return;
                                 }
-                                x.Cursor.Buffer.DeleteString(before.Item1, before.Item2.Length);
+                                x.DeleteString(before.Item1, before.Item2.Length);
                                 var after = x.Cursor.Buffer.GetLine(x.MaxLine + 1);
                                 if (after.Item2 == null)
                                 {
                                     return;
                                 }
-                                x.Cursor.Buffer.InsertString(after.Item1, before.Item2);
+                                x.InsertString(after.Item1, before.Item2);
                             });
                             cursor?.Commit();
                         }
@@ -528,6 +534,7 @@ namespace SDL2Interface
                     }
                     else if (e.Keyboard.Keysym.Scancode == Scancode.Tab && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Shift) != 0)
                     {
+                        cursor?.Fork();
                         cursor?.Selections.ForEach(x =>
                         {
                             long endLine = x.MaxLine;
@@ -536,7 +543,7 @@ namespace SDL2Interface
                                 (long pos, string? str, _) = x.Cursor.Buffer.GetLine(line);
                                 if (str != null)
                                 {
-                                    x.Cursor.Buffer.DeleteString(pos, Math.Min(4, str.TakeWhile(char.IsWhiteSpace).Count()));
+                                    x.DeleteString(pos, Math.Min(4, str.TakeWhile(char.IsWhiteSpace).Count()));
                                     x.UpdateFromLineOffset();
                                 }
                             }
@@ -546,6 +553,7 @@ namespace SDL2Interface
                     }
                     else if (e.Keyboard.Keysym.Scancode == Scancode.Tab)
                     {
+                        cursor?.Fork();
                         cursor?.Selections.ForEach(x =>
                         {
                             if (x.TextLength > 0)
@@ -553,13 +561,13 @@ namespace SDL2Interface
                                 long endLine = x.MaxLine;
                                 for (long line = x.MinLine; line <= endLine; ++line)
                                 {
-                                    x.Cursor.Buffer.InsertString(x.Cursor.Buffer.GetLine(line).Item1, "    ");
+                                    x.InsertString(x.Cursor.Buffer.GetLine(line).Item1, "    ");
                                     x.UpdateFromLineOffset();
                                 }
                             }
                             else
                             {
-                                x.InsertText("    ");
+                                x.InsertString("    ");
                             }
                         });
                         cursor?.Commit();
@@ -568,6 +576,7 @@ namespace SDL2Interface
                     else if ((e.Keyboard.Keysym.Scancode == Scancode.I && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Alt) != 0) ||
                              (e.Keyboard.Keysym.Scancode == Scancode.I && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0))
                     {
+                        cursor?.Fork();
                         cursor?.Selections.ForEach(x =>
                         {
                             if (x.TextLength == 0)
@@ -576,7 +585,7 @@ namespace SDL2Interface
                                 x.MoveVertical(-1, true);
                                 x.MoveToLineEnd(true);
                             }
-                            x.Cursor.Buffer.DeleteString(x.Min, x.TextLength);
+                            x.DeleteString(x.Min, x.TextLength);
                             x.UpdateFromLineOffset();
                         });
                         cursor?.Commit();
@@ -586,13 +595,14 @@ namespace SDL2Interface
                              (e.Keyboard.Keysym.Scancode == Scancode.O && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Alt) != 0) ||
                              (e.Keyboard.Keysym.Scancode == Scancode.O && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0))
                     {
+                        cursor?.Fork();
                         cursor?.Selections.ForEach(x =>
                         {
                             if (x.TextLength == 0)
                             {
                                 x.MoveHorisontalWord(-1, true);
                             }
-                            x.Cursor.Buffer.DeleteString(x.Min, x.TextLength);
+                            x.DeleteString(x.Min, x.TextLength);
                             x.UpdateFromLineOffset();
                         });
                         cursor?.Commit();
@@ -602,6 +612,7 @@ namespace SDL2Interface
                             (e.Keyboard.Keysym.Scancode == Scancode.P && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Alt) != 0) ||
                             (e.Keyboard.Keysym.Scancode == Scancode.P && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0))
                     {
+                        cursor?.Fork();
                         cursor?.Selections.ForEach(x =>
                         {
                             if (x.TextLength == 0)
@@ -609,18 +620,18 @@ namespace SDL2Interface
                                 if (x.End >= 4 &&
                                     x.Cursor.Buffer.Text.Substring(x.End - 4, 4).All(x => x == ' '))
                                 {
-                                    x.Cursor.Buffer.DeleteString(x.End - 4, 4);
+                                    x.DeleteString(x.End - 4, 4);
                                     x.UpdateFromLineOffset();
                                 }
                                 else
                                 {
-                                    x.Cursor.Buffer.DeleteString(x.End - 1, 1);
+                                    x.DeleteString(x.End - 1, 1);
                                     x.UpdateFromLineOffset();
                                 }
                             }
                             else
                             {
-                                x.Cursor.Buffer.DeleteString(x.Min, x.TextLength);
+                                x.DeleteString(x.Min, x.TextLength);
                                 x.UpdateFromLineOffset();
                             }
                         });
@@ -629,28 +640,30 @@ namespace SDL2Interface
                     }
                     else if (e.Keyboard.Keysym.Scancode == Scancode.Delete && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0)
                     {
+                        cursor?.Fork();
                         cursor?.Selections.ForEach(x =>
                         {
                             if (x.TextLength == 0)
                             {
                                 x.MoveHorisontalWord(1, true);
                             }
-                            x.Cursor.Buffer.DeleteString(x.Min, x.TextLength);
+                            x.DeleteString(x.Min, x.TextLength);
                         });
                         cursor?.Commit();
                         return false;
                     }
                     else if (e.Keyboard.Keysym.Scancode == Scancode.Delete)
                     {
+                        cursor?.Fork();
                         cursor?.Selections.ForEach(x =>
                         {
                             if (x.TextLength == 0)
                             {
-                                x.Cursor.Buffer.DeleteString(x.End, 1);
+                                x.DeleteString(x.End, 1);
                             }
                             else
                             {
-                                x.Cursor.Buffer.DeleteString(x.Min, x.TextLength);
+                                x.DeleteString(x.Min, x.TextLength);
                             }
                         });
                         cursor?.Commit();
@@ -658,12 +671,13 @@ namespace SDL2Interface
                     }
                     else if (e.Keyboard.Keysym.Scancode == Scancode.Return)
                     {
+                        cursor?.Fork();
                         /* clear all selection */
-                        cursor?.Selections.ForEach(x => x.Cursor.Buffer.DeleteString(x.Min, x.TextLength));
+                        cursor?.Selections.ForEach(x => x.DeleteString(x.Min, x.TextLength));
                         /* find previous line with text, and use it's indent */
                         if (cursor?.Selections.Count > 1)
                         {
-                            cursor?.Selections.ForEach(x => x.InsertText("\n"));
+                            cursor?.Selections.ForEach(x => x.InsertString("\n"));
                         }
                         else
                         {
@@ -679,7 +693,7 @@ namespace SDL2Interface
                                 if (content != null)
                                 {
                                     int indent = content.TakeWhile(char.IsWhiteSpace).Count();
-                                    x.InsertText("\n" + new string(' ', indent));
+                                    x.InsertString("\n" + new string(' ', indent));
                                 }
                             });
                         }
@@ -689,8 +703,9 @@ namespace SDL2Interface
                     else if ((e.Keyboard.Keysym.Scancode == Scancode.N && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Alt) != 0) ||
                              (e.Keyboard.Keysym.Scancode == Scancode.N && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0))
                     {
+                        cursor?.Fork();
                         /* clear all selection */
-                        cursor?.Selections.ForEach(x => x.Cursor.Buffer.DeleteString(x.Min, x.TextLength));
+                        cursor?.Selections.ForEach(x => x.DeleteString(x.Min, x.TextLength));
                         /* find previous line with text, and use it's indent */
                         cursor?.Selections.ForEach(x =>
                         {
@@ -705,7 +720,7 @@ namespace SDL2Interface
                             if (content != null)
                             {
                                 int indent = content.TakeWhile(char.IsWhiteSpace).Count();
-                                x.InsertText("\n" + new string(' ', indent));
+                                x.InsertString("\n" + new string(' ', indent));
                             }
                         });
                         cursor?.Commit();

@@ -72,9 +72,7 @@ namespace SDL2Interface
 
 
                 // add "lsp" module
-                server.ActionOnFileSave += SimpleLinterMod.OnFileSave;
-
-
+                SimpleLinterMod.Init(server);
 
                 if (fileToOpen != null)
                 {

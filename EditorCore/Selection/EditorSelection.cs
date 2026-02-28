@@ -83,7 +83,7 @@ namespace EditorCore.Selection
         {
             if (clipboard != null)
             {
-                InsertText(clipboard);
+                InsertString(clipboard);
             }
         }
 
@@ -92,19 +92,33 @@ namespace EditorCore.Selection
         public long MinLine => Cursor.Buffer.GetPositionOffsets(Min).Item1;
         public long MaxLine => Cursor.Buffer.GetPositionOffsets(Max).Item1;
 
-        public long InsertText(string text)
+        public long InsertString(string text)
         {
-            Console.WriteLine($"Insert {text}");
             long res = Cursor.Buffer.InsertString(End, text);
-            UpdateFromLineOffset();
             return res;
         }
 
         public long InsertBytes(byte[] text)
         {
             long res = Cursor.Buffer.InsertBytes(End, text);
-            UpdateFromLineOffset();
             return res;
+        }
+
+        public long InsertString(long position, string text)
+        {
+            long res = Cursor.Buffer.InsertString(position, text);
+            return res;
+        }
+
+        public long InsertBytes(long position, byte[] text)
+        {
+            long res = Cursor.Buffer.InsertBytes(position, text);
+            return res;
+        }
+
+        public void DeleteString(long min, long textLength)
+        {
+            Cursor.Buffer.DeleteString(min, textLength);
         }
 
         public void MoveToLineBegin(bool withSelect = false)

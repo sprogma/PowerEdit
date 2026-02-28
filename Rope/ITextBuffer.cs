@@ -36,12 +36,16 @@ namespace TextBuffer
 
         public void RemoveAt(long index, long count = 1);
 
+        public void Fork();
+
+        public void Commit();
+
         public void Clear() => RemoveAt(0, Length);
     }
 
     public interface ITextBuffer
     {
-        public char this[long index] { get; set; }
+        public char this[long index] { get; }
 
         public int Length { get; }
 

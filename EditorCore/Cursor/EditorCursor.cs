@@ -60,6 +60,7 @@ namespace EditorCore.Cursor
                             return;
                         }
                         Console.WriteLine($"get result: {string.Join(' ', result.Select(x => x.ToString()))}");
+                        Selections.Sort((x, y) => x.Begin.CompareTo(y.Begin));
                         Selections.ForEach(x => Buffer.DeleteString(x.Min, x.TextLength));
                         {
                             int id = 0;
@@ -69,7 +70,7 @@ namespace EditorCore.Cursor
                                 {
                                     Selections[id].Begin = Selections[id].End;
                                     long begin = Selections[id].End;
-                                    Selections[id].InsertText(item);
+                                    Selections[id].InsertString(item);
                                     /* select entered text */
                                     Selections[id].SetPosition(begin, Selections[id].End);
                                     id++;
@@ -87,7 +88,7 @@ namespace EditorCore.Cursor
                                 foreach (var item in result)
                                 {
                                     var s = new EditorSelection(this, begin);
-                                    long endPosition = s.InsertText(item);
+                                    long endPosition = s.InsertString(item);
                                     s.SetPosition(begin, endPosition);
                                     begin = endPosition;
                                     newSelections.Add(s);
@@ -125,9 +126,15 @@ namespace EditorCore.Cursor
 
         /* declarations for simplicity */
 
+        public void Fork()
+        {
+            Buffer.Fork();
+        }
+
         public void Commit()
         {
-            Buffer.OnUpdate();
+            Buffer.Commit();
+            Selections.ForEach(x => x.UpdateFromLineOffset());
         }
 
         public IEnumerable<string> SelectionsText => Selections.Select(x => x.Text.ToString());

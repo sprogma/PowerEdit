@@ -127,14 +127,6 @@ namespace TextBuffer
                 string res = Marshal.PtrToStringAnsi(destPtr, 1);
                 Marshal.FreeHGlobal(destPtr);
                 return res[0];
-            } 
-            set
-            {
-                curr_state = CLibrary.state_create_dup(project, curr_state);
-                CLibrary.state_moditify(project, curr_state, index, Modification.Delete, 1, null);
-                byte[] utf8Bytes = System.Text.Encoding.UTF8.GetBytes(value.ToString());
-                CLibrary.state_moditify(project, curr_state, index, Modification.Insert, utf8Bytes.Length, utf8Bytes);
-                CLibrary.state_commit(project, curr_state);
             }
         }
 
@@ -231,19 +223,15 @@ namespace TextBuffer
         public long Insert(long index, string item)
         {
             undos.Clear();
-            curr_state = CLibrary.state_create_dup(project, curr_state);
             byte[] utf8Bytes = System.Text.Encoding.UTF8.GetBytes(item);
             CLibrary.state_moditify(project, curr_state, index, Modification.Insert, utf8Bytes.Length, utf8Bytes);
-            CLibrary.state_commit(project, curr_state);
             return utf8Bytes.Length;
         }
 
         public long Insert(long index, byte[] item)
         {
             undos.Clear();
-            curr_state = CLibrary.state_create_dup(project, curr_state);
             CLibrary.state_moditify(project, curr_state, index, Modification.Insert, item.Length, item);
-            CLibrary.state_commit(project, curr_state);
             return item.Length;
         }
 
@@ -252,9 +240,7 @@ namespace TextBuffer
             if (count == 0) return;
             if (index + count > Length) return;
             undos.Clear();
-            curr_state = CLibrary.state_create_dup(project, curr_state);
             CLibrary.state_moditify(project, curr_state, index, Modification.Delete, count, null);
-            CLibrary.state_commit(project, curr_state);
         }
 
         public void Clear() => RemoveAt(0, Length);
@@ -377,6 +363,16 @@ namespace TextBuffer
         {
             Clear();
             return Insert(0, text);
+        }
+
+        public void Fork()
+        {
+            curr_state = CLibrary.state_create_dup(project, curr_state);
+        }
+
+        public void Commit()
+        {
+            CLibrary.state_commit(project, curr_state);
         }
     }
 }

@@ -386,7 +386,7 @@ void state_get_offsets(struct state *state, int64_t position, int64_t *result_li
 {
     while (state->merged_to) state = state->merged_to;
     int64_t node_id = state->value - glb_nodes;
-    if (!node_id || position <= 0)
+    if (!state->value || !node_id || position <= 0)
     {
         *result_line = 0;
         *result_column = 0;

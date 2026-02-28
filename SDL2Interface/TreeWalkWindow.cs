@@ -338,12 +338,7 @@ namespace SDL2Interface
                     }
                     else if (e.Keyboard.Keysym.Scancode == Scancode.Return)
                     {
-                        cBuffer.SetVersion(current.id);
-                        if (buffer != null)
-                        {
-                            buffer.LoadCursorState();
-                            buffer.OnUpdate();
-                        }
+                        buffer.SetVersion(current.id);
                         DeleteSelf();
                         return false;
                     }
