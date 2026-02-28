@@ -273,7 +273,7 @@ namespace EditorCore.Buffer
             return Text.GetLine(line);
         }
 
-        public (long, long) GetPositionOffsets(long position)
+        public (long line, long offset) GetPositionOffsets(long position)
         {
             Debug.Assert(position >= 0);
             return Text.GetPositionOffsets(position);

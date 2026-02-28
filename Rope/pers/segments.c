@@ -150,15 +150,15 @@ int64_t _update_newlines(struct segment *node)
 }
 
 
-static int64_t insert_at_pos(int64_t root_idx, int64_t pos, struct segment_info info, int64_t ver) {
+static int64_t insert_at_pos(int64_t root_idx, int64_t pos, struct segment_info *info, int64_t ver) {
     // printf("Insert: length %lld at %lld\n", info.length, pos);
     if (root_idx == 0) 
     {
         int64_t new_node = glb_next_node++;
         // printf("B: allocated node %lld\n", new_node);
         memset(&glb_nodes[new_node], 0, sizeof(glb_nodes[new_node]));
-        memcpy(&glb_nodes[new_node], &info, sizeof(info));
-        glb_nodes[new_node].offset = info.offset;
+        memcpy(&glb_nodes[new_node], info, sizeof(*info));
+        glb_nodes[new_node].offset = info->offset;
         glb_nodes[new_node].newlines = _update_newlines(&glb_nodes[new_node]);
         update(new_node);
         return new_node;
@@ -191,7 +191,7 @@ static int64_t insert_at_pos(int64_t root_idx, int64_t pos, struct segment_info 
 struct segment *InsertSegment(struct segment *tree, struct segment_info info, int64_t position, int64_t this_version)
 {    
     int64_t root_idx = (tree ? tree - glb_nodes : 0);
-    int64_t new_root = insert_at_pos(root_idx, position, info, this_version);
+    int64_t new_root = insert_at_pos(root_idx, position, &info, this_version);
     return &glb_nodes[new_root];
 }
 

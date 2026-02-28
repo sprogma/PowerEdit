@@ -16,7 +16,7 @@
 struct segment_info
 {
     struct mapped_buffer *buffer;
-    int64_t offset; // offset buffer
+    int64_t offset; // offset in buffer
     int64_t length; // length of segment 
     int64_t newlines; // count of newlines in buffer
 };

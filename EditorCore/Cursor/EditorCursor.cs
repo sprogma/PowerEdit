@@ -114,7 +114,9 @@ namespace EditorCore.Cursor
                     Selections.Clear();
                     foreach (var (index, value) in textFields)
                     {
-                        foreach (Match x in Regex.Matches(value, command, RegexOptions.Singleline))
+                        var result = Regex.Matches(value, command, RegexOptions.Singleline);
+                        Selections.EnsureCapacity(result.Count);
+                        foreach (Match x in result)
                         {
                             Selections.Add(new EditorSelection(this, index + x.Index, index + x.Index + x.Length));
                         }

@@ -217,11 +217,12 @@ void _state_insert(struct project *project, struct state *state, int64_t positio
     {
         int64_t segoffset;
         struct segment *seg = GetSegment(state->value, position - 1, &segoffset);
-        if (seg && segoffset + seg->length == position && seg->buffer == buffer && seg->offset + seg->length == offset)
+        if (seg && segoffset + seg->length == position && seg->buffer == buffer && seg->offset + seg->length == offset && seg->length < SEGMENT_SIZE && length < SEGMENT_SIZE)
         {
+            struct segment_info info = { seg->buffer, seg->offset, seg->length + length };
             state->value = RemoveSegment(state->value, position - 1, state->version_id);
-            state->value = InsertSegment(state->value, (struct segment_info) { seg->buffer, seg->offset, seg->length + length}, segoffset, state->version_id);
-            printf("Z: Increase length of previous segment\n");
+            state->value = InsertSegment(state->value, info, segoffset, state->version_id);
+            printf("Z: Increase length of previous segment [seg->offset=%lld]\n", seg->offset);
             return;
         }
     }

@@ -87,10 +87,10 @@ namespace EditorCore.Selection
             }
         }
 
-        public long BeginLine => Cursor.Buffer.GetPositionOffsets(Begin).Item1;
-        public long EndLine => Cursor.Buffer.GetPositionOffsets(End).Item1;
-        public long MinLine => Cursor.Buffer.GetPositionOffsets(Min).Item1;
-        public long MaxLine => Cursor.Buffer.GetPositionOffsets(Max).Item1;
+        public long BeginLine => Cursor.Buffer.GetPositionOffsets(Begin).line;
+        public long EndLine => Cursor.Buffer.GetPositionOffsets(End).line;
+        public long MinLine => Cursor.Buffer.GetPositionOffsets(Min).line;
+        public long MaxLine => Cursor.Buffer.GetPositionOffsets(Max).line;
 
         public long InsertString(string text)
         {

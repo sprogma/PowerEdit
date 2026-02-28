@@ -143,21 +143,67 @@ namespace SDL2Interface
             }
 
             /* draw cursor */
-            SDL.SetRenderDrawColor(renderer, 255, 255, 255, 255);
             if (cursor != null)
             {
+                SDL.SetRenderDrawColor(renderer, 255, 255, 255, 255);
+                int selectionWidth = (int)(5 * textRenderer.currentScale);
+                long minLine = viewOffset;
+                long maxLine = minLine + (H / textRenderer.FontLineStep) + 1;
+                long minPos = buffer.GetLineOffsets(minLine).begin;
+                long maxPos = buffer.GetLineOffsets(maxLine).begin;
+                maxPos = (maxPos == 0 ? buffer.Text.Length + 1 : maxPos + (W / textRenderer.FontStep) + 1);
+
                 foreach (var selection in cursor.Selections)
                 {
+                    /* draw vericall line */
+                    if (minPos <= selection.End && selection.End < maxPos)
                     {
                         (long line, long offset) = buffer.GetPositionOffsets(selection.End);
                         Rect r = new(leftBarSize + position.X + 5 + (int)offset * textRenderer.FontStep, position.Y + (int)(line - viewOffset) * textRenderer.FontLineStep, 5, textRenderer.FontLineStep);
                         SDL.RenderFillRect(renderer, ref r);
                     }
-                    int selectionWidth = (int)(5 * textRenderer.currentScale);
-                    for (long p = selection.Min; p < selection.Max; ++p)
+
+                    (long line, long offset) begin, end;
+                    if (selection.Min < minPos)
                     {
-                        (long line, long offset) = buffer.GetPositionOffsets(p);
-                        Rect r = new(leftBarSize + position.X + 5 + (int)offset * textRenderer.FontStep, position.Y + (int)(line - viewOffset) * textRenderer.FontLineStep + textRenderer.FontLineStep - selectionWidth, textRenderer.FontStep, selectionWidth);
+                        begin = (minLine, 0);
+                    }
+                    else if (selection.Min >= maxPos)
+                    {
+                        begin = (maxLine+1, 0);
+                    }
+                    else
+                    {
+                        begin = buffer.GetPositionOffsets(selection.Min);
+                    }
+                    if (selection.Max < minPos)
+                    {
+                        end = (minLine, 0);
+                    }
+                    else if (selection.Max >= maxPos)
+                    {
+                        end = (maxLine + 1, 0);
+                    }
+                    else
+                    {
+                        end = buffer.GetPositionOffsets(selection.Max);
+                    }
+
+                    long beginLine = Math.Max(begin.line, minLine);
+                    long endLine = Math.Min(end.line, maxLine);
+                    for (long line = beginLine; line <= endLine; line++)
+                    {
+                        long startOffset = (line == begin.line) ? begin.offset : 0;
+                        long endOffset = (line == end.line) ? end.offset : buffer.Text.GetLineOffsets(line).length;
+
+                        int width = (int)(endOffset - startOffset) * textRenderer.FontStep;
+                        if (width <= 0) continue;
+                        Rect r = new(
+                            leftBarSize + position.X + 5 + (int)startOffset * textRenderer.FontStep,
+                            position.Y + (int)(line - viewOffset) * textRenderer.FontLineStep + textRenderer.FontLineStep - selectionWidth,
+                            width,
+                            selectionWidth
+                        );
                         SDL.RenderFillRect(renderer, ref r);
                     }
                 }
