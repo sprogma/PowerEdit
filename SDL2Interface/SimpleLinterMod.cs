@@ -110,7 +110,6 @@ namespace SDL2Interface
                             void UpdateError(string filename, int line, int col, string msg)
                             {
                                 long position = file.Buffer.GetPosition(line, col);
-                                Console.WriteLine($"Add to position {line}:{col} -> {position}");
                                 lock (file.Buffer.ErrorMarks)
                                 {
                                     file.Buffer.ErrorMarks.Add(new(msg, position));

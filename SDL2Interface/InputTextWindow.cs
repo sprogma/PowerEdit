@@ -109,7 +109,6 @@ namespace SDL2Interface
                 (long line, _) = buffer.GetPositionOffsets(selection.End);
                 (long begin, long length) = buffer.GetLineOffsets(line);
                 long end = begin + length;
-                Console.WriteLine($"line={line} from {begin} to {end}");
                 lock (buffer.ErrorMarks)
                 {
                     long mindiff = long.MaxValue;

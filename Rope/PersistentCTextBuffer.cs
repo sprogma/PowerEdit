@@ -266,7 +266,7 @@ namespace TextBuffer
 
         public void SetVersion(IntPtr version)
         {
-            curr_state = version;
+            curr_state = CLibrary.state_resolve(version);
         }
 
         public IntPtr[] GetInitialVersions()
@@ -276,7 +276,7 @@ namespace TextBuffer
 
         public IntPtr GetCurrentVersion()
         {
-            return curr_state;
+            return CLibrary.state_resolve(curr_state);
         }
 
         public (IntPtr[] states, MarshalingLink[] links) GetVersionTree()

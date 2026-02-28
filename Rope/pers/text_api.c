@@ -118,7 +118,7 @@ void project_get_states(struct project *project, int64_t states_count, struct st
 			{
 				if (!project->states[j]->merged_to)
 				{
-					*links++ = (struct link){ st, st->next_versions[j] };
+					*links++ = (struct link){ st, state_resolve(st->next_versions[j]) };
 				}
 			}
 		}
