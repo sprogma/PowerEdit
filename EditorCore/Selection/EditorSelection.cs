@@ -16,8 +16,10 @@ namespace EditorCore.Selection
 
         public long End { get; internal set; }
 
+        // cache
         public long FromLineOffset { get; internal set; }
 
+        // parent
         public EditorCursor Cursor { get; internal set; }
 
         public string? clipboard { get; internal set; } = null;
