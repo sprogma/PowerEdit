@@ -75,11 +75,13 @@ namespace EditorCore.Cursor
                             {
                                 foreach (var item in result)
                                 {
-                                    Selections[id].Begin = Selections[id].End;
-                                    long begin = Selections[id].End;
-                                    Selections[id].InsertString(item);
+                                    var tmp = Selections[id];
+                                    tmp.Begin = tmp.End;
+                                    long begin = tmp.End;
+                                    tmp.InsertString(item);
                                     /* select entered text */
-                                    Selections[id].SetPosition(begin, Selections[id].End);
+                                    tmp.SetPosition(begin, tmp.End);
+                                    Selections[id] = tmp;
                                     id++;
                                 }
                             }
@@ -127,11 +129,13 @@ namespace EditorCore.Cursor
                             {
                                 foreach (var item in result)
                                 {
-                                    Selections[id].Begin = Selections[id].End;
-                                    long begin = Selections[id].End;
-                                    Selections[id].InsertString(item);
+                                    var tmp = Selections[id];
+                                    tmp.Begin = tmp.End;
+                                    long begin = tmp.End;
+                                    tmp.InsertString(item);
                                     /* select entered text */
-                                    Selections[id].SetPosition(begin, Selections[id].End);
+                                    tmp.SetPosition(begin, tmp.End);
+                                    Selections[id] = tmp;
                                     id++;
                                 }
                             }
