@@ -350,7 +350,7 @@ namespace SDL2Interface
                     }
                     else if (e.Keyboard.Keysym.Scancode == Scancode.Q && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0)
                     {
-                        cursor?.Selections.SelectEnd();
+                        cursor?.Selections.UpdateBeginToEnd();
                         return false;
                     }
                     else if (e.Keyboard.Keysym.Scancode == Scancode.Z && 

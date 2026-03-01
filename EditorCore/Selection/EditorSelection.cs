@@ -12,6 +12,7 @@ using System.Reflection.Metadata.Ecma335;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
+using System.Xml.Linq;
 using static System.Collections.Specialized.BitVector32;
 using static System.Net.Mime.MediaTypeNames;
 
@@ -19,7 +20,7 @@ namespace EditorCore.Selection
 {
     internal class OrderedMaxTreap
     {
-        private class Node
+        private struct Node
         {
             public long Value;
             public long Priority;
@@ -27,7 +28,7 @@ namespace EditorCore.Selection
             public long LazyAdd = 0;
             public long? LazySet = null;
 
-            public Node? Left, Right, Parent;
+            public int Left = -1, Right = -1, Parent = -1;
 
             public Node(long val)
             {
@@ -36,8 +37,23 @@ namespace EditorCore.Selection
             }
         }
 
-        private Node? root;
-        private List<Node> nodes = [];
+        public long size = 0;
+        // -1 means null
+        private int root = -1;
+        private Node[] nodes = new Node[1024];
+
+        public OrderedMaxTreap Copy()
+        {
+            var copy = new OrderedMaxTreap();
+            if (copy.nodes.Length != nodes.Length)
+            {
+                Array.Resize(ref copy.nodes, nodes.Length);
+            }
+            Array.Copy(nodes, 0, copy.nodes, 0, (int)size);
+            copy.size = size;
+            copy.root = root;
+            return copy;
+        }
 
         public long this[long index]
         {
@@ -47,151 +63,194 @@ namespace EditorCore.Selection
 
         public long Get(int index)
         {
-            Node target = nodes[index];
-            PushPathFromRoot(target);
-            return target.Value;
+            PushPathFromRoot(index);
+            return nodes[index].Value;
         }
 
         public void Set(int index, long newValue)
         {
-            Node target = nodes[index];
-            RemoveNode(target);
+            ref var target = ref nodes[index];
+            RemoveNode(index);
             target.Value = newValue;
             target.LazyAdd = 0;
             target.LazySet = null;
-            root = Insert(root, target);
+            root = InsertNode(root, index);
         }
 
         public void Insert(int pos, long val)
         {
-            var newNode = new Node(val);
-            nodes.Insert(pos, newNode);
-            root = Insert(root, newNode);
+            EnsureCapacity(size + 1);
+
+            if (size - pos > 0)
+            {
+                for (int i = 0; i < size; i++)
+                {
+                    ref var n = ref nodes[i];
+                    if (n.Left >= pos) n.Left++;
+                    if (n.Right >= pos) n.Right++;
+                    if (n.Parent >= pos) n.Parent++;
+                }
+                if (root >= pos) root++;
+            }
+
+            Array.Copy(nodes, pos, nodes, pos + 1, size - pos);
+
+            nodes[pos] = new Node(val);
+            size++;
+
+            root = InsertNode(root, pos);
+        }
+
+        private void EnsureCapacity(long newCount)
+        {
+            if (newCount >= nodes.Length)
+            {
+                Array.Resize(ref nodes, nodes.Length * 2);
+            }
         }
 
         public void Add(long x, long v)
         {
             var (low, hi) = Split(root, x);
-            if (hi != null)
+            if (hi != -1)
             {
                 ApplyAdd(hi, v);
             }
             root = Merge(low, hi);
         }
 
-        public void Sub(long x, long v)
+        // with saturation
+        public void AddSat(long x, long v)
+        {
+            var (low, hi) = Split(root, x);
+            var (add, ceil) = Split(low, x - v);
+            ApplySet(ceil, x);
+            ApplyAdd(add, v);
+
+            root = Merge(Merge(add, ceil), hi);
+        }
+
+        // with saturation
+        public void SubSat(long x, long v)
         {
             var (low, hi) = Split(root, x);
             var (floor, sub) = Split(hi, x + v);
-            if (floor != null) ApplySet(floor, x);
-            if (sub != null) ApplyAdd(sub, -v);
+            ApplySet(floor, x);
+            ApplyAdd(sub, -v);
 
             root = Merge(low, Merge(floor, sub));
         }
 
 
-        private void ApplyAdd(Node? t, long v)
+        private void ApplyAdd(int t, long v)
         {
-            if (t == null) return;
-            if (t.LazySet != null) t.LazySet += v;
-            else t.LazyAdd += v;
+            if (t == -1) return;
+            ref var node = ref nodes[t];
+            if (node.LazySet != null) node.LazySet += v;
+            else node.LazyAdd += v;
         }
 
-        private void ApplySet(Node? t, long v)
+        private void ApplySet(int t, long v)
         {
-            if (t == null) return;
-            t.LazySet = v;
-            t.LazyAdd = 0;
+            if (t == -1) return;
+            ref var node = ref nodes[t];
+            node.LazySet = v;
+            node.LazyAdd = 0;
         }
 
-        private void Push(Node? t)
+        private void Push(int t)
         {
-            if (t == null) return;
-            else if (t.LazySet != null)
+            if (t == -1) return;
+            ref var node = ref nodes[t];
+            if (node.LazySet != null)
             {
-                t.Value = t.LazySet.Value;
-                ApplySet(t.Left, t.LazySet.Value);
-                ApplySet(t.Right, t.LazySet.Value);
-                t.LazySet = null;
+                node.Value = node.LazySet.Value;
+                ApplySet(node.Left, node.LazySet.Value);
+                ApplySet(node.Right, node.LazySet.Value);
+                node.LazySet = null;
             }
-            else if (t.LazyAdd != 0)
+            else if (node.LazyAdd != 0)
             {
-                t.Value += t.LazyAdd;
-                ApplyAdd(t.Left, t.LazyAdd);
-                ApplyAdd(t.Right, t.LazyAdd);
-                t.LazyAdd = 0;
+                node.Value += node.LazyAdd;
+                ApplyAdd(node.Left, node.LazyAdd);
+                ApplyAdd(node.Right, node.LazyAdd);
+                node.LazyAdd = 0;
             }
         }
 
-        private void PushPathFromRoot(Node? t)
+        private void PushPathFromRoot(int t)
         {
-            Stack<Node> path = [];
-            Node? curr = t;
-            while (curr != null) { path.Push(curr); curr = curr.Parent; }
+            Stack<int> path = [];
+            int curr = t;
+            while (curr != -1) { path.Push(curr); curr = nodes[curr].Parent; }
             while (path.Count > 0) Push(path.Pop());
         }
 
-        private (Node?, Node?) Split(Node? t, long key)
+        private (int, int) Split(int t, long key)
         {
-            if (t == null) return (null, null);
+            if (t == -1) return (-1, -1);
             Push(t);
-            if (t.Value <= key)
+            ref var node = ref nodes[t];
+            if (node.Value <= key)
             {
-                var (l, r) = Split(t.Right, key);
-                t.Right = l;
-                l?.Parent = t;
-                r?.Parent = null;
+                var (l, r) = Split(node.Right, key);
+                node.Right = l;
+                if (l != -1) nodes[l].Parent = t;
+                if (r != -1) nodes[r].Parent = -1;
                 return (t, r);
             }
             else
             {
-                var (l, r) = Split(t.Left, key);
-                t.Left = r;
-                r?.Parent = t;
-                l?.Parent = null;
+                var (l, r) = Split(node.Left, key);
+                node.Left = r;
+                if (l != -1) nodes[l].Parent = -1;
+                if (r != -1) nodes[r].Parent = t;
                 return (l, t);
             }
         }
 
-        private Node? Merge(Node? l, Node? r)
+        private int Merge(int l, int r)
         {
-            if (l == null || r == null) return l ?? r;
+            if (l == -1 || r == -1) return Math.Max(l, r);
             Push(l); 
             Push(r);
-            if (l.Priority > r.Priority)
+            ref var nl = ref nodes[l];
+            ref var nr = ref nodes[r];
+            if (nl.Priority > nr.Priority)
             {
-                l.Right = Merge(l.Right, r);
-                l.Right?.Parent = l;
+                nl.Right = Merge(nl.Right, r);
+                if (nl.Right != -1) nodes[nl.Right].Parent = l;
                 return l;
             }
             else
             {
-                r.Left = Merge(l, r.Left);
-                r.Left?.Parent = r;
+                nr.Left = Merge(l, nr.Left);
+                if (nr.Left != -1) nodes[nr.Left].Parent = r;
                 return r;
             }
         }
 
-        private Node? Insert(Node? r, Node node)
+        private int InsertNode(int t, int node)
         {
-            var (l, ri) = Split(r, node.Value);
-            node.Left = node.Right = node.Parent = null;
+            var (l, ri) = Split(t, nodes[node].Value);
+            nodes[node].Left = nodes[node].Right = nodes[node].Parent = -1;
             return Merge(Merge(l, node), ri);
         }
 
-        private void RemoveNode(Node node)
+        private void RemoveNode(int t)
         {
-            PushPathFromRoot(node);
-            Node? m = Merge(node.Left, node.Right);
-            if (node.Parent == null) 
+            PushPathFromRoot(t);
+            ref var node = ref nodes[t];
+            int m = Merge(node.Left, node.Right);
+            if (node.Parent == -1) 
                 root = m;
-            else if (node.Parent.Left == node) 
-                node.Parent.Left = m;
+            else if (nodes[node.Parent].Left == t) 
+                nodes[node.Parent].Left = m;
             else 
-                node.Parent.Right = m;
+                nodes[node.Parent].Right = m;
 
-            m?.Parent = node.Parent;
-            node.Left = node.Right = node.Parent = null;
+            if (m != -1) nodes[m].Parent = node.Parent;
+            node.Left = node.Right = node.Parent = -1;
         }
     }
 
@@ -271,9 +330,10 @@ namespace EditorCore.Selection
         {
             for (int i = 0; i < size; ++i)
             {
-                var tmp = this[i];
-                tmp.UpdateFromLineOffset();
-                this[i] = tmp;
+                long end = End[i];
+                long last_newline = Cursor.Buffer.Text.NearestNewlineLeft(end - 1);
+                if (last_newline == -1) last_newline = 0;
+                FromLineOffset[i] = end - last_newline - 1;
             }
         }
 
@@ -287,13 +347,19 @@ namespace EditorCore.Selection
             }
         }
 
-        public void MoveHorisontal(long offset, bool v)
+        public void MoveHorisontal(long offset, bool withSelect)
         {
-            for (int i = 0; i < size; ++i)
+            if (offset > 0)
             {
-                var tmp = this[i];
-                tmp.MoveHorisontal(offset, v);
-                this[i] = tmp;
+                End.AddSat(Cursor.Buffer.Text.Length, offset);
+            }
+            else
+            {
+                End.SubSat(0, -offset);
+            }
+            if (!withSelect)
+            {
+                UpdateBeginToEnd();
             }
         }
 
@@ -382,12 +448,9 @@ namespace EditorCore.Selection
             (Begin, End) = (End, Begin);
         }
 
-        public void SelectEnd()
+        public void UpdateBeginToEnd()
         {
-            for (int i = 0; i < size; ++i)
-            {
-                Begin[i] = End[i];
-            }
+            Begin = End.Copy();
         }
 
         public void MoveToLineBegin(bool v)
@@ -419,9 +482,9 @@ namespace EditorCore.Selection
 
         internal void MoveDelete(long position, long length)
         {
-            End.Sub(position, length);
-            Begin.Sub(position, length);
-            FromLineOffset.Sub(position, length);
+            End.SubSat(position, length);
+            Begin.SubSat(position, length);
+            FromLineOffset.SubSat(position, length);
         }
 
         public EditorSelection this[long index]
