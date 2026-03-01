@@ -84,7 +84,7 @@ namespace EditorCore.Cursor
                                 {
                                     Selections.Insert(Selections.Count, new EditorSelection(this, 0));
                                 }
-                                long begin = Selections[Selections.Count].End;
+                                long begin = Selections[Selections.Count-1].End;
                                 List<EditorSelection> newSelections = [];
                                 foreach (var item in result)
                                 {

@@ -565,8 +565,8 @@ namespace SDL2Interface
                         cursor?.Selections.MoveHorisontalWord(1, ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Shift) != 0);
                         return false;
                     }
-                    else if ((e.Keyboard.Keysym.Scancode == Scancode.Left && e.Keyboard.Keysym.Mod.HasFlag(KeyModifier.Ctrl)) ||
-                             (e.Keyboard.Keysym.Scancode == Scancode.K && e.Keyboard.Keysym.Mod.HasFlag(KeyModifier.Alt)))
+                    else if ((e.Keyboard.Keysym.Scancode == Scancode.Left && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0) ||
+                             (e.Keyboard.Keysym.Scancode == Scancode.K && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Alt) != 0))
                     {
                         cursor?.Selections.MoveHorisontalWord(-1, ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Shift) != 0);
                         return false;
