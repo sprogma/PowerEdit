@@ -332,7 +332,6 @@ namespace EditorCore.Selection
             {
                 long end = End[i];
                 long last_newline = Cursor.Buffer.Text.NearestNewlineLeft(end - 1);
-                if (last_newline == -1) last_newline = 0;
                 FromLineOffset[i] = end - last_newline - 1;
             }
         }
@@ -361,6 +360,7 @@ namespace EditorCore.Selection
             {
                 UpdateBeginToEnd();
             }
+            UpdateFromOffset();
         }
 
         public void MoveHorisontalWord(long offset, bool v)
@@ -515,7 +515,6 @@ namespace EditorCore.Selection
         public void UpdateFromLineOffset()
         {
             long last_newline = Cursor.Buffer.Text.NearestNewlineLeft(End - 1);
-            if (last_newline == -1) { last_newline = 0; }
             FromLineOffset = End - last_newline - 1;
         }
 
