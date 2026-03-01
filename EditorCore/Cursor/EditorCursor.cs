@@ -15,13 +15,13 @@ namespace EditorCore.Cursor
 {
     public class EditorCursor
     {
-        public List<EditorSelection> Selections { get; set; }
+        public EditorSelectionList Selections { get; set; }
         public EditorBuffer Buffer { get; internal set; }
 
         internal EditorCursor(EditorBuffer buffer)
         {
             Buffer = buffer;
-            Selections = [];
+            Selections = new(this);
         }
 
         public void ApplyCommand(string type, string command)
@@ -36,7 +36,7 @@ namespace EditorCore.Cursor
                             return;
                         }
                         Console.WriteLine($"get result: {string.Join(' ', enumerable_result.Select(x => x.ToString()))}");
-                        Selections = enumerable_result.Where(x => x is EditorSelection).Cast<EditorSelection>().ToList();
+                        Selections = new(this, enumerable_result.Where(x => x is EditorSelection).Cast<EditorSelection>().ToArray());
                     }
                     break;
                 case "edit":
@@ -60,8 +60,10 @@ namespace EditorCore.Cursor
                             return;
                         }
                         Console.WriteLine($"get result: {string.Join(' ', result.Select(x => x.ToString()))}");
-                        Selections.Sort((x, y) => x.Begin.CompareTo(y.Begin));
-                        Selections.ForEach(x => Buffer.DeleteString(x.Min, x.TextLength));
+                        foreach (var x in Selections)
+                        {
+                            Buffer.DeleteString(x.Min, x.TextLength);
+                        }
                         {
                             int id = 0;
                             if (result.Length == Selections.Count)
@@ -80,10 +82,9 @@ namespace EditorCore.Cursor
                             {
                                 if (Selections.Count == 0)
                                 {
-                                    Selections.Add(new EditorSelection(this, 0));
+                                    Selections.Insert(Selections.Count, new EditorSelection(this, 0));
                                 }
-                                long begin = Selections[^1].End;
-                                Selections = [];
+                                long begin = Selections[Selections.Count].End;
                                 List<EditorSelection> newSelections = [];
                                 foreach (var item in result)
                                 {
@@ -93,7 +94,7 @@ namespace EditorCore.Cursor
                                     begin = endPosition;
                                     newSelections.Add(s);
                                 }
-                                Selections.AddRange(newSelections);
+                                Selections = new(this, newSelections);
                             }
                         }
                     }
@@ -117,10 +118,9 @@ namespace EditorCore.Cursor
                         foreach (var (index, value) in textFields)
                         {
                             var result = Regex.Matches(value, command, RegexOptions.Singleline);
-                            Selections.EnsureCapacity(result.Count);
                             foreach (Match x in result)
                             {
-                                Selections.Add(new EditorSelection(this, index + x.Index, index + x.Index + x.Length));
+                                Selections.Insert(Selections.Count, new EditorSelection(this, index + x.Index, index + x.Index + x.Length));
                             }
                         }
                     }
@@ -130,7 +130,7 @@ namespace EditorCore.Cursor
                     }
                     break;
             }
-            Selections.ForEach(x => x.UpdateFromLineOffset());
+            Selections.UpdateFromOffset();
         }
 
         /* declarations for simplicity */
@@ -143,7 +143,7 @@ namespace EditorCore.Cursor
         public void Commit()
         {
             Buffer.Commit();
-            Selections.ForEach(x => x.UpdateFromLineOffset());
+            Selections.UpdateFromOffset();
         }
 
         public IEnumerable<string> SelectionsText => Selections.Select(x => x.Text.ToString());

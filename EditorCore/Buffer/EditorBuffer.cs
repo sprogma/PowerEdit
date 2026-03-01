@@ -92,7 +92,7 @@ namespace EditorCore.Buffer
                 }
                 var ver = undoText.GetCurrentVersion();
                 var cursors = navText.GetCursors(ver);
-                Cursor.Selections = cursors.Select(x => new EditorSelection(Cursor, x.Begin, x.End)).ToList();
+                Cursor.Selections = new(Cursor, cursors.Select(x => new EditorSelection(Cursor, x.Begin, x.End)).ToArray());
             }
         }
 
@@ -150,17 +150,7 @@ namespace EditorCore.Buffer
             /* move all cursors */
             if (Cursor != null)
             {
-                foreach (var selection in Cursor.Selections)
-                {
-                    if (selection.Begin >= position)
-                    {
-                        selection.Begin += length;
-                    }
-                    if (selection.End >= position)
-                    {
-                        selection.End += length;
-                    }
-                }
+                Cursor.Selections.MoveInsert(position, length);
             }
             lock (ErrorMarks)
             {
@@ -182,9 +172,9 @@ namespace EditorCore.Buffer
             {
                 long length = editableText.Insert(position, data);
                 MoveCursorsInsert(position, length);
-                return position + length;
+                return length;
             }
-            return position;
+            return 0;
         }
 
         internal long InsertBytes(long position, byte[] data)
@@ -193,9 +183,9 @@ namespace EditorCore.Buffer
             {
                 long length = editableText.Insert(position, data);
                 MoveCursorsInsert(position, length);
-                return position + length;
+                return length;
             }
-            return position;
+            return 0;
         }
 
         internal void DeleteString(long position, long count)
@@ -222,25 +212,7 @@ namespace EditorCore.Buffer
             /* move all cursors */
             if (Cursor != null)
             {
-                foreach (var selection in Cursor.Selections)
-                {
-                    if (selection.Begin >= position + length)
-                    {
-                        selection.Begin -= length;
-                    }
-                    else if (selection.Begin >= position)
-                    {
-                        selection.Begin = position;
-                    }
-                    if (selection.End >= position + length)
-                    {
-                        selection.End -= length;
-                    }
-                    else if (selection.End >= position)
-                    {
-                        selection.End = position;
-                    }
-                }
+                Cursor.Selections.MoveDelete(position, length);
             }
             lock (ErrorMarks)
             {

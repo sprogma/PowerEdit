@@ -237,8 +237,8 @@ namespace SDL2Interface
                         Console.WriteLine($"Input text: {s}");
                         /* clear all selection */
                         cursor?.Fork();
-                        cursor?.Selections.ForEach(x => { if (x.TextLength != 0) { x.DeleteString(x.Min, x.TextLength); } });
-                        cursor?.Selections.ForEach(x => x.InsertBytes(s));
+                        cursor?.Selections.DeleteString();
+                        cursor?.Selections.InsertBytes(s);
                         cursor?.Commit();
                     }
                     return false;
@@ -252,7 +252,7 @@ namespace SDL2Interface
                             {
                                 offset = enteredLineNumber - 100;
                             }
-                            cursor?.Selections.ForEach(x => x.MoveVertical(offset, false));
+                            cursor?.Selections.MoveVertical(offset, false);
                             const int KEYEVENTF_EXTENDEDKEY = 0x1;
                             const int KEYEVENTF_KEYUP = 0x2;
                             WinapiKeybdEvent(0x14, 0x45, KEYEVENTF_EXTENDEDKEY, 0);
@@ -279,22 +279,22 @@ namespace SDL2Interface
                     }
                     if (e.Keyboard.Keysym.Scancode == Scancode.C && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0)
                     {
-                        cursor?.Selections.ForEach(x => x.Copy());
+                        cursor?.Selections.Copy();
                         return false;
                     }
                     else if (e.Keyboard.Keysym.Scancode == Scancode.X && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0)
                     {
                         cursor?.Fork();
-                        cursor?.Selections.ForEach(x => x.Copy());
-                        cursor?.Selections.ForEach(x => x.DeleteString(x.Min, x.TextLength));
+                        cursor?.Selections.Copy();
+                        cursor?.Selections.DeleteString();
                         cursor?.Commit();
                         return false;
                     }
                     else if (e.Keyboard.Keysym.Scancode == Scancode.V && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0)
                     {
                         cursor?.Fork();
-                        cursor?.Selections.ForEach(x => x.DeleteString(x.Min, x.TextLength));
-                        cursor?.Selections.ForEach(x => x.Paste());
+                        cursor?.Selections.DeleteString();
+                        cursor?.Selections.Paste();
                         cursor?.Commit();
                         return false;
                     }
@@ -310,44 +310,47 @@ namespace SDL2Interface
                     }
                     else if (e.Keyboard.Keysym.Scancode == Scancode.D && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0)
                     {
-                        cursor?.Fork();
-                        cursor?.Selections.ForEach(x =>
+                        if (cursor != null)
                         {
-                            if (x.Text.Length == 0)
+                            cursor.Fork();
+                            long id = 0;
+                            foreach (var x in cursor.Selections)
                             {
-                                var line = x.Cursor.Buffer.GetLine(x.EndLine);
-                                if (line.Item2 != null)
+                                if (x.Text.Length == 0)
                                 {
-                                    x.InsertString(line.Item1, line.Item2 + (line.Item2.EndsWith("\n") ? "" : "\n"));
+                                    var line = x.Cursor.Buffer.GetLine(x.EndLine);
+                                    if (line.value != null)
+                                    {
+                                        x.InsertString(line.offset, line.value + (line.value.EndsWith('\n') ? "" : "\n"));
+                                        x.UpdateFromLineOffset();
+                                    }
+                                }
+                                else
+                                {
+                                    long a = x.Begin, b = x.End;
+                                    x.InsertString(x.Min, x.Text);
                                     x.UpdateFromLineOffset();
                                 }
+                                cursor.Selections[id] = x;
+                                id++;
                             }
-                            else
-                            {
-                                long a = x.Begin, b = x.End;
-                                x.InsertString(x.Min, x.Text);
-                                x.UpdateFromLineOffset();
-                            }
-                        });
-                        cursor?.Commit();
-                        return false;
+                            cursor.Commit();
+                            return false;
+                        }
                     }
                     else if (e.Keyboard.Keysym.Scancode == Scancode.A && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0)
                     {
-                        if (cursor != null)
-                        {
-                            cursor.Selections = [new EditorSelection(cursor, 0, cursor.Buffer.Text.Length)];
-                        }
+                        cursor?.Selections = new(cursor, [new EditorSelection(cursor, 0, cursor.Buffer.Text.Length)]);
                         return false;
                     }
                     else if (e.Keyboard.Keysym.Scancode == Scancode.W && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0)
                     {
-                        cursor?.Selections.ForEach(x => x.SetPosition(x.End, x.Begin));
+                        cursor?.Selections.SwapBeginEnd();
                         return false;
                     }
                     else if (e.Keyboard.Keysym.Scancode == Scancode.Q && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0)
                     {
-                        cursor?.Selections.ForEach(x => x.SetPosition(x.End));
+                        cursor?.Selections.SelectEnd();
                         return false;
                     }
                     else if (e.Keyboard.Keysym.Scancode == Scancode.Z && 
@@ -421,7 +424,7 @@ namespace SDL2Interface
                         {
                             if (cursor.Selections.Count > 1)
                             {
-                                cursor.Selections = [cursor.Selections[0]];
+                                cursor.Selections = new(cursor, [cursor.Selections[0]]);
                             }
                             return false;
                         }
@@ -463,272 +466,362 @@ namespace SDL2Interface
                     else if (e.Keyboard.Keysym.Scancode == Scancode.Home ||
                             (e.Keyboard.Keysym.Scancode == Scancode.J && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Alt) != 0))
                     {
-                        cursor?.Selections.ForEach(x => { x.MoveToLineBegin(((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Shift) != 0); });
+                        cursor?.Selections.MoveToLineBegin(((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Shift) != 0);
                         return false;
                     }
                     else if (e.Keyboard.Keysym.Scancode == Scancode.End ||
                             (e.Keyboard.Keysym.Scancode == Scancode.SemiColon && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Alt) != 0))
                     {
-                        cursor?.Selections.ForEach(x => { x.MoveToLineEnd(((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Shift) != 0); });
+                        cursor?.Selections.MoveToLineEnd(((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Shift) != 0);
                         return false;
                     }
                     else if (e.Keyboard.Keysym.Scancode == Scancode.PageUp)
                     {
                         long step = H / textRenderer.FontLineStep;
-                        cursor?.Selections.ForEach(x => { x.MoveVertical(-step, ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Shift) != 0); });
+                        cursor?.Selections.MoveVertical(-step, ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Shift) != 0);
                         return false;
                     }
                     else if (e.Keyboard.Keysym.Scancode == Scancode.PageDown)
                     {
                         long step = H / textRenderer.FontLineStep;
-                        cursor?.Selections.ForEach(x => { x.MoveVertical(step, ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Shift) != 0); });
+                        cursor?.Selections.MoveVertical(step, ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Shift) != 0);
                         return false;
                     }
                     else if (e.Keyboard.Keysym.Scancode == Scancode.Down && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Alt) != 0)
                     {
-                        if (cursor?.Selections.Count == 1)
+                        if (cursor != null && cursor.Selections.Count == 1)
                         {
-                            cursor?.Fork();
-                            cursor?.Selections.ForEach(x => {
+                            cursor.Fork();
+                            long id = 0;
+                            foreach (var x in cursor.Selections)
+                            {
                                 long MaxLine = x.MaxLine;
                                 var after = x.Cursor.Buffer.GetLine(MaxLine + 1);
-                                if (after.Item2 == null)
+                                if (after.value == null)
                                 {
-                                    return;
+                                    id++;
+                                    continue;
                                 }
-                                x.DeleteString(after.Item1, after.Item2.Length);
+                                x.DeleteString(after.offset, after.value.Length);
                                 var before = x.Cursor.Buffer.GetLine(x.MinLine);
-                                if (before.Item2 == null)
+                                if (before.value == null)
                                 {
-                                    return;
+                                    id++;
+                                    continue;
                                 }
-                                x.InsertString(before.Item1, after.Item2);
-                            });
-                            cursor?.Commit();
+                                x.InsertString(before.offset, after.value);
+                                cursor.Selections[id] = x;
+                                id++;
+                            }
+                            cursor.Commit();
                         }
                         return false;
                     }
                     else if (e.Keyboard.Keysym.Scancode == Scancode.Up && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Alt) != 0)
                     {
-                        if (cursor?.Selections.Count == 1)
+                        if (cursor != null && cursor.Selections.Count == 1)
                         {
-                            cursor?.Fork();
-                            cursor?.Selections.ForEach(x => {
+                            cursor.Fork();
+                            long id = 0;
+                            foreach (var x in cursor.Selections)
+                            {
                                 long MinLine = x.MinLine;
                                 var before = x.Cursor.Buffer.GetLine(MinLine - 1);
-                                if (before.Item2 == null)
+                                if (before.value == null)
                                 {
-                                    return;
+                                    id++;
+                                    continue;
                                 }
-                                x.DeleteString(before.Item1, before.Item2.Length);
+                                x.DeleteString(before.offset, before.value.Length);
                                 var after = x.Cursor.Buffer.GetLine(x.MaxLine + 1);
-                                if (after.Item2 == null)
+                                if (after.value == null)
                                 {
-                                    return;
+                                    id++;
+                                    continue;
                                 }
-                                x.InsertString(after.Item1, before.Item2);
-                            });
-                            cursor?.Commit();
+                                x.InsertString(after.offset, before.value);
+                                cursor.Selections[id] = x;
+                                id++;
+                            }
+                            cursor.Commit();
                         }
                         return false;
                     }
                     else if (e.Keyboard.Keysym.Scancode == Scancode.Down ||
                             (e.Keyboard.Keysym.Scancode == Scancode.K && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0))
                     {
-                        cursor?.Selections.ForEach(x => { x.MoveVertical(1, ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Shift) != 0); });
+                        cursor?.Selections.MoveVertical(1, ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Shift) != 0);
                         return false;
                     }
                     else if (e.Keyboard.Keysym.Scancode == Scancode.Up ||
                             (e.Keyboard.Keysym.Scancode == Scancode.L && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0))
                     {
-                        cursor?.Selections.ForEach(x => { x.MoveVertical(-1, ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Shift) != 0); });
+                        cursor?.Selections.MoveVertical(-1, ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Shift) != 0);
                         return false;
                     }
                     else if ((e.Keyboard.Keysym.Scancode == Scancode.Right && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0) ||
                              (e.Keyboard.Keysym.Scancode == Scancode.L && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Alt) != 0))
                     {
-                        cursor?.Selections.ForEach(x => { x.MoveHorisontalWord(1, ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Shift) != 0); });
+                        cursor?.Selections.MoveHorisontalWord(1, ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Shift) != 0);
                         return false;
                     }
-                    else if ((e.Keyboard.Keysym.Scancode == Scancode.Left && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0) ||
-                             (e.Keyboard.Keysym.Scancode == Scancode.K && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Alt) != 0))
+                    else if ((e.Keyboard.Keysym.Scancode == Scancode.Left && e.Keyboard.Keysym.Mod.HasFlag(KeyModifier.Ctrl)) ||
+                             (e.Keyboard.Keysym.Scancode == Scancode.K && e.Keyboard.Keysym.Mod.HasFlag(KeyModifier.Alt)))
                     {
-                        cursor?.Selections.ForEach(x => { x.MoveHorisontalWord(-1, ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Shift) != 0); });
+                        cursor?.Selections.MoveHorisontalWord(-1, ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Shift) != 0);
                         return false;
                     }
                     else if (e.Keyboard.Keysym.Scancode == Scancode.Down && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0)
                     {
-                        cursor?.Selections.ForEach(x => { x.MoveVertical(10, ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Shift) != 0); });
+                        cursor?.Selections.MoveVertical(10, ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Shift) != 0);
                         return false;
                     }
                     else if (e.Keyboard.Keysym.Scancode == Scancode.Up && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0)
                     {
-                        cursor?.Selections.ForEach(x => { x.MoveVertical(-10, ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Shift) != 0); });
+                        cursor?.Selections.MoveVertical(-10, ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Shift) != 0);
                         return false;
                     }
                     else if (e.Keyboard.Keysym.Scancode == Scancode.Right ||
                             (e.Keyboard.Keysym.Scancode == Scancode.SemiColon && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0))
                     {
-                        cursor?.Selections.ForEach(x => { x.MoveHorisontal(1, ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Shift) != 0); });
+                        cursor?.Selections.MoveHorisontal(1, ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Shift) != 0);
                         return false;
                     }
                     else if (e.Keyboard.Keysym.Scancode == Scancode.Left ||
                             (e.Keyboard.Keysym.Scancode == Scancode.J && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0))
                     {
-                        cursor?.Selections.ForEach(x => { x.MoveHorisontal(-1, ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Shift) != 0); });
+                        cursor?.Selections.MoveHorisontal(-1, ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Shift) != 0);
                         return false;
                     }
                     else if (e.Keyboard.Keysym.Scancode == Scancode.Tab && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Shift) != 0)
                     {
-                        cursor?.Fork();
-                        cursor?.Selections.ForEach(x =>
+                        if (cursor != null)
                         {
-                            long endLine = x.MaxLine;
-                            for (long line = x.MinLine; line <= endLine; ++line)
-                            {
-                                (long pos, string? str, _) = x.Cursor.Buffer.GetLine(line);
-                                if (str != null)
-                                {
-                                    x.DeleteString(pos, Math.Min(4, str.TakeWhile(char.IsWhiteSpace).Count()));
-                                    x.UpdateFromLineOffset();
-                                }
-                            }
-                        });
-                        cursor?.Commit();
-                        return false;
-                    }
-                    else if (e.Keyboard.Keysym.Scancode == Scancode.Tab)
-                    {
-                        cursor?.Fork();
-                        cursor?.Selections.ForEach(x =>
-                        {
-                            if (x.TextLength > 0)
+                            cursor.Fork();
+                            long id = 0;
+                            foreach (var x in cursor.Selections)
                             {
                                 long endLine = x.MaxLine;
                                 for (long line = x.MinLine; line <= endLine; ++line)
                                 {
-                                    x.InsertString(x.Cursor.Buffer.GetLine(line).Item1, "    ");
-                                    x.UpdateFromLineOffset();
+                                    (long pos, string? str, _) = x.Cursor.Buffer.GetLine(line);
+                                    if (str != null)
+                                    {
+                                        x.DeleteString(pos, Math.Min(4, str.TakeWhile(char.IsWhiteSpace).Count()));
+                                        x.UpdateFromLineOffset();
+                                    }
                                 }
+                                cursor.Selections[id] = x;
+                                id++;
                             }
-                            else
+                            cursor.Commit();
+                        }
+                        return false;
+                    }
+                    else if (e.Keyboard.Keysym.Scancode == Scancode.Tab)
+                    {
+                        if (cursor != null)
+                        {
+                            cursor.Fork();
+                            long id = 0;
+                            foreach (var x in cursor.Selections)
                             {
-                                x.InsertString("    ");
+                                if (x.TextLength > 0)
+                                {
+                                    long endLine = x.MaxLine;
+                                    for (long line = x.MinLine; line <= endLine; ++line)
+                                    {
+                                        x.InsertString(x.Cursor.Buffer.GetLine(line).offset, "    ");
+                                        x.UpdateFromLineOffset();
+                                    }
+                                }
+                                else
+                                {
+                                    x.InsertString("    ");
+                                }
+                                cursor.Selections[id] = x;
+                                id++;
                             }
-                        });
-                        cursor?.Commit();
+                            cursor.Commit();
+                        }
                         return false;
                     }
                     else if ((e.Keyboard.Keysym.Scancode == Scancode.I && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Alt) != 0) ||
                              (e.Keyboard.Keysym.Scancode == Scancode.I && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0))
                     {
-                        cursor?.Fork();
-                        cursor?.Selections.ForEach(x =>
+                        if (cursor != null)
                         {
-                            if (x.TextLength == 0)
+                            cursor.Fork();
+                            long id = 0;
+                            foreach (var x in cursor.Selections)
                             {
-                                x.MoveToLineEnd(false);
-                                x.MoveVertical(-1, true);
-                                x.MoveToLineEnd(true);
+                                if (x.TextLength == 0)
+                                {
+                                    x.MoveToLineEnd(false);
+                                    x.MoveVertical(-1, true);
+                                    x.MoveToLineEnd(true);
+                                }
+                                x.DeleteString(x.Min, x.TextLength);
+                                x.UpdateFromLineOffset();
+                                cursor.Selections[id] = x;
+                                id++;
                             }
-                            x.DeleteString(x.Min, x.TextLength);
-                            x.UpdateFromLineOffset();
-                        });
-                        cursor?.Commit();
+                            cursor.Commit();
+                        }
                         return false;
                     }
                     else if ((e.Keyboard.Keysym.Scancode == Scancode.Backspace && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0) ||
                              (e.Keyboard.Keysym.Scancode == Scancode.O && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Alt) != 0) ||
                              (e.Keyboard.Keysym.Scancode == Scancode.O && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0))
                     {
-                        cursor?.Fork();
-                        cursor?.Selections.ForEach(x =>
+                        if (cursor != null)
                         {
-                            if (x.TextLength == 0)
+                            cursor.Fork();
+                            long id = 0;
+                            foreach (var x in cursor.Selections)
                             {
-                                x.MoveHorisontalWord(-1, true);
+                                if (x.TextLength == 0)
+                                {
+                                    x.MoveHorisontalWord(-1, true);
+                                }
+                                x.DeleteString(x.Min, x.TextLength);
+                                x.UpdateFromLineOffset();
+                                cursor.Selections[id] = x;
+                                id++;
                             }
-                            x.DeleteString(x.Min, x.TextLength);
-                            x.UpdateFromLineOffset();
-                        });
-                        cursor?.Commit();
+                            cursor.Commit();
+                        }
                         return false;
                     }
                     else if (e.Keyboard.Keysym.Scancode == Scancode.Backspace ||
                             (e.Keyboard.Keysym.Scancode == Scancode.P && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Alt) != 0) ||
                             (e.Keyboard.Keysym.Scancode == Scancode.P && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0))
                     {
-                        cursor?.Fork();
-                        cursor?.Selections.ForEach(x =>
+                        if (cursor != null)
                         {
-                            if (x.TextLength == 0)
+                            cursor.Fork();
+                            long id = 0;
+                            foreach (var x in cursor.Selections)
                             {
-                                if (x.End >= 4 &&
-                                    x.Cursor.Buffer.Text.Substring(x.End - 4, 4).All(x => x == ' '))
+                                if (x.TextLength == 0)
                                 {
-                                    x.DeleteString(x.End - 4, 4);
-                                    x.UpdateFromLineOffset();
+                                    if (x.End >= 4 &&
+                                        x.Cursor.Buffer.Text.Substring(x.End - 4, 4).All(x => x == ' '))
+                                    {
+                                        x.DeleteString(x.End - 4, 4);
+                                        x.UpdateFromLineOffset();
+                                    }
+                                    else
+                                    {
+                                        x.DeleteString(x.End - 1, 1);
+                                        x.UpdateFromLineOffset();
+                                    }
                                 }
                                 else
                                 {
-                                    x.DeleteString(x.End - 1, 1);
+                                    x.DeleteString(x.Min, x.TextLength);
                                     x.UpdateFromLineOffset();
                                 }
+                                cursor.Selections[id] = x;
+                                id++;
                             }
-                            else
-                            {
-                                x.DeleteString(x.Min, x.TextLength);
-                                x.UpdateFromLineOffset();
-                            }
-                        });
-                        cursor?.Commit();
+                            cursor.Commit();
+                        }
                         return false;
                     }
                     else if (e.Keyboard.Keysym.Scancode == Scancode.Delete && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0)
                     {
-                        cursor?.Fork();
-                        cursor?.Selections.ForEach(x =>
+                        if (cursor != null)
                         {
-                            if (x.TextLength == 0)
+                            cursor.Fork();
+                            long id = 0;
+                            foreach (var x in cursor.Selections)
                             {
-                                x.MoveHorisontalWord(1, true);
+                                if (x.TextLength == 0)
+                                {
+                                    x.MoveHorisontalWord(1, true);
+                                }
+                                x.DeleteString(x.Min, x.TextLength);
+                                cursor.Selections[id] = x;
+                                id++;
                             }
-                            x.DeleteString(x.Min, x.TextLength);
-                        });
-                        cursor?.Commit();
+                            cursor.Commit();
+                        }
                         return false;
                     }
                     else if (e.Keyboard.Keysym.Scancode == Scancode.Delete)
                     {
-                        cursor?.Fork();
-                        cursor?.Selections.ForEach(x =>
+                        if (cursor != null)
                         {
-                            if (x.TextLength == 0)
+                            cursor.Fork();
+                            long id = 0;
+                            foreach (var x in cursor.Selections)
                             {
-                                x.DeleteString(x.End, 1);
+                                if (x.TextLength == 0)
+                                {
+                                    x.DeleteString(x.End, 1);
+                                }
+                                else
+                                {
+                                    x.DeleteString(x.Min, x.TextLength);
+                                }
+                                cursor.Selections[id] = x;
+                                id++;
                             }
-                            else
-                            {
-                                x.DeleteString(x.Min, x.TextLength);
-                            }
-                        });
-                        cursor?.Commit();
+                            cursor.Commit();
+                        }
                         return false;
                     }
                     else if (e.Keyboard.Keysym.Scancode == Scancode.Return)
                     {
                         cursor?.Fork();
                         /* clear all selection */
-                        cursor?.Selections.ForEach(x => x.DeleteString(x.Min, x.TextLength));
+                        cursor?.Selections.DeleteString();
                         /* find previous line with text, and use it's indent */
                         if (cursor?.Selections.Count > 1)
                         {
-                            cursor?.Selections.ForEach(x => x.InsertString("\n"));
+                            cursor?.Selections.InsertString("\n");
                         }
                         else
                         {
-                            cursor?.Selections.ForEach(x =>
+                            if (cursor != null)
                             {
+                                long id = 0;
+                                foreach (var x in cursor.Selections)
+                                {
+                                    long line = x.EndLine;
+                                    string? content = null;
+                                    while (line >= 0 && string.IsNullOrWhiteSpace(content = x.Cursor.Buffer.GetLine(line).value))
+                                    {
+                                        line--;
+                                    }
+                                    line++;
+                                    if (content != null)
+                                    {
+                                        int indent = content.TakeWhile(char.IsWhiteSpace).Count();
+                                        x.InsertString("\n" + new string(' ', indent));
+                                    }
+                                    cursor.Selections[id] = x;
+                                    id++;
+                                }
+                            }
+                        }
+                        cursor?.Commit();
+                        return false;
+                    }
+                    else if ((e.Keyboard.Keysym.Scancode == Scancode.N && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Alt) != 0) ||
+                             (e.Keyboard.Keysym.Scancode == Scancode.N && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0))
+                    {
+                        cursor?.Fork();
+                        /* clear all selection */
+                        cursor?.Selections.DeleteString();
+                        /* find previous line with text, and use it's indent */
+                        if (cursor != null)
+                        {
+                            long id = 0;
+                            foreach (var x in cursor.Selections)
+                            {
+                                x.MoveToLineEnd();
                                 long line = x.EndLine;
                                 string? content = null;
                                 while (line >= 0 && string.IsNullOrWhiteSpace(content = x.Cursor.Buffer.GetLine(line).Item2))
@@ -741,34 +834,10 @@ namespace SDL2Interface
                                     int indent = content.TakeWhile(char.IsWhiteSpace).Count();
                                     x.InsertString("\n" + new string(' ', indent));
                                 }
-                            });
+                                cursor.Selections[id] = x;
+                                id++;
+                            }
                         }
-                        cursor?.Commit();
-                        return false;
-                    }
-                    else if ((e.Keyboard.Keysym.Scancode == Scancode.N && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Alt) != 0) ||
-                             (e.Keyboard.Keysym.Scancode == Scancode.N && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0))
-                    {
-                        cursor?.Fork();
-                        /* clear all selection */
-                        cursor?.Selections.ForEach(x => x.DeleteString(x.Min, x.TextLength));
-                        /* find previous line with text, and use it's indent */
-                        cursor?.Selections.ForEach(x =>
-                        {
-                            x.MoveToLineEnd();
-                            long line = x.EndLine;
-                            string? content = null;
-                            while (line >= 0 && string.IsNullOrWhiteSpace(content = x.Cursor.Buffer.GetLine(line).Item2))
-                            {
-                                line--;
-                            }
-                            line++;
-                            if (content != null)
-                            {
-                                int indent = content.TakeWhile(char.IsWhiteSpace).Count();
-                                x.InsertString("\n" + new string(' ', indent));
-                            }
-                        });
                         cursor?.Commit();
                         return false;
                     }
