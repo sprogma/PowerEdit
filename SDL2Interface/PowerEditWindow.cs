@@ -2,6 +2,7 @@
 using EditorCore.Cursor;
 using EditorCore.Selection;
 using EditorCore.Server;
+using Microsoft.Extensions.ObjectPool;
 using SDL_Sharp;
 using System;
 using System.Collections.Generic;
@@ -25,12 +26,16 @@ namespace SDL2Interface
                 var res = buffer.Server.CommandProvider.Execute(buffer.Text.Substring(0), usingCursor.Selections.ToArray());
                 return (res.Item1?.Select(x => x.ToString()).Where(x => x != null).Cast<string>(), res.Item2);
             }
-            else
+            else if (editType == "replace")
             {
-                var text = usingCursor.SelectionsText.Where(x => x != "").ToArray();
-                if (text.Length == 0)
+                string[] text;
+                if (usingCursor.Selections.All(x => x.TextLength == 0))
                 {
                     text = [usingCursor.Buffer.Text.Substring(0)];
+                }
+                else
+                {
+                    text = usingCursor.SelectionsText.ToArray();
                 }
                 (IEnumerable<object?>?, string?) res;
                 if (text.Sum(x => x.Length) > 1000)
@@ -39,6 +44,20 @@ namespace SDL2Interface
                 }
                 else
                 {    
+                    res = buffer.Server.CommandProvider.Execute(buffer.Text.Substring(0), text);
+                }
+                return (res.Item1?.Select(x => x?.ToString()).Where(x => x != null).Cast<string>(), res.Item2);
+            }
+            else
+            {
+                var text = usingCursor.SelectionsText.ToArray();
+                (IEnumerable<object?>?, string?) res;
+                if (text.Sum(x => x.Length) > 1000)
+                {
+                    res = (["Too big arguments. preview disabled"], "Too big arguments. preview disabled");
+                }
+                else
+                {
                     res = buffer.Server.CommandProvider.Execute(buffer.Text.Substring(0), text);
                 }
                 return (res.Item1?.Select(x => x?.ToString()).Where(x => x != null).Cast<string>(), res.Item2);
@@ -62,7 +81,11 @@ namespace SDL2Interface
             {
                 usingCursor.ApplyCommand("powerEdit", buffer.Text.Substring(0));
             }
-            else /* edit or replace events */
+            else if (editType == "replace")
+            {
+                usingCursor.ApplyCommand("replace", buffer.Text.Substring(0));
+            }
+            else
             {
                 usingCursor.ApplyCommand("edit", buffer.Text.Substring(0));
             }

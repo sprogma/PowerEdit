@@ -10,6 +10,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Transactions;
+using TextBuffer;
 
 namespace EditorCore.Cursor
 {
@@ -37,6 +38,70 @@ namespace EditorCore.Cursor
                         }
                         Console.WriteLine($"get result: {string.Join(' ', enumerable_result.Select(x => x.ToString()))}");
                         Selections = new(this, enumerable_result.Where(x => x is EditorSelection).Cast<EditorSelection>().ToArray());
+                    }
+                    break;
+                case "replace":
+                    {
+                        string[] args;
+                        if (Selections.All(x => x.TextLength == 0))
+                        {
+                            args = [Buffer.Text.Substring(0)];
+                            if (Buffer.Text is IEditableTextBuffer editableText)
+                            {
+                                editableText.Clear();
+                            }
+                        }
+                        else
+                        {
+                            args = Selections.Select(x => x.Text).OfType<string>().ToArray();
+                        }
+                        (var enumerable_result, string? error_string) = Buffer.Server.CommandProvider.Execute(command, args.Select(x => x.ToString()).ToArray());
+                        var result = enumerable_result?.Select(x => x.ToString()).
+                                                        Where(x => x != null).
+                                                        Cast<string>().
+                                                        ToArray();
+                        if (result == null)
+                        {
+                            return;
+                        }
+                        Console.WriteLine($"get result: {string.Join(' ', result.Select(x => x.ToString()))}");
+                        foreach (var x in Selections)
+                        {
+                            Buffer.DeleteString(x.Min, x.TextLength);
+                        }
+                        {
+                            int id = 0;
+                            if (result.Length == Selections.Count)
+                            {
+                                foreach (var item in result)
+                                {
+                                    Selections[id].Begin = Selections[id].End;
+                                    long begin = Selections[id].End;
+                                    Selections[id].InsertString(item);
+                                    /* select entered text */
+                                    Selections[id].SetPosition(begin, Selections[id].End);
+                                    id++;
+                                }
+                            }
+                            else
+                            {
+                                if (Selections.Count == 0)
+                                {
+                                    Selections.Insert(Selections.Count, new EditorSelection(this, 0));
+                                }
+                                long begin = Selections[Selections.Count - 1].End;
+                                List<EditorSelection> newSelections = [];
+                                foreach (var item in result)
+                                {
+                                    var s = new EditorSelection(this, begin);
+                                    long endPosition = s.InsertString(item);
+                                    s.SetPosition(begin, endPosition);
+                                    begin = endPosition;
+                                    newSelections.Add(s);
+                                }
+                                Selections = new(this, newSelections);
+                            }
+                        }
                     }
                     break;
                 case "edit":
