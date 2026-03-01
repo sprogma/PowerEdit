@@ -104,7 +104,7 @@ namespace EditorCore.Buffer
             }
             ActionOnUpdate?.Invoke(this);
             _ = Task.Run(() => Client?.ChangeFileAsync("aboba/aboba", Text.Substring(0)));
-            Tokens = Tokenizer.ParseContent(Text.Substring(0));
+            _ = Task.Run(() => Tokens = Tokenizer.ParseContent(Text.Substring(0)));
         }
 
         public void Undo()

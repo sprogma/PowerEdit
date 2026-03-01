@@ -50,7 +50,7 @@ namespace SDL2Interface
         {
             (long begin, long end, string text) = server.CommandProvider.ExampleScript(editType);
             buffer.SetText(text);
-            cursor?.Selections[0].SetPosition(begin, end);
+            cursor?.Selections = new(cursor, [new EditorSelection(cursor, begin, end)]);
             this.usingCursor = usingCursor;
             this.editType = editType;
         }

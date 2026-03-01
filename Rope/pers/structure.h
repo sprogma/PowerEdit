@@ -66,7 +66,8 @@ struct state
     int64_t version_id;
     int64_t depth;
 
-    int64_t committed;
+    int32_t moditified;
+    int32_t committed;
 
     struct cursor *cursors;
     int64_t cursors_len;

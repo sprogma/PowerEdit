@@ -310,6 +310,10 @@ void _state_delete(struct project *project, struct state *state, int64_t positio
 
 void state_moditify(struct project *project, struct state *state, int64_t position, int64_t type, int64_t length, char *buffer)
 {
+    if (length != 0)
+    {
+        state->moditified = 1;
+    }
     while (state->merged_to) state = state->merged_to;
     lockExclusive(&state->lock);
     if (state->committed)
@@ -333,10 +337,15 @@ void state_moditify(struct project *project, struct state *state, int64_t positi
 
 void state_commit(struct project *project, struct state *state)
 {
-    while (state->merged_to) state = state->merged_to;
-
     (void)project;
 
+    if (!state->moditified)
+    {
+        if (state->previous_versions_len)
+        {
+            state->merged_to = state->previous_versions[0];
+        }
+    }
     lockExclusive(&state->lock);
     state->committed = 1;
     freeExclusive(&state->lock);
@@ -369,6 +378,7 @@ void state_read(struct state *state, int64_t position, int64_t length, char *buf
 
 void state_set_cursors(struct state *state, int64_t count, struct cursor *cursors)
 {
+    state->moditified = 1;
     while (state->merged_to) state = state->merged_to;
     lockExclusive(&state->lock);
     free(state->cursors);
