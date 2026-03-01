@@ -41,15 +41,7 @@ namespace EditorCore.Cursor
                     break;
                 case "edit":
                     {
-                        string[] args;
-                        if (Selections.Count == 0 || Selections.All(x => x.TextLength == 0))
-                        {
-                            args = [Buffer.Text.Substring(0)];
-                        }
-                        else
-                        {
-                            args = Selections.Select(x => x.Text).OfType<string>().ToArray();
-                        }
+                        string[] args = Selections.Select(x => x.Text).OfType<string>().ToArray();
                         (var enumerable_result, string? error_string) = Buffer.Server.CommandProvider.Execute(command, args.Select(x => x.ToString()).ToArray());
                         var result = enumerable_result?.Select(x => x.ToString()).
                                                         Where(x => x != null).
