@@ -11,7 +11,7 @@ namespace RegexTokenizer
     {
         public abstract List<Token> ParseContent(string content);
 
-        public static BaseTokenizer CreateTokenizer(string fileExternsion)
+        public static BaseTokenizer CreateTokenizer(string? fileExternsion)
         {
             Console.WriteLine($"Creating ... {fileExternsion} tokenizer");
             switch (fileExternsion)

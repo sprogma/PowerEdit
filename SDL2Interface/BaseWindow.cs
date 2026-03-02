@@ -1,5 +1,6 @@
 ﻿using EditorCore.Buffer;
 using EditorCore.Cursor;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 using SDL_Sharp;
 using System;
 using System.Collections.Generic;
@@ -16,15 +17,34 @@ namespace SDL2Interface
         static public int W, H;
         static public Window window;
         static public Renderer renderer;
-        public TextBufferRenderer textRenderer;
         public bool deleted = false;
 
-        internal Rect position;
+        protected BaseWindow? popup = null;
+        protected BaseWindow? parent = null;
+
+        protected TextBufferRenderer textRenderer;
+        protected Rect position;
 
         public BaseWindow(Rect position)
         {
             textRenderer = new TextBufferRenderer(renderer, new ColorTheme());
             this.position = position;
+        }
+
+        public void OpenPopup(BaseWindow window)
+        {
+            if (popup != null)
+            {
+                throw new Exception("Open popup while having one");
+            }
+            popup = window;
+            window.parent = this;
+        }
+
+        public virtual void Resize(Rect newPosition)
+        {
+            position = newPosition;
+            popup?.Resize(newPosition);
         }
 
         public virtual void PreDraw()
@@ -40,11 +60,18 @@ namespace SDL2Interface
 
         public abstract void DrawElements();
 
-        public virtual void Draw()
+        public void Draw()
         {
-            PreDraw();
-            DrawElements();
-            AfterDraw();
+            if (popup != null)
+            {
+                popup.Draw();
+            }
+            else
+            {
+                PreDraw();
+                DrawElements();
+                AfterDraw();
+            }
         }
 
         /// <summary>
@@ -82,6 +109,18 @@ namespace SDL2Interface
         /// </summary>
         /// <param name="e"> Event to handle </param>
         /// <returns> true if event needs to fall down (to next window in queue) </returns>
+        public bool Event(Event e)
+        {
+            if (popup != null)
+            {
+                return popup.Event(e);
+            }
+            else
+            {
+                return HandleEvent(e);  
+            }
+        }
+
         public virtual bool HandleEvent(Event e)
         {
             return true;
@@ -92,7 +131,9 @@ namespace SDL2Interface
         /// </summary>
         public void DeleteSelf()
         {
+            popup?.DeleteSelf();
             Program.windows.Remove(this);
+            parent?.popup = null;
             this.deleted = true;
         }
     }

@@ -9,7 +9,7 @@ using TextBuffer;
 
 namespace SDL2Interface
 {
-    internal class TreeWalkWithPreviewWindow: BaseWindow
+    internal class TreeWalkWithPreviewWindow : BaseWindow
     {
         TreeWalkWindow tree;
         SimpleTextWindow preview;
@@ -19,20 +19,28 @@ namespace SDL2Interface
         public TreeWalkWithPreviewWindow(Rect position, TreeWalkWindow tree) : base(position)
         {
             moditifed = true;
+
+            this.tree = tree;
+            this.preview = new(new EditorBuffer(tree.buffer.Server, "loading ...", tree.buffer.Tokenizer, null, "", new ReadonlyTextBuffer()), new());
+            Resize(position);
+            this.lastDrawTime = DateTime.UtcNow;
+        }
+
+        public override void Resize(Rect newPosition)
+        {
+            base.Resize(newPosition);
             Rect right_position = position;
             Rect left_position = position;
             left_position.Width = position.Width / 2;
             right_position.Width = position.Width - left_position.Width;
             right_position.X += left_position.Width;
-            tree.position = left_position;
-
-            this.tree = tree;
-            this.preview = new(new EditorBuffer(tree.buffer.Server, "loading ...", tree.buffer.Tokenizer, null, "", new ReadonlyTextBuffer()), right_position);
-            this.lastDrawTime = DateTime.UtcNow;
+            tree.Resize(left_position);
+            preview.Resize(right_position);
         }
 
         public override void PreDraw()
         {
+            base.PreDraw();
             if ((DateTime.UtcNow - lastDrawTime).TotalSeconds > 0.1 && moditifed)
             {
                 lastDrawTime = DateTime.UtcNow;
@@ -79,7 +87,7 @@ namespace SDL2Interface
                     moditifed = true;
                     break;
             }
-            bool res = tree.HandleEvent(e);
+            bool res = tree.Event(e);
             if (tree.deleted)
             {
                 DeleteSelf();

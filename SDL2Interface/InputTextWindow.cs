@@ -30,7 +30,6 @@ namespace SDL2Interface
         public override void PreDraw()
         {
             base.PreDraw();
-
             if (cursor == null)
             {
                 return;
@@ -361,7 +360,7 @@ namespace SDL2Interface
                         if (buffer.Text is IUndoTextBuffer undoText)
                         {
                             TreeWalkWindow treeWin = new (buffer, undoText, position);
-                            Program.OpenWindow(new TreeWalkWithPreviewWindow(position, treeWin));
+                            OpenPopup(new TreeWalkWithPreviewWindow(position, treeWin));
                         }
                         return false;
                     }
@@ -392,9 +391,8 @@ namespace SDL2Interface
                         /* v.1 - open powerWindow powerEdit */
                         if (cursor != null)
                         {
-                            Console.WriteLine("powerEdit!\n");
                             var win = new PowerEditWindow(cursor.Buffer.Server, cursor, position, "powerEdit");
-                            Program.OpenWindow(new PowerEditWithPreviewWindow(position, win));
+                            OpenPopup(new PowerEditWithPreviewWindow(position, win));
                             return false;
                         }
                     }
@@ -404,7 +402,7 @@ namespace SDL2Interface
                         if (cursor != null)
                         {
                             var win = new PowerEditWindow(cursor.Buffer.Server, cursor, position, "edit");
-                            Program.OpenWindow(new PowerEditWithPreviewWindow(position, win));
+                            OpenPopup(new PowerEditWithPreviewWindow(position, win));
                             return false;
                         }
                     }
@@ -414,7 +412,7 @@ namespace SDL2Interface
                         if (cursor != null)
                         {
                             var win = new PowerEditWindow(cursor.Buffer.Server, cursor, position, "replace");
-                            Program.OpenWindow(new PowerEditWithPreviewWindow(position, win));
+                            OpenPopup(new PowerEditWithPreviewWindow(position, win));
                             return false;
                         }
                     }
@@ -839,6 +837,11 @@ namespace SDL2Interface
                             }
                         }
                         cursor?.Commit();
+                        return false;
+                    }
+                    else if ((e.Keyboard.Keysym.Scancode == Scancode.Q && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0))
+                    {
+                        DeleteSelf();
                         return false;
                     }
                     break;

@@ -21,23 +21,29 @@ namespace SDL2Interface
 
         public PowerEditWithPreviewWindow(Rect position, PowerEditWindow editor) : base(position)
         {
-            Console.WriteLine("Creating");
             moditifed = true;
+            editor.buffer.ActionOnUpdate +=  buf => {moditifed = true; };
+            this.editor = editor;
+            this.preview = new(new EditorBuffer(editor.buffer.Server, "processing ...", editor.usingCursor.Buffer.Tokenizer, null, "", new ReadonlyTextBuffer()), new());
+            Resize(position);
+            this.lastDrawTime = DateTime.UtcNow;
+        }
+
+        public override void Resize(Rect newPosition)
+        {
+            base.Resize(newPosition);
             Rect right_position = position;
             Rect left_position = position;
             left_position.Width = position.Width / 2;
             right_position.Width = position.Width - left_position.Width;
             right_position.X += left_position.Width;
-            editor.position = left_position;
-            editor.buffer.ActionOnUpdate +=  buf => {moditifed = true; };
-            this.editor = editor;
-            this.preview = new(new EditorBuffer(editor.buffer.Server, "processing ...", editor.usingCursor.Buffer.Tokenizer, null, "", new ReadonlyTextBuffer()), right_position);
-            this.lastDrawTime = DateTime.UtcNow;
-            Console.WriteLine("Created");
+            editor.Resize(left_position);
+            preview.Resize(right_position);
         }
 
         public override void PreDraw()
         {
+            base.PreDraw();
             if ((DateTime.UtcNow - lastDrawTime).TotalSeconds > 1 && moditifed)
             {
                 lastDrawTime = DateTime.UtcNow;
@@ -82,21 +88,13 @@ namespace SDL2Interface
                 case EventType.Quit:
                     Environment.Exit(1);
                     return false;
-                case EventType.KeyDown:
-                    if (e.Keyboard.Keysym.Scancode == Scancode.Escape)
-                    {
-                        DeleteSelf();
-                        return false;
-                    }
-                    if (e.Keyboard.Keysym.Scancode == Scancode.Return && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0)
-                    {
-                        editor.Apply();
-                        DeleteSelf();
-                        return false;
-                    }
-                    break;
             }
-            return editor.HandleEvent(e);
+            bool res = editor.Event(e);
+            if (editor.deleted)
+            {
+                DeleteSelf();
+            }
+            return res;
         }
     }
 }

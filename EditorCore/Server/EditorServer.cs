@@ -8,6 +8,7 @@ using TextBuffer;
 using Lsp;
 using EditorCore.Buffer;
 using EditorCore.File;
+using RegexTokenizer;
 
 namespace EditorCore.Server
 {
@@ -27,15 +28,26 @@ namespace EditorCore.Server
             Files = [];
         }
 
-        public File.EditorFile OpenFile(string filename)
+        public EditorFile OpenFile(string filename)
         {
-            File.EditorFile new_file = new File.EditorFile(this, filename, new PersistentCTextBuffer());
+            EditorFile new_file = new(this, filename, new PersistentCTextBuffer());
             Files.Add(new_file);
             return new_file;
         }
 
-        public LspClient GetLsp(string v)
+        public EditorFile CreateFile(string? name, string? externsion)
         {
+            EditorFile new_file = new(this, new EditorBuffer(this, BaseTokenizer.CreateTokenizer(externsion), GetLsp(externsion), name, new PersistentCTextBuffer()))
+            {
+                filename = name
+            };
+            Files.Add(new_file);
+            return new_file;
+        }
+
+        public LspClient? GetLsp(string? v)
+        {
+            if (v == null) return null;
             if (clients.TryGetValue(v, out LspClient? value))
             {
                 return value;

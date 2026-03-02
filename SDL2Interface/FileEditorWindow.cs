@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace SDL2Interface
 {
@@ -30,6 +31,19 @@ namespace SDL2Interface
                     if (e.Keyboard.Keysym.Scancode == Scancode.S && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0)
                     {
                         file.Save();
+                    }
+                    else if ((e.Keyboard.Keysym.Scancode == Scancode.Q && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0))
+                    {
+                        if (file.WasChanged)
+                        {
+                            OpenPopup(new AlertWindow("Do you want to quit? all progress will be removed.", position, 
+                                                         ("no, continue edit", () => { }), 
+                                                         ("save and quit", () => { file.Save(); if (!file.WasChanged) { DeleteSelf(); } }), 
+                                                         ("yes, discard changes", () => { DeleteSelf(); })));
+                            return false;
+                        }
+                        DeleteSelf();
+                        return false;
                     }
                     break;
             }

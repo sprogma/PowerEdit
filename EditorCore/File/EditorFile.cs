@@ -37,6 +37,15 @@ namespace EditorCore.File
             ActionOnSave += server.ActionOnFileSave;
         }
 
+        public EditorFile(Server.EditorServer server, EditorBuffer buffer)
+        {
+            this.filename = null;
+            Buffer = buffer;
+            Server = server;
+
+            ActionOnSave += server.ActionOnFileSave;
+        }
+
         public void Save(string? newFilename = null)
         {
             if (newFilename != null)
@@ -46,8 +55,8 @@ namespace EditorCore.File
             if (filename != null)
             {
                 Buffer.Text.SaveToFile(filename);
+                ActionOnSave?.Invoke(this);
             }
-            ActionOnSave?.Invoke(this);
         }
 
         /* declarations for simplicity */

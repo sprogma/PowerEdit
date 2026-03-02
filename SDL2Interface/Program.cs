@@ -26,6 +26,12 @@ namespace SDL2Interface
             windows.Add(window);
         }
 
+        internal static void RaiseWindow(BaseWindow window)
+        {
+            windows.Remove(window);
+            windows.Add(window);
+        }
+
         static void Main(string[] args)
         {
             Console.OutputEncoding = Encoding.UTF8;
@@ -67,21 +73,31 @@ namespace SDL2Interface
                     Console.WriteLine("Error: Not selected any provider");
                     return;
                 }
+
+                FileTabsWindow tabs = new([], new());
+
+                ProjectEditorWindow project = new(
+                    tabs.OpenFile,
+                    tabs.RaiseFile,
+                    tabs,
+                    provider,
+                    new Rect(0, 0, BaseWindow.W, BaseWindow.H)
+                );
                 EditorServer server = new(provider);
-
-
 
                 // add "lsp" module
                 SimpleLinterMod.Init(server);
 
+                windows.Add(project);
+
+
                 if (fileToOpen != null)
                 {
-                    EditorFile file = new(server, fileToOpen, new PersistentCTextBuffer());
-                    windows.Add(new FileEditorWindow(file, new Rect(0, 0, BaseWindow.W, BaseWindow.H)));
+                    project.OpenFile(fileToOpen);
                 }
                 else
                 {
-                    windows.Add(new InputTextWindow(new EditorBuffer(server, BaseTokenizer.CreateTokenizer("c"), null, "", new PersistentCTextBuffer()), new Rect(0, 0, BaseWindow.W, BaseWindow.H)));
+                    project.CreateFile(null, "c");
                 }
             }
 
@@ -97,7 +113,7 @@ namespace SDL2Interface
                 {
                     foreach (var win in windows.Reverse<BaseWindow>())
                     {
-                        if (!win.HandleEvent(evt))
+                        if (!win.Event(evt))
                         {
                             break;
                         }

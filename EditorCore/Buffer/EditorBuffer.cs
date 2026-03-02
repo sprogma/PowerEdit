@@ -37,9 +37,9 @@ namespace EditorCore.Buffer
         public List<Token> Tokens { get; internal set; } = [];
         public List<ErrorMark> ErrorMarks { get; internal set; } = [];
         public LspClient? Client { get; internal set; }
-        public string FilePath { get; internal set; }
+        public string? FilePath { get; internal set; }
 
-        public EditorBuffer(Server.EditorServer server, BaseTokenizer tokenizer, LspClient? client, string filepath, ITextBuffer buffer)
+        public EditorBuffer(Server.EditorServer server, BaseTokenizer tokenizer, LspClient? client, string? filepath, ITextBuffer buffer)
         {
             Tokenizer = tokenizer;
             Text = buffer;
@@ -56,7 +56,7 @@ namespace EditorCore.Buffer
             OnUpdate();
         }
 
-        public EditorBuffer(Server.EditorServer server, string content, BaseTokenizer tokenizer, LspClient? client, string filepath, ITextBuffer buffer)
+        public EditorBuffer(Server.EditorServer server, string content, BaseTokenizer tokenizer, LspClient? client, string? filepath, ITextBuffer buffer)
         {
             Tokenizer = tokenizer;
             Text = buffer;
