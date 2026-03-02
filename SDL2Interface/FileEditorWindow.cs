@@ -37,9 +37,20 @@ namespace SDL2Interface
                         if (file.WasChanged)
                         {
                             OpenPopup(new AlertWindow("Do you want to quit? all progress will be removed.", position, 
-                                                         ("no, continue edit", () => { }), 
-                                                         ("save and quit", () => { file.Save(); if (!file.WasChanged) { DeleteSelf(); } }), 
-                                                         ("yes, discard changes", () => { DeleteSelf(); })));
+                                                     ("no, continue edit", () => { }), 
+                                                     ("save and quit", () => { 
+                                                        file.Save();
+                                                        if (!file.WasChanged)
+                                                        {
+                                                            DeleteSelf();
+                                                        }
+                                                        else
+                                                        {
+                                                             ReleasePopup();
+                                                             OpenPopup(new AlertWindow("Error: File save failed [data was't saved]", position, ("ok", () => { })));
+                                                        }
+                                                     }), 
+                                                     ("yes, discard changes", () => { DeleteSelf(); })));
                             return false;
                         }
                         DeleteSelf();

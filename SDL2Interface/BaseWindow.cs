@@ -31,6 +31,12 @@ namespace SDL2Interface
             this.position = position;
         }
 
+        public void ReleasePopup()
+        {
+            popup?.parent = null;
+            popup = null;
+        }
+
         public void OpenPopup(BaseWindow window)
         {
             if (popup != null)
@@ -133,7 +139,10 @@ namespace SDL2Interface
         {
             popup?.DeleteSelf();
             Program.windows.Remove(this);
-            parent?.popup = null;
+            if (parent?.popup == this)
+            {
+                parent?.popup = null;
+            }
             this.deleted = true;
         }
     }

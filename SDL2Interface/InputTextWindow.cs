@@ -709,7 +709,7 @@ namespace SDL2Interface
                                         x.DeleteString(x.End - 4, 4);
                                         x.UpdateFromLineOffset();
                                     }
-                                    else
+                                    else if (x.End >= 1)
                                     {
                                         x.DeleteString(x.End - 1, 1);
                                         x.UpdateFromLineOffset();
@@ -753,9 +753,10 @@ namespace SDL2Interface
                         {
                             cursor.Fork();
                             long id = 0;
+                            long textLength = cursor.Buffer.Text.Length;
                             foreach (var x in cursor.Selections)
                             {
-                                if (x.TextLength == 0)
+                                if (x.TextLength == 0 && x.End < textLength)
                                 {
                                     x.DeleteString(x.End, 1);
                                 }

@@ -24,9 +24,12 @@ namespace SDL2Interface
 
         public override void DrawElements()
         {
+            SDL.SetRenderDrawColor(renderer, 0, 0, 0, 0);
+            SDL.RenderFillRect(renderer, ref position);
+
             long dummyValue = 0;
             textRenderer.DrawTextLine(position.X, position.Y, text, 0, [], ref dummyValue);
-            int y = position.Y;
+            int y = position.Y + textRenderer.FontLineStep;
             foreach (var (i, (text, _)) in buttons.Index())
             {
                 if (selected == i)

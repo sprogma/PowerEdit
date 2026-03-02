@@ -135,7 +135,7 @@ namespace SDL2Interface
             if (Child?.deleted == true)
             {
                 childs.Remove(Child);
-                current--;
+                current = Math.Min(current, childs.Count);
             }
             return res ?? true;
         }

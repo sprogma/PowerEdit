@@ -39,7 +39,7 @@ namespace EditorCore.Buffer
         public LspClient? Client { get; internal set; }
         public string? FilePath { get; internal set; }
 
-        private IntPtr last_saved_version = 0;
+        private IntPtr? last_saved_version = null;
         private bool dirty_was_changed = false;
 
         public bool WasChanged
@@ -48,7 +48,7 @@ namespace EditorCore.Buffer
             {
                 if (Text is IUndoTextBuffer undoText)
                 {
-                    return undoText.GetCurrentVersion() != undoText.ResolveVersion(last_saved_version);
+                    return last_saved_version == null || undoText.GetCurrentVersion() != undoText.ResolveVersion(last_saved_version.Value);
                 }
                 return dirty_was_changed;
             }
@@ -57,7 +57,7 @@ namespace EditorCore.Buffer
                 dirty_was_changed = value;
                 if (Text is IUndoTextBuffer undoText)
                 {
-                    last_saved_version = (value ? 0 : undoText.GetCurrentVersion());
+                    last_saved_version = (value ? null : undoText.GetCurrentVersion());
                 }
             }
         }
