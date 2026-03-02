@@ -20,6 +20,8 @@ namespace TextBuffer
         public IntPtr[] GetInitialVersions();
 
         public (IntPtr[] states, MarshalingLink[] links) GetVersionTree();
+
+        public IntPtr ResolveVersion(IntPtr last_saved_version);
     }
 
     public interface INavigatableTextBuffer : ITextBuffer

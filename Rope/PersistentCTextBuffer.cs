@@ -374,5 +374,10 @@ namespace TextBuffer
         {
             CLibrary.state_commit(project, curr_state);
         }
+
+        public IntPtr ResolveVersion(IntPtr version)
+        {
+            return CLibrary.state_resolve(version);
+        }
     }
 }

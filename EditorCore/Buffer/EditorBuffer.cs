@@ -39,6 +39,29 @@ namespace EditorCore.Buffer
         public LspClient? Client { get; internal set; }
         public string? FilePath { get; internal set; }
 
+        private IntPtr last_saved_version = 0;
+        private bool dirty_was_changed = false;
+
+        public bool WasChanged
+        {
+            get
+            {
+                if (Text is IUndoTextBuffer undoText)
+                {
+                    return undoText.GetCurrentVersion() != undoText.ResolveVersion(last_saved_version);
+                }
+                return dirty_was_changed;
+            }
+            set
+            {
+                dirty_was_changed = value;
+                if (Text is IUndoTextBuffer undoText)
+                {
+                    last_saved_version = (value ? 0 : undoText.GetCurrentVersion());
+                }
+            }
+        }
+
         public EditorBuffer(Server.EditorServer server, BaseTokenizer tokenizer, LspClient? client, string? filepath, ITextBuffer buffer)
         {
             Tokenizer = tokenizer;
@@ -105,6 +128,7 @@ namespace EditorCore.Buffer
             ActionOnUpdate?.Invoke(this);
             _ = Task.Run(() => Client?.ChangeFileAsync("aboba/aboba", Text.Substring(0)));
             _ = Task.Run(() => Tokens = Tokenizer.ParseContent(Text.Substring(0)));
+            dirty_was_changed = true;
         }
 
         public void Undo()
@@ -119,8 +143,7 @@ namespace EditorCore.Buffer
                 undoText.Undo();
                 LoadCursorState();
 
-                //Cursor.Selections = selections.Select(x => new EditorSelection(Cursor, x.Item1, x.Item2)).ToList();
-                Tokens = Tokenizer.ParseContent(Text.Substring(0));
+                OnUpdate();
             }
         }
 
@@ -132,15 +155,13 @@ namespace EditorCore.Buffer
                 {
                     return;
                 }
-                if (undoText.Redo())
+                if (!undoText.Redo())
                 {
                     return;
                 }
                 LoadCursorState();
 
-                //(Text, var selections) = RedoHistory.Last.Value;
-                //Cursor.Selections = selections.Select(x => new EditorSelection(Cursor, x.Item1, x.Item2)).ToList();
-                Tokens = Tokenizer.ParseContent(Text.Substring(0));
+                OnUpdate();
             }
         }
 

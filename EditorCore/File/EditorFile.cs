@@ -20,6 +20,10 @@ namespace EditorCore.File
         public EditorBuffer Buffer { get; internal set; }
         public Server.EditorServer Server { get; internal set; }
 
+        IntPtr last_saved_version;
+
+        public bool WasChanged => Buffer.WasChanged;
+
         public string? filename;
         public EditorFileOnSave? ActionOnSave = null;
 
@@ -54,6 +58,7 @@ namespace EditorCore.File
             }
             if (filename != null)
             {
+                Buffer.WasChanged = false;
                 Buffer.Text.SaveToFile(filename);
                 ActionOnSave?.Invoke(this);
             }
