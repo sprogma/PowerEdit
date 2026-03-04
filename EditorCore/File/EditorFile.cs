@@ -30,12 +30,15 @@ namespace EditorCore.File
         public EditorFile(Server.EditorServer server, string filename, ITextBuffer buffer)
         {
             this.filename = filename;
-            Buffer = new EditorBuffer(server, 
-                                      System.IO.File.ReadAllText(filename), 
-                                      BaseTokenizer.CreateTokenizer(Path.GetExtension(filename).Substring(1) ?? ""),
-                                      server.GetLsp(Path.GetExtension(filename).Substring(1) ?? ""),
+            Buffer = new EditorBuffer(server,
+                                      System.IO.File.ReadAllText(filename),
+                                      BaseTokenizer.CreateTokenizer(Path.GetExtension(filename)?.TrimStart('.') ?? ""),
+                                      server.GetLsp(Path.GetExtension(filename)?.TrimStart('.') ?? ""),
                                       this.filename,
-                                      buffer);
+                                      buffer)
+            {
+                WasChanged = false
+            };
             Server = server;
 
             ActionOnSave += server.ActionOnFileSave;
@@ -52,14 +55,27 @@ namespace EditorCore.File
 
         public void Save(string? newFilename = null)
         {
-            if (newFilename != null)
+            if (newFilename != null && newFilename != filename)
             {
                 filename = newFilename;
+                // update tokenizer
+                string? ext = Path.GetExtension(newFilename)?.TrimStart('.') ?? "";
+                Buffer.Tokenizer = BaseTokenizer.CreateTokenizer(ext);
+                Buffer.Client = Server.GetLsp(ext);
+                Buffer.FilePath = newFilename;
+                Buffer.OnUpdate();
             }
             if (filename != null)
             {
-                Buffer.WasChanged = false;
-                Buffer.Text.SaveToFile(filename);
+                try
+                {
+                    Buffer.Text.SaveToFile(filename);
+                    Buffer.WasChanged = false;
+                }
+                catch
+                {
+                    Buffer.WasChanged = true;
+                }
                 ActionOnSave?.Invoke(this);
             }
         }

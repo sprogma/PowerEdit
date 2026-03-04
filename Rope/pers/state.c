@@ -34,8 +34,7 @@ void _reserve_next_versions(struct state *state, int64_t total_size)
     {
         while (state->next_versions_alloc < total_size)
         {
-            state->next_versions_alloc *= 2;
-            state->next_versions_alloc |= 1;
+            state->next_versions_alloc = 2 * state->next_versions_alloc + !state->next_versions_alloc;
         }
         void *oldPtr = state->next_versions;
         state->next_versions = realloc(oldPtr, sizeof(*state->next_versions) * state->next_versions_alloc);

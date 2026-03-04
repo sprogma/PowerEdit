@@ -34,6 +34,11 @@ namespace RegexTokenizer
             return new SimpleTokenizer();
         }
 
+        public static BaseTokenizer CreateBaseTokenizer()
+        {
+            return new SimpleTokenizer();
+        }
+
         static public List<Token> UpdateTokensAsUTF8(string input, List<Token> tokens)
         {
             int currentUtf16Pos = 0;

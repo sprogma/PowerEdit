@@ -12,6 +12,8 @@ using System.Threading.Tasks;
 
 namespace SDL2Interface
 {
+    delegate void OnQuitAction(BaseWindow window);
+
     internal abstract class BaseWindow
     {
         static public int W, H;
@@ -24,6 +26,8 @@ namespace SDL2Interface
 
         protected TextBufferRenderer textRenderer;
         protected Rect position;
+
+        public OnQuitAction? OnQuit = null;
 
         public BaseWindow(Rect position)
         {
@@ -137,6 +141,7 @@ namespace SDL2Interface
         /// </summary>
         public void DeleteSelf()
         {
+            OnQuit?.Invoke(this);
             popup?.DeleteSelf();
             Program.windows.Remove(this);
             if (parent?.popup == this)

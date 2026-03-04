@@ -255,10 +255,7 @@ namespace EditorCore.Buffer
 
         public long SetText(string data)
         {
-            Fork();
-            long res = Text.SetText(data);
-            Commit();
-            return res;
+            return Text.SetText(data);
         }
 
         public (long offset, string? value, long length) GetLine(long line)

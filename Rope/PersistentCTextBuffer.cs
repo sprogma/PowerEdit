@@ -355,14 +355,20 @@ namespace TextBuffer
 
         public long SetText(string text)
         {
+            Fork();
             Clear();
-            return Insert(0, text);
+            long res = Insert(0, text);
+            Commit();
+            return res;
         }
 
         public long SetBytes(byte[] text)
         {
+            Fork();
             Clear();
-            return Insert(0, text);
+            long res = Insert(0, text);
+            Commit();
+            return res;
         }
 
         public void Fork()

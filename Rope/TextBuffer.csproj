@@ -1,9 +1,14 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
+  <ItemGroup>
+    <UpToDateCheckInput Include="**\*.c;**\*.h" />
+  </ItemGroup>
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
+  <Target Name="MyCustomStep" BeforeTargets="Build" Inputs="$(ProjectDir)**/*.c;$(ProjectDir)**/*.h"  Outputs="$(ProjectDir)msrope.dll">
+    <Exec Command="pwsh -NoProfile -ExecutionPolicy Bypass -File &quot;$(ProjectDir)build.ps1&quot;" />
+  </Target>
 </Project>

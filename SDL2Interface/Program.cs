@@ -32,14 +32,20 @@ namespace SDL2Interface
             windows.Add(window);
         }
 
-        static void Main(string[] args)
+        static void Main(string[] raw_args)
         {
+            List<string> args = [..raw_args];
+
             Console.OutputEncoding = Encoding.UTF8;
             Console.InputEncoding = Encoding.UTF8;
 
-            string? fileToOpen = args.Where(x => !x.StartsWith("-")).ElementAtOrDefault(0);
+            List<string?> fileToOpen = [.. args.Where(x => !x.StartsWith("-")).Cast<string?>()];
+            if (fileToOpen.Count == 0)
+            {
+                fileToOpen.Add(null);
+            }
             //fileToOpen = "D:\\mipt\\a.c";
-            Console.WriteLine($"Opening \"{fileToOpen}\"...");
+            Console.WriteLine($"Opening files {fileToOpen.Count} \"{fileToOpen}\"...");
             if (SDL.Init(SdlInitFlags.Everything) != 0)
             {
                 throw new Exception("SDL initialization failed");
@@ -61,6 +67,7 @@ namespace SDL2Interface
 
                 if (args.Contains("--python"))
                 {
+                    args.Remove("--python");
                     provider = new PythonProvider();
                 }
                 else
@@ -90,14 +97,16 @@ namespace SDL2Interface
 
                 windows.Add(project);
 
-
-                if (fileToOpen != null)
+                foreach (var file in fileToOpen)
                 {
-                    project.OpenFile(fileToOpen);
-                }
-                else
-                {
-                    project.CreateFile(null, "c");
+                    if (file != null)
+                    {
+                        project.OpenFile(file);
+                    }
+                    else
+                    {
+                        project.CreateFile(null, "c");
+                    }
                 }
             }
 
