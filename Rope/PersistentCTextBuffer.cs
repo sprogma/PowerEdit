@@ -61,6 +61,9 @@ namespace TextBuffer
         internal static extern void state_read(IntPtr state, long position, long length, IntPtr buffer);
 
         [DllImport("msrope.dll")]
+        internal static extern void state_read(IntPtr state, long position, long length, [Out] byte[] buffer);
+
+        [DllImport("msrope.dll")]
         internal static extern IntPtr state_version_before(IntPtr state, long steps);
 
         [DllImport("msrope.dll")]
@@ -132,6 +135,13 @@ namespace TextBuffer
 
         public int Length => (int)CLibrary.state_get_size(curr_state);
         public long LengthEx(IntPtr state) => CLibrary.state_get_size(state);
+
+        public byte[] SubBytes(long pos, long len)
+        {
+            byte[] data = new byte[len];
+            CLibrary.state_read(curr_state, pos, len, data);
+            return data;
+        }
 
         public string SubstringEx(IntPtr state, long pos, long len)
         {

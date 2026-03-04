@@ -57,6 +57,8 @@ namespace TextBuffer
 
         public string SubstringEx(IntPtr state, long pos);
 
+        public byte[] SubBytes(long pos, long len);
+
         public string Substring(long pos, long len);
 
         public string Substring(long pos);

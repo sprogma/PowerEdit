@@ -126,8 +126,14 @@ namespace EditorCore.Buffer
                 return;
             }
             ActionOnUpdate?.Invoke(this);
-            _ = Task.Run(() => Client?.ChangeFileAsync("aboba/aboba", Text.Substring(0)));
-            _ = Task.Run(() => Tokens = Tokenizer.ParseContent(Text.Substring(0)));
+            if (Text.Length <= Client?.MaxContentSize)
+            {
+                _ = Task.Run(() => Client?.ChangeFileAsync("aboba/aboba", Text.Substring(0)));
+            }
+            if (Text.Length <= Tokenizer.MaxContentSize)
+            {
+                _ = Task.Run(() => Tokens = Tokenizer.ParseContent(Text.Substring(0)));
+            }
             dirty_was_changed = true;
         }
 

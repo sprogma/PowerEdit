@@ -11,6 +11,8 @@ namespace RegexTokenizer
     {
         public abstract List<Token> ParseContent(string content);
 
+        public virtual long MaxContentSize => 256*1024;
+
         public static BaseTokenizer CreateTokenizer(string? fileExternsion)
         {
             Console.WriteLine($"Creating ... {fileExternsion} tokenizer");

@@ -44,7 +44,7 @@ namespace SDL2Interface
             {
                 fileToOpen.Add(null);
             }
-            //fileToOpen = "D:\\mipt\\a.c";
+            fileToOpen = ["D:\\big.txt"];
             Console.WriteLine($"Opening files {fileToOpen.Count} \"{fileToOpen}\"...");
             if (SDL.Init(SdlInitFlags.Everything) != 0)
             {

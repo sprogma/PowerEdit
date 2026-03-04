@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace TextBuffer
 {
@@ -116,6 +117,11 @@ namespace TextBuffer
         public string SubstringEx(IntPtr state, long pos) => Substring(pos);
         public long LengthEx(IntPtr state) => Length;
         public void SaveToFile(string filename) => File.WriteAllText(filename, content);
+
+        public byte[] SubBytes(long pos, long len)
+        {
+            return Encoding.UTF8.GetBytes(Substring(pos, len));
+        }
     }
 
 }

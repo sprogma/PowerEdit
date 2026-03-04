@@ -10,6 +10,8 @@ namespace Lsp
     {
         private TaskCompletionSource<bool> _tcs = new TaskCompletionSource<bool>();
 
+        public virtual long MaxContentSize => 256 * 1024;
+
         public async Task StartAsync(string serverPath, string arguments)
         {
             Console.WriteLine("[LOG] Server connected.");
