@@ -46,6 +46,9 @@ namespace TextBuffer
         internal static extern IntPtr project_new_state(IntPtr project);
 
         [DllImport("msrope.dll")]
+        internal static extern IntPtr project_open_file(IntPtr project, [MarshalAs(UnmanagedType.LPUTF8Str)] string filename);
+
+        [DllImport("msrope.dll")]
         internal static extern IntPtr state_create_dup(IntPtr project, IntPtr state);
 
         [DllImport("msrope.dll")]
@@ -112,6 +115,15 @@ namespace TextBuffer
         {
             project = CLibrary.project_create();
             curr_state = CLibrary.project_new_state(project);
+            CLibrary.state_commit(project, curr_state);
+            undos = [];
+            InitialVersions = [curr_state];
+        }
+
+        public PersistentCTextBuffer(string filename)
+        {
+            project = CLibrary.project_create();
+            curr_state = CLibrary.project_open_file(project, filename);
             CLibrary.state_commit(project, curr_state);
             undos = [];
             InitialVersions = [curr_state];

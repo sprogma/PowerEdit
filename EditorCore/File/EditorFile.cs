@@ -31,7 +31,6 @@ namespace EditorCore.File
         {
             this.filename = filename;
             Buffer = new EditorBuffer(server,
-                                      System.IO.File.ReadAllText(filename),
                                       BaseTokenizer.CreateTokenizer(Path.GetExtension(filename)?.TrimStart('.') ?? ""),
                                       server.GetLsp(Path.GetExtension(filename)?.TrimStart('.') ?? ""),
                                       this.filename,

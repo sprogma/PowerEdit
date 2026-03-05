@@ -12,7 +12,7 @@ struct mapped_buffer
     int64_t allocated;
 };
 
-
+struct mapped_buffer *allocate_buffer_from_file(const char *filename);
 struct mapped_buffer *allocate_buffer(int64_t size);
 void acquire_buffer(struct mapped_buffer *);
 void release_buffer(struct mapped_buffer *);

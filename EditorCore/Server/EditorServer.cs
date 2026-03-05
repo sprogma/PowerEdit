@@ -30,7 +30,7 @@ namespace EditorCore.Server
 
         public EditorFile OpenFile(string filename)
         {
-            EditorFile new_file = new(this, filename, new PersistentCTextBuffer());
+            EditorFile new_file = new(this, filename, new PersistentCTextBuffer(filename));
             Files.Add(new_file);
             return new_file;
         }

@@ -6,6 +6,8 @@
 #include "structure.h"
 
 
+void _state_insert_with_buffer(struct project *project, struct state *state, int64_t position, struct mapped_buffer *buffer, int64_t offset, int64_t length);
+
 #define logError(...) fprintf(stderr, __VA_ARGS__);
 
 
@@ -58,6 +60,27 @@ struct state *state_create_empty(struct project *project)
     _reserve_state(project, project->states_len + 1);
     project->states[project->states_len++] = res;
     freeExclusive(&project->lock);
+
+    return res;
+}
+
+
+struct state *project_open_file(struct project *project, const char *filename)
+{
+    struct state *res = calloc(1, sizeof(*res));
+    res->timestamp = get_time_us();
+    res->depth = 0;
+
+    lockExclusive(&project->lock);
+    res->version_id = project->last_version_id++;
+
+    _reserve_state(project, project->states_len + 1);
+    project->states[project->states_len++] = res;
+    freeExclusive(&project->lock);
+
+    /* now we need to open file */
+    struct mapped_buffer *buffer = allocate_buffer_from_file(filename);
+    _state_insert_with_buffer(project, res, 0, buffer, 0, buffer->allocated);
 
     return res;
 }
@@ -171,39 +194,8 @@ void state_release(struct state *state)
     free(state->tags);
 }
 
-void _state_insert(struct project *project, struct state *state, int64_t position, int64_t length, char *source)
+void _state_insert_with_buffer(struct project *project, struct state *state, int64_t position, struct mapped_buffer *buffer, int64_t offset, int64_t length)
 {
-    /* create buffer for this moditification */
-    struct mapped_buffer *buffer;
-    int64_t offset;
-
-    lockExclusive(&project->lock);
-    if (project->current_buffer->length + length > project->current_buffer->allocated)
-    {
-        /* if 4/5 is filled - create new buffer */
-        if (project->current_buffer->length * 4 > project->current_buffer->allocated * 5)
-        {
-            buffer = allocate_buffer(length + 8 * 1024 * 1024);
-            buffer->length = length;
-            offset = 0;
-        }
-        else /* create buffer for only this modification */
-        {
-            buffer = allocate_buffer(length);
-            buffer->length = length;
-            offset = 0;
-        }
-    }
-    else
-    {
-        offset = project->current_buffer->length;
-        buffer = project->current_buffer;
-        buffer->length += length;
-    }
-    freeExclusive(&project->lock);
-
-    memcpy(buffer->buffer + offset, source, length);
-
     if (position < 0 || position > SegmentLength(state->value))
     {
         position = SegmentLength(state->value);
@@ -273,6 +265,42 @@ void _state_insert(struct project *project, struct state *state, int64_t positio
     {
         state->value = InsertSegment(state->value, (struct segment_info) { info.buffer, info.offset + (position - segment_position), info.length - (position - segment_position) }, position + length, state->version_id);
     }
+}
+
+void _state_insert(struct project *project, struct state *state, int64_t position, int64_t length, char *source)
+{
+    /* create buffer for this moditification */
+    struct mapped_buffer *buffer;
+    int64_t offset;
+
+    lockExclusive(&project->lock);
+    if (project->current_buffer->length + length > project->current_buffer->allocated)
+    {
+        /* if 4/5 is filled - create new buffer */
+        if (project->current_buffer->length * 4 > project->current_buffer->allocated * 5)
+        {
+            buffer = allocate_buffer(length + 8 * 1024 * 1024);
+            buffer->length = length;
+            offset = 0;
+        }
+        else /* create buffer for only this modification */
+        {
+            buffer = allocate_buffer(length);
+            buffer->length = length;
+            offset = 0;
+        }
+    }
+    else
+    {
+        offset = project->current_buffer->length;
+        buffer = project->current_buffer;
+        buffer->length += length;
+    }
+    freeExclusive(&project->lock);
+
+    memcpy(buffer->buffer + offset, source, length);
+
+    _state_insert_with_buffer(project, state, position, buffer, offset, length);
 }
 
 
