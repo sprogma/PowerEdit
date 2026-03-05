@@ -44,7 +44,9 @@ namespace SDL2Interface
             {
                 fileToOpen.Add(null);
             }
-            fileToOpen = ["D:\\big.txt"];
+            //fileToOpen = ["D:\\big.txt"];
+            fileToOpen = ["C:\\Users\\User\\AppData\\Local\\Temp\\copy_10gb.txt"];
+            //fileToOpen = ["C:\\Users\\User\\AppData\\Local\\Temp\\big.txt"]; // too big for now
             Console.WriteLine($"Opening files {fileToOpen.Count} \"{fileToOpen}\"...");
             if (SDL.Init(SdlInitFlags.Everything) != 0)
             {
