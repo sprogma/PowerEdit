@@ -271,7 +271,7 @@ namespace SDL2Interface
 
         public string? CurrentPreview()
         {
-            return cBuffer.SubstringEx(current.id, 0);
+            return cBuffer.SubstringEx(current.id, 0, 32*1024);
         }
 
         public override bool HandleEvent(Event e)
