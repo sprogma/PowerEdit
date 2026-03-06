@@ -299,7 +299,7 @@ namespace TextBuffer
 
         public void SaveToFile(string filename)
         {
-            File.WriteAllText(filename, Substring(0));
+            File.WriteAllText(filename + ".bak", Substring(0));
         }
 
         public void SaveCursors(IntPtr state, MarshalingCursor[] cursors)
