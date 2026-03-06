@@ -24,7 +24,7 @@ namespace TextBuffer
             get => content[(int)index];
         }
 
-        public int Length => content.Length;
+        public long Length => content.Length;
 
         public long SetText(string text)
         {

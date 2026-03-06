@@ -71,9 +71,10 @@ namespace EditorCore.File
                     Buffer.Text.SaveToFile(filename);
                     Buffer.WasChanged = false;
                 }
-                catch
+                catch (Exception e)
                 {
                     Buffer.WasChanged = true;
+                    Console.Write($"Error: file wasn't saved: error {e.Message}");
                 }
                 ActionOnSave?.Invoke(this);
             }

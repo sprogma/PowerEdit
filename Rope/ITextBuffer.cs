@@ -49,7 +49,7 @@ namespace TextBuffer
     {
         public char this[long index] { get; }
 
-        public int Length { get; }
+        public long Length { get; }
 
         public long LengthEx(IntPtr state);
 

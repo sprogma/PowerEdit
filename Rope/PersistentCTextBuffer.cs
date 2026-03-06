@@ -145,7 +145,7 @@ namespace TextBuffer
             }
         }
 
-        public int Length => (int)CLibrary.state_get_size(curr_state);
+        public long Length => CLibrary.state_get_size(curr_state);
         public long LengthEx(IntPtr state) => CLibrary.state_get_size(state);
 
         public byte[] SubBytes(long pos, long len)
