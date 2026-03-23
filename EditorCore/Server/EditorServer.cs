@@ -15,7 +15,8 @@ namespace EditorCore.Server
     public class EditorServer
     {
         public ICommandProvider CommandProvider { get; internal set; }
-        public List<File.EditorFile> Files { get; internal set; }
+        public Lock FilesLock = new();
+        public List<EditorFile> Files { get; internal set; }
 
         Dictionary<string, LspClient> clients = [];
         public EditorBufferOnUpdate? ActionOnBufferUpdate;
@@ -31,7 +32,10 @@ namespace EditorCore.Server
         public EditorFile OpenFile(string filename)
         {
             EditorFile new_file = new(this, filename, new PersistentCTextBuffer(filename));
-            Files.Add(new_file);
+            using (FilesLock.EnterScope())
+            {
+                Files.Add(new_file);
+            }
             return new_file;
         }
 
@@ -41,7 +45,10 @@ namespace EditorCore.Server
             {
                 filename = name
             };
-            Files.Add(new_file);
+            using (FilesLock.EnterScope())
+            {
+                Files.Add(new_file);
+            }
             return new_file;
         }
 

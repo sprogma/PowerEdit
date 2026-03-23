@@ -1,4 +1,5 @@
-﻿using RegexTokenizer;
+﻿using EditorCore.File;
+using RegexTokenizer;
 using SDL_Sharp;
 using SDL_Sharp.Ttf;
 using System;
@@ -15,6 +16,58 @@ namespace SDL2Interface
         internal double currentScale;
         internal int baseFontStep;
         internal int baseFontLineStep;
+        internal bool fontSizeLoaded = false;
+        private static Lazy<Task> fontLoadingTask = new(() => Task.Run(() =>
+        {
+            asciiMapRectangles = new Rect[128];
+            font = TTF.OpenFont(@"D:\cs\PowerEdit\CascadiaMono.ttf", 32);
+            fontEmoji = TTF.OpenFont(@"C:\Windows\Fonts\seguiemj.ttf", 32);
+            if (font.IsNull)
+            {
+                throw new Exception("Font is not loaded");
+            }
+            if (fontEmoji.IsNull)
+            {
+                throw new Exception("fontEmoji is not loaded");
+            }
+            /* generate rectangles */
+            int x = 0;
+            for (int i = 32; i < 128; ++i)
+            {
+                string st = ((char)i).ToString();
+                if (TTF.SizeText(font, st, out int w, out int h) != 0)
+                {
+                    throw new Exception("SizeText exception");
+                }
+                asciiMapRectangles[i].X = x;
+                asciiMapRectangles[i].Y = 0;
+                asciiMapRectangles[i].Width = w;
+                asciiMapRectangles[i].Height = h;
+                x += w;
+            }
+            /* render glyphs */
+            SDL.CreateRGBSurface(0, x, asciiMapRectangles[127].Height, 32, 0xff, 0xff00, 0xff0000, 0xff000000, out PSurface textMap);
+            x = 0;
+            for (int i = 32; i < 128; ++i)
+            {
+                string st = ((char)i).ToString();
+                if (TTF.SizeText(font, st, out int w, out int h) != 0)
+                {
+                    throw new Exception("SizeText exception");
+                }
+                TTF.RenderText_Blended(font, st, new Color(255, 255, 255, 255), out PSurface glythMap);
+                Rect r = new(0, 0, asciiMapRectangles[i].Width, asciiMapRectangles[i].Height);
+                SDL.BlitSurface(glythMap, ref r, textMap, ref asciiMapRectangles[i]);
+                SDL.FreeSurface(glythMap);
+                x += w;
+            }
+            asciiMap = SDL.CreateTextureFromSurface(renderer, textMap);
+            if (asciiMap.IsNull)
+            {
+                throw new Exception($"Temporary texture is null: {SDL.GetError()}");
+            }
+            SDL.FreeSurface(textMap);
+        }));
         static internal Renderer renderer;
         static internal Font font;
         static internal Font fontEmoji;
@@ -29,72 +82,33 @@ namespace SDL2Interface
         {
             currentScale = 0.6;
             colorTheme = color_theme;
-            if (asciiMapRectangles.Length == 0)
-            {
-                renderer = input_renderer;
-                asciiMapRectangles = new Rect[128];
-                font = TTF.OpenFont(@"D:\cs\PowerEdit\CascadiaMono.ttf", 32);
-                fontEmoji = TTF.OpenFont(@"C:\Windows\Fonts\seguiemj.ttf", 32);
-                if (font.IsNull)
-                {
-                    throw new Exception("Font is not loaded");
-                }
-                if (fontEmoji.IsNull)
-                {
-                    throw new Exception("fontEmoji is not loaded");
-                }
-                /* generate rectangles */
-                int x = 0;
-                for (int i = 32; i < 128; ++i)
-                {
-                    string st = ((char)i).ToString();
-                    if (TTF.SizeText(font, st, out int w, out int h) != 0)
-                    {
-                        throw new Exception("SizeText exception");
-                    }
-                    asciiMapRectangles[i].X = x;
-                    asciiMapRectangles[i].Y = 0;
-                    asciiMapRectangles[i].Width = w;
-                    asciiMapRectangles[i].Height = h;
-                    x += w;
-                    baseFontStep = Math.Max(baseFontStep, w);
-                    baseFontLineStep = Math.Max(baseFontLineStep, h);
-                }
-                baseFontLineStep += 3;
-                /* render glyphs */
-                SDL.CreateRGBSurface(0, x, asciiMapRectangles[127].Height, 32, 0xff, 0xff00, 0xff0000, 0xff000000, out PSurface textMap);
-                x = 0;
-                for (int i = 32; i < 128; ++i)
-                {
-                    string st = ((char)i).ToString();
-                    if (TTF.SizeText(font, st, out int w, out int h) != 0)
-                    {
-                        throw new Exception("SizeText exception");
-                    }
-                    TTF.RenderText_Blended(font, st, new Color(255, 255, 255, 255), out PSurface glythMap);
-                    Rect r = new(0, 0, asciiMapRectangles[i].Width, asciiMapRectangles[i].Height);
-                    SDL.BlitSurface(glythMap, ref r, textMap, ref asciiMapRectangles[i]);
-                    SDL.FreeSurface(glythMap);
-                    x += w;
-                }
-                asciiMap = SDL.CreateTextureFromSurface(renderer, textMap);
-                if (asciiMap.IsNull)
-                {
-                    throw new Exception($"Temporary texture is null: {SDL.GetError()}");
-                }
-                SDL.FreeSurface(textMap);
-            }
-            else
-            {
-                for (int i = 32; i < 128; ++i)
-                {
-                    baseFontStep = Math.Max(baseFontStep, asciiMapRectangles[i].Width);
-                    baseFontLineStep = Math.Max(baseFontLineStep, asciiMapRectangles[i].Height + 3);
-                }
-            }
+            renderer = input_renderer;
+
+            // run task if it isn't running yet.
+            _ = fontLoadingTask.Value;
         }
+
+        private bool CheckInitializated()
+        {
+            if (fontLoadingTask.Value.IsCompleted)
+            {
+                if (!fontSizeLoaded)
+                {
+                    fontSizeLoaded = true;
+                    for (int i = 32; i < 128; ++i)
+                    {
+                        baseFontStep = Math.Max(baseFontStep, asciiMapRectangles[i].Width);
+                        baseFontLineStep = Math.Max(baseFontLineStep, asciiMapRectangles[i].Height + 3);
+                    }
+                }
+                return true;
+            }
+            return false;
+        }
+
         public void DrawTextLine(int x, int y, string line, long position, List<Token> tokens, ref long lastToken)
         {
+            if (!CheckInitializated()) return;
             var elements = StringInfo.GetTextElementEnumerator(line);
             while (elements.MoveNext())
             {

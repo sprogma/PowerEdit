@@ -48,7 +48,7 @@ namespace SDL2Interface
             //fileToOpen = ["C:\\Users\\User\\AppData\\Local\\Temp\\copy_10gb.txt"];
             //fileToOpen = ["C:\\Users\\User\\AppData\\Local\\Temp\\big.txt"]; // too big for now
             Console.WriteLine($"Opening files {fileToOpen.Count} \"{fileToOpen}\"...");
-            if (SDL.Init(SdlInitFlags.Everything) != 0)
+            if (SDL.Init(SdlInitFlags.Video | SdlInitFlags.Events) != 0)
             {
                 throw new Exception("SDL initialization failed");
             }
@@ -103,30 +103,33 @@ namespace SDL2Interface
                 {
                     if (file != null)
                     {
-                        project.OpenFile(file);
+                        Task.Run(() => project.OpenFile(file));
                     }
                     else
                     {
-                        project.CreateFile(null, "c");
+                        Task.Run(() => project.CreateFile(null, "c"));
                     }
                 }
             }
 
-            while (windows.Count > 0)
+            if (!args.Contains("--no-interactive"))
             {
-                foreach (var win in windows)
+                while (windows.Count > 0)
                 {
-                    win.Draw();
-                }
-                SDL.RenderPresent(BaseWindow.renderer);
-                Thread.Sleep(10);
-                while (SDL.PollEvent(out Event evt) != 0)
-                {
-                    foreach (var win in windows.Reverse<BaseWindow>())
+                    foreach (var win in windows)
                     {
-                        if (!win.Event(evt))
+                        win.Draw();
+                    }
+                    SDL.RenderPresent(BaseWindow.renderer);
+                    Thread.Sleep(10);
+                    while (SDL.PollEvent(out Event evt) != 0)
+                    {
+                        foreach (var win in windows.Reverse<BaseWindow>())
                         {
-                            break;
+                            if (!win.Event(evt))
+                            {
+                                break;
+                            }
                         }
                     }
                 }

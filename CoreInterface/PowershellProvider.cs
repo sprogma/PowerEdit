@@ -16,18 +16,21 @@ namespace PowershellCommandProvider
         public BaseTokenizer Tokenizer => new PowershellTokenizer();
 
 
-        internal Runspace runSpace;
+        internal RunspacePool? runSpacePool;
 
         public PowershellProvider()
         {
-            runSpace = RunspaceFactory.CreateRunspace();
-            runSpace.Open();
+            Task.Run(() =>
+            {
+                runSpacePool = RunspaceFactory.CreateRunspacePool(1, 1);
+                runSpacePool.Open();
+            });
         }
 
         ~PowershellProvider()
         {
-            runSpace.Close();
-            runSpace.Dispose();
+            runSpacePool?.Close();
+            runSpacePool?.Dispose();
         }
 
         public (long, long, string) ExampleScript(string editType)
@@ -43,19 +46,28 @@ namespace PowershellCommandProvider
 
         public (IEnumerable<object>?, string?) Execute(string command, object[] args)
         {
-            using Pipeline pipeline = runSpace.CreatePipeline();
-            pipeline.Commands.AddScript(command);
-            Collection<PSObject> results;
+            if (runSpacePool == null)
+            {
+                return (null, "runspace don't initializated yet");
+            }
+            using PowerShell ps = PowerShell.Create();
+            ps.RunspacePool = runSpacePool;
+            ps.AddScript(command);
             try
             {
-                results = pipeline.Invoke(args);
+                var results = ps.Invoke(args);
+                if (ps.HadErrors)
+                {
+                    var errorMsg = string.Join(Environment.NewLine, ps.Streams.Error);
+                    return (null, errorMsg);
+                }
+                return (results.Select(x => x?.BaseObject ?? x).OfType<object>(), null);
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"ERROR: {ex}");
                 return (null, ex.ToString());
             }
-            return (results.Select(x => (x is PSObject o ? o.BaseObject: x)).Where(x => x != null), null);
         }
     }
 }

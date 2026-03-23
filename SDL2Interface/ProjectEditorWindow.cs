@@ -6,6 +6,7 @@ using EditorCore.Server;
 using RegexTokenizer;
 using SDL_Sharp;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Text;
 using TextBuffer;
@@ -14,6 +15,9 @@ namespace SDL2Interface
 {
     internal class ProjectEditorWindow : BaseWindow
     {
+        // todo: make when will be async
+        // public readonly ConcurrentDictionary<string, Task<EditorFile>> OpeningFiles = new();
+        public Lock FilesLock = new();
         public List<EditorFile> Files;
         public EditorServer Server;
         protected BaseWindow Child;
@@ -37,21 +41,28 @@ namespace SDL2Interface
         internal EditorFile CreateFile(string? name = null, string? externsion = null)
         {
             var file = Server.CreateFile(name, externsion);
-            Files.Add(file);
+            using (FilesLock.EnterScope())
+            {
+                Files.Add(file);
+            }
             OpenFileCallback(this, file);
             return file;
         }
 
         public EditorFile OpenFile(string filename)
         {
-            var file = Files.Find(x => x.filename == filename);
-            if (file != null)
+            EditorFile? file;
+            using (FilesLock.EnterScope())
             {
-                RaiseFileCallback(this, file);
-                return file;
+                file = Files.Find(x => x.filename == filename);
+                if (file != null)
+                {
+                    RaiseFileCallback(this, file);
+                    return file;
+                }
+                file = Server.OpenFile(filename);
+                Files.Add(file);
             }
-            file = Server.OpenFile(filename);
-            Files.Add(file);
             OpenFileCallback(this, file);
             return file;
         }
