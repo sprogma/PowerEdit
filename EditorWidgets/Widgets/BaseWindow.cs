@@ -18,18 +18,15 @@ namespace EditorFramework.Widgets
     {
         public bool IsDeleted = false;
         public IApplication App;
+        public ILayoutManager Layout;
         public BaseWindow? Popup = null;
         public BaseWindow? Parent = null;
         public OnQuitAction? OnQuit = null;
-        public Rect Position;
 
-
-
-
-        public BaseWindow(IApplication app, Rect position)
+        public BaseWindow(IApplication app, ILayoutManager layout)
         {
             this.App = app;
-            this.Position = position;
+            this.Layout = layout;
         }
 
         public void ReleasePopup()
@@ -46,12 +43,6 @@ namespace EditorFramework.Widgets
             }
             Popup = window;
             window.Parent = this;
-        }
-
-        public virtual void Resize(Rect newPosition)
-        {
-            Position = newPosition;
-            Popup?.Resize(newPosition);
         }
 
         public virtual void PreDraw()

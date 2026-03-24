@@ -21,6 +21,17 @@ namespace SDL2Interface
             SDLWindow = sDLWindow;
         }
 
+
+        void ResizeRecurse(BaseWindow window, EditorFramework.Layout.Rect NewPosition)
+        {
+            // resize this window
+            window.Position = NewPosition;
+            window.Popup?.Resize(NewPosition);
+
+            // handle special layouts:
+            
+        }
+
         void DrawRecurse(BaseWindow window)
         {
             if (window.Popup != null)
