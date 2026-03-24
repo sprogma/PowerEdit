@@ -7,7 +7,7 @@ using System.Text;
 using System.Threading.Tasks;
 using TextBuffer;
 
-namespace SDL2Interface
+namespace EditorFramework.Widgets
 {
     internal class TreeWalkWithPreviewWindow : BaseWindow
     {
@@ -29,10 +29,10 @@ namespace SDL2Interface
         public override void Resize(Rect newPosition)
         {
             base.Resize(newPosition);
-            Rect right_position = position;
-            Rect left_position = position;
-            left_position.Width = position.Width / 2;
-            right_position.Width = position.Width - left_position.Width;
+            Rect right_position = Position;
+            Rect left_position = Position;
+            left_position.Width = Position.Width / 2;
+            right_position.Width = Position.Width - left_position.Width;
             right_position.X += left_position.Width;
             tree.Resize(left_position);
             preview.Resize(right_position);
@@ -88,7 +88,7 @@ namespace SDL2Interface
                     break;
             }
             bool res = tree.Event(e);
-            if (tree.deleted)
+            if (tree.IsDeleted)
             {
                 DeleteSelf();
             }

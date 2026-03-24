@@ -11,7 +11,7 @@ using System.Collections.Generic;
 using System.Text;
 using TextBuffer;
 
-namespace SDL2Interface
+namespace EditorFramework.Widgets
 {
     internal class ProjectEditorWindow : BaseWindow
     {
@@ -88,11 +88,11 @@ namespace SDL2Interface
                         }
                         if (e.Keyboard.Keysym.Scancode == Scancode.O && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0)
                         {
-                            PromptTextWindow promptWindow = new(new EditorBuffer(Server, BaseTokenizer.CreateBaseTokenizer(), null, null, new PersistentCTextBuffer()), position);
+                            PromptTextWindow promptWindow = new(new EditorBuffer(Server, BaseTokenizer.CreateBaseTokenizer(), null, null, new PersistentCTextBuffer()), Position);
                             promptWindow.cursor?.Buffer.Text.SetText("enter path to file to open");
                             promptWindow.cursor?.Selections = new(promptWindow.cursor, [new EditorSelection(promptWindow.cursor, 0, promptWindow.buffer.Text.Length)]);
                             OpenPopup(promptWindow);
-                            popup?.OnQuit += (x) =>
+                            Popup?.OnQuit += (x) =>
                             {
                                 if (x is PromptTextWindow itw)
                                 {
@@ -100,7 +100,7 @@ namespace SDL2Interface
                                     if (!File.Exists(filename))
                                     {
                                         ReleasePopup();
-                                        OpenPopup(new AlertWindow($"Error - File {filename} doesn't exists or is a directory", position, ("Ok", () => { })));
+                                        OpenPopup(new AlertWindow($"Error - File {filename} doesn't exists or is a directory", Position, ("Ok", () => { })));
                                         return;
                                     }
                                     Console.WriteLine($"opening file {filename}");
@@ -117,7 +117,7 @@ namespace SDL2Interface
                     break;
             }
             bool res = Child.Event(e);
-            if (Child.deleted)
+            if (Child.IsDeleted)
             {
                 DeleteSelf();
                 return false;

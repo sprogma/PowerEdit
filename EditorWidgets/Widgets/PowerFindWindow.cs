@@ -10,7 +10,7 @@ using System.Text;
 using System.Threading.Tasks;
 using TextBuffer;
 
-namespace SDL2Interface
+namespace EditorFramework.Widgets
 {
     internal class PowerFindWindow : InputTextWindow
     {

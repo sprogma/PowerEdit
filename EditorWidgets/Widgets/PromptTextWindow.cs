@@ -4,7 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace SDL2Interface
+namespace EditorFramework.Widgets
 {
     internal class PromptTextWindow : InputTextWindow
     {

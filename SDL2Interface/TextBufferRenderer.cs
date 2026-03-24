@@ -77,6 +77,7 @@ namespace SDL2Interface
 
         internal int FontStep => (int)(baseFontStep * currentScale);
         internal int FontLineStep => (int)(baseFontLineStep * currentScale);
+        internal bool Ready => CheckInitializated();
 
         public TextBufferRenderer(Renderer input_renderer, ColorTheme color_theme)
         {

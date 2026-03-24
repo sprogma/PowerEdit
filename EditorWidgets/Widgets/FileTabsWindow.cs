@@ -1,5 +1,7 @@
 ﻿using EditorCore.Buffer;
 using EditorCore.File;
+using EditorFramework.ApplicationApi;
+using EditorFramework.Layout;
 using Markdig.Syntax;
 using Microsoft.CodeAnalysis;
 using SDL_Sharp;
@@ -8,18 +10,16 @@ using System.Collections.Generic;
 using System.Text;
 using TextBuffer;
 
-namespace SDL2Interface
+namespace EditorFramework.Widgets
 {
-    internal class FileTabsWindow : BaseWindow
+    public class FileTabsWindow : BaseWindow
     {
         public List<FileEditorWindow> childs;
         public int current;
-        public int tabWidth = 80;
-        public int tabHeight = 25;
 
-        internal FileEditorWindow? Child => current < childs.Count ? childs[current] : null;
+        public FileEditorWindow? Child => current < childs.Count ? childs[current] : null;
 
-        public FileTabsWindow(List<FileEditorWindow> windows, Rect position) : base(position)
+        public FileTabsWindow(IApplication App, List<FileEditorWindow> windows, Rect position) : base(App, position)
         {
             this.childs = windows;
             this.current = 0;
@@ -30,7 +30,7 @@ namespace SDL2Interface
         {
             base.Resize(newPosition);
             newPosition.Y += tabHeight;
-            newPosition.Height -= tabHeight;
+            newPosition.H -= tabHeight;
             foreach (var child in this.childs)
             {
                 child.Resize(newPosition);
@@ -47,7 +47,7 @@ namespace SDL2Interface
                     return;
                 }
             }
-            childs.Add(new FileEditorWindow(file, new(position.X, position.Y + tabHeight, position.Width, position.Height - tabHeight)));
+            childs.Add(new FileEditorWindow(App, file, new(Position.X, Position.Y + tabHeight, Position.Width, Position.Height - tabHeight)));
             current = childs.Count - 1;
         }
 
@@ -60,35 +60,6 @@ namespace SDL2Interface
                     current = i;
                     return;
                 }
-            }
-        }
-
-        public override void DrawElements()
-        {
-            /* draw tabs */
-            {
-                Rect header = new(position.X, position.Y, position.Width, tabHeight);
-                SDL.SetRenderDrawColor(renderer, 0, 25, 40, 255);
-                SDL.RenderFillRect(renderer, ref header);
-                Rect tab = new(position.X + 2, position.Y + 2, tabWidth - 4, tabHeight - 4);
-                SDL.RenderGetClipRect(renderer, out Rect clip);
-                foreach (var (id, child) in childs.Index())
-                {
-                    SDL.RenderSetClipRect(renderer, ref tab);
-                    if (current == id)
-                    {
-                        SDL.SetRenderDrawColor(renderer, 0, 50, 80, 255);
-                        SDL.RenderFillRect(renderer, ref tab);
-                    }
-                    long dummyValue = 0;
-                    textRenderer.DrawTextLine(tab.X, tab.Y, child.file.filename ?? "<Unnamed>", 0, [], ref dummyValue);
-                    tab.X += tab.Width + 4;
-                }
-                SDL.RenderSetClipRect(renderer, ref clip);
-            }
-            if (current < childs.Count)
-            {
-                childs[current].Draw();
             }
         }
 
@@ -132,7 +103,7 @@ namespace SDL2Interface
                     break;
             }
             bool? res = Child?.Event(e);
-            if (Child?.deleted == true)
+            if (Child?.IsDeleted == true)
             {
                 childs.Remove(Child);
                 current = Math.Max(current - 1, 0);

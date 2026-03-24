@@ -11,7 +11,7 @@ using System.Text;
 using System.Threading.Tasks;
 using TextBuffer;
 
-namespace SDL2Interface
+namespace EditorFramework.Widgets
 {
     internal class TreeWalkWindow: BaseWindow
     {
@@ -218,18 +218,18 @@ namespace SDL2Interface
         public override void DrawElements()
         {
             SDL.SetRenderDrawColor(renderer, 0, 0, 0, 0);
-            SDL.RenderFillRect(renderer, ref position);
+            SDL.RenderFillRect(renderer, ref Position);
 
             /* draw tree, relative to current version */
             foreach (Node node in tree.Values.Where(x => !x.hidden))
             {
                 SDL.SetRenderDrawColor(renderer, 255, 0, 0, 0);
-                Vector2 pos = (node.position - Camera) * Scale + new Vector2(position.Width * 0.5f, position.Height * 0.5f);
+                Vector2 pos = (node.position - Camera) * Scale + new Vector2(Position.Width * 0.5f, Position.Height * 0.5f);
                 float w, h;
                 w = NodeWidth * Scale;
                 h = NodeHeight * Scale;
                 pos -= 0.5f * new Vector2(w, h);
-                Rect rect = new() { X = position.X + (int)pos.X, Y = position.Y + (int)pos.Y, Width = (int)w, Height = (int)h};
+                Rect rect = new() { X = Position.X + (int)pos.X, Y = Position.Y + (int)pos.Y, Width = (int)w, Height = (int)h};
                 if (node == current)
                 {
                     SDL.RenderFillRect(renderer, ref rect);
@@ -239,11 +239,11 @@ namespace SDL2Interface
                     SDL.RenderDrawRect(renderer, ref rect);
                 }
                 pos += 0.5f * new Vector2(w, h);
-                rect = new() { X = position.X + (int)pos.X, Y = position.Y + (int)pos.Y, Width = (int)w, Height = (int)h};
+                rect = new() { X = Position.X + (int)pos.X, Y = Position.Y + (int)pos.Y, Width = (int)w, Height = (int)h};
                 foreach (Node next in new[]{ node.up, node.right }.OfType<Node>())
                 {
-                    Vector2 nextPos = (next.position - Camera) * Scale + new Vector2(position.Width * 0.5f, position.Height * 0.5f);
-                    int x = position.X + (int)nextPos.X, y = position.Y + (int)nextPos.Y;
+                    Vector2 nextPos = (next.position - Camera) * Scale + new Vector2(Position.Width * 0.5f, Position.Height * 0.5f);
+                    int x = Position.X + (int)nextPos.X, y = Position.Y + (int)nextPos.Y;
                     SDL.RenderDrawLine(renderer, rect.X, rect.Y, x, y);
                 }
                 //SDL.SetRenderDrawColor(renderer, 64, 0, 0, 0);
@@ -271,7 +271,7 @@ namespace SDL2Interface
 
         public string? CurrentPreview()
         {
-            return cBuffer.SubstringEx(current.id, 0, 32*1024);
+            return cBuffer.SubstringEx(current.id, 0, Math.Min(32*1024, cBuffer.LengthEx(current.id)));
         }
 
         public override bool HandleEvent(Event e)

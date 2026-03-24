@@ -3,6 +3,7 @@ using EditorCore.Cursor;
 using EditorCore.Selection;
 using Microsoft.ApplicationInsights.Metrics.Extensibility;
 using SDL_Sharp;
+using SDL2Interface;
 using System;
 using System.Collections.Generic;
 using System.Configuration;
@@ -13,11 +14,11 @@ using System.Threading.Tasks;
 using TextBuffer;
 using static System.Collections.Specialized.BitVector32;
 
-namespace SDL2Interface
+namespace EditorFramework.Widgets
 {
-    internal class InputTextWindow : SimpleTextWindow
+    public class InputTextWindow : SimpleTextWindow
     {
-        internal EditorCursor? cursor;
+        public EditorCursor? cursor;
         bool relativeNumbers = true;
         long enteredLineNumber = 0;
         bool jumpInput = false;
@@ -30,7 +31,7 @@ namespace SDL2Interface
         public override void PreDraw()
         {
             base.PreDraw();
-            if (cursor == null)
+            if (cursor == null || !textRenderer.fontSizeLoaded)
             {
                 return;
             }
@@ -51,8 +52,10 @@ namespace SDL2Interface
 
         public override void DrawElements()
         {
+            if (!textRenderer.Ready) return;
+
             SDL.SetRenderDrawColor(renderer, 0, 0, 0, 0);
-            SDL.RenderFillRect(renderer, ref position);
+            SDL.RenderFillRect(renderer, ref Position);
 
             int leftBarSize = 0;
 
@@ -81,13 +84,13 @@ namespace SDL2Interface
                             }
                             if (num == 0)
                             {
-                                Rect rect = new(position.X + 5, position.Y + t * textRenderer.FontLineStep, position.Width - 10, textRenderer.FontLineStep);
+                                Rect rect = new(Position.X + 5, Position.Y + t * textRenderer.FontLineStep, Position.Width - 10, textRenderer.FontLineStep);
                                 SDL.SetRenderDrawColor(renderer, 0, 20, 20, 255);
                                 SDL.RenderFillRect(renderer, ref rect);
                             }
                             else
                             {
-                                textRenderer.DrawTextLine(position.X + 5, position.Y + t * textRenderer.FontLineStep, num.ToString().PadLeft(maxPower), 0, [], ref dummyValue);
+                                textRenderer.DrawTextLine(Position.X + 5, Position.Y + t * textRenderer.FontLineStep, num.ToString().PadLeft(maxPower), 0, [], ref dummyValue);
                             }
                         }
                     }
@@ -135,8 +138,8 @@ namespace SDL2Interface
                 int selectionWidth = (int)(4 * textRenderer.currentScale);
                 SDL.SetRenderDrawColor(renderer, 255, 166, 0, 255);
                 (long line, long offset) = buffer.GetPositionOffsets(errorPosition);
-                int x = leftBarSize + position.X + 5 + (int)offset * textRenderer.FontStep - textRenderer.FontStep / 2;
-                int y = position.Y + (int)(line - viewOffset) * textRenderer.FontLineStep + textRenderer.FontLineStep - selectionWidth;
+                int x = leftBarSize + Position.X + 5 + (int)offset * textRenderer.FontStep - textRenderer.FontStep / 2;
+                int y = Position.Y + (int)(line - viewOffset) * textRenderer.FontLineStep + textRenderer.FontLineStep - selectionWidth;
                 Rect r = new(x, y, 2 * textRenderer.FontStep, selectionWidth);
                 SDL.RenderFillRect(renderer, ref r);
             }
@@ -158,7 +161,7 @@ namespace SDL2Interface
                     if (minPos <= selection.End && selection.End < maxPos)
                     {
                         (long line, long offset) = buffer.GetPositionOffsets(selection.End);
-                        Rect r = new(leftBarSize + position.X + 5 + (int)offset * textRenderer.FontStep, position.Y + (int)(line - viewOffset) * textRenderer.FontLineStep, 5, textRenderer.FontLineStep);
+                        Rect r = new(leftBarSize + Position.X + 5 + (int)offset * textRenderer.FontStep, Position.Y + (int)(line - viewOffset) * textRenderer.FontLineStep, 5, textRenderer.FontLineStep);
                         SDL.RenderFillRect(renderer, ref r);
                     }
 
@@ -198,8 +201,8 @@ namespace SDL2Interface
                         int width = (int)(endOffset - startOffset) * textRenderer.FontStep;
                         if (width <= 0) continue;
                         Rect r = new(
-                            leftBarSize + position.X + 5 + (int)startOffset * textRenderer.FontStep,
-                            position.Y + (int)(line - viewOffset) * textRenderer.FontLineStep + textRenderer.FontLineStep - selectionWidth,
+                            leftBarSize + Position.X + 5 + (int)startOffset * textRenderer.FontStep,
+                            Position.Y + (int)(line - viewOffset) * textRenderer.FontLineStep + textRenderer.FontLineStep - selectionWidth,
                             width,
                             selectionWidth
                         );
@@ -213,7 +216,7 @@ namespace SDL2Interface
             {
                 long dummyValue = 0;
                 textRenderer.Scale(0.8);
-                textRenderer.DrawTextLine(position.X + 200, position.Y + H - 5 - textRenderer.FontLineStep, message, 0, [], ref dummyValue);
+                textRenderer.DrawTextLine(Position.X + 200, Position.Y + H - 5 - textRenderer.FontLineStep, message, 0, [], ref dummyValue);
                 textRenderer.Scale(1.25);
             }
         }
@@ -359,8 +362,8 @@ namespace SDL2Interface
                         Console.WriteLine("MEGA UN");
                         if (buffer.Text is IUndoTextBuffer undoText)
                         {
-                            TreeWalkWindow treeWin = new (buffer, undoText, position);
-                            OpenPopup(new TreeWalkWithPreviewWindow(position, treeWin));
+                            TreeWalkWindow treeWin = new (buffer, undoText, Position);
+                            OpenPopup(new TreeWalkWithPreviewWindow(Position, treeWin));
                         }
                         return false;
                     }
@@ -381,7 +384,7 @@ namespace SDL2Interface
                         /* v.1 - open powerWindow */
                         if (cursor != null)
                         {
-                            Program.OpenWindow(new PowerFindWindow(cursor.Buffer.Server, cursor, position));
+                            Program.OpenWindow(new PowerFindWindow(cursor.Buffer.Server, cursor, Position));
                             return false;
                         }
                     }
@@ -391,8 +394,8 @@ namespace SDL2Interface
                         /* v.1 - open powerWindow powerEdit */
                         if (cursor != null)
                         {
-                            var win = new PowerEditWindow(cursor.Buffer.Server, cursor, position, "powerEdit");
-                            OpenPopup(new PowerEditWithPreviewWindow(position, win));
+                            var win = new PowerEditWindow(cursor.Buffer.Server, cursor, Position, "powerEdit");
+                            OpenPopup(new PowerEditWithPreviewWindow(Position, win));
                             return false;
                         }
                     }
@@ -401,8 +404,8 @@ namespace SDL2Interface
                         /* v.1 - open powerWindow edit */
                         if (cursor != null)
                         {
-                            var win = new PowerEditWindow(cursor.Buffer.Server, cursor, position, "edit");
-                            OpenPopup(new PowerEditWithPreviewWindow(position, win));
+                            var win = new PowerEditWindow(cursor.Buffer.Server, cursor, Position, "edit");
+                            OpenPopup(new PowerEditWithPreviewWindow(Position, win));
                             return false;
                         }
                     }
@@ -411,8 +414,8 @@ namespace SDL2Interface
                         /* v.1 - open powerWindow replace */
                         if (cursor != null)
                         {
-                            var win = new PowerEditWindow(cursor.Buffer.Server, cursor, position, "replace");
-                            OpenPopup(new PowerEditWithPreviewWindow(position, win));
+                            var win = new PowerEditWindow(cursor.Buffer.Server, cursor, Position, "replace");
+                            OpenPopup(new PowerEditWithPreviewWindow(Position, win));
                             return false;
                         }
                     }
@@ -475,15 +478,21 @@ namespace SDL2Interface
                     }
                     else if (e.Keyboard.Keysym.Scancode == Scancode.PageUp)
                     {
-                        long step = H / textRenderer.FontLineStep;
-                        cursor?.Selections.MoveVertical(-step, ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Shift) != 0);
-                        return false;
+                        if (textRenderer.Ready)
+                        {
+                            long step = H / textRenderer.FontLineStep;
+                            cursor?.Selections.MoveVertical(-step, ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Shift) != 0);
+                            return false;
+                        }
                     }
                     else if (e.Keyboard.Keysym.Scancode == Scancode.PageDown)
                     {
-                        long step = H / textRenderer.FontLineStep;
-                        cursor?.Selections.MoveVertical(step, ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Shift) != 0);
-                        return false;
+                        if (textRenderer.Ready)
+                        {
+                            long step = H / textRenderer.FontLineStep;
+                            cursor?.Selections.MoveVertical(step, ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Shift) != 0);
+                            return false;
+                        }
                     }
                     else if (e.Keyboard.Keysym.Scancode == Scancode.Down && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Alt) != 0)
                     {
