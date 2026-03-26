@@ -1,6 +1,8 @@
 ﻿using EditorCore.Buffer;
+using EditorFramework.ApplicationApi;
+using EditorFramework.Events;
+using EditorFramework.Layout;
 using RegexTokenizer;
-using SDL_Sharp;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
@@ -12,33 +14,20 @@ using TextBuffer;
 
 namespace EditorFramework.Widgets
 {
-    internal class PowerEditWithPreviewWindow : BaseWindow
+    public class PowerEditWithPreviewWindow : BaseWindow
     {
-        PowerEditWindow editor;
-        SimpleTextWindow preview;
-        DateTime lastDrawTime;
-        bool moditifed;
+        public PowerEditWindow editor;
+        public SimpleTextWindow preview;
+        public DateTime lastDrawTime;
+        public bool moditifed;
 
-        public PowerEditWithPreviewWindow(Rect position, PowerEditWindow editor) : base(position)
+        public PowerEditWithPreviewWindow(IApplication app, ILayoutManager layout, PowerEditWindow editor) : base(app, layout)
         {
             moditifed = true;
             editor.buffer.ActionOnUpdate +=  buf => {moditifed = true; };
             this.editor = editor;
-            this.preview = new(new EditorBuffer(editor.buffer.Server, "processing ...", editor.usingCursor.Buffer.Tokenizer, null, "", new ReadonlyTextBuffer()), new());
-            Resize(position);
+            this.preview = new(app, GetLayout<SimpleTextWindow>.Value, new EditorBuffer(editor.buffer.Server, "processing ...", editor.usingCursor.Buffer.Tokenizer, null, "", new ReadonlyTextBuffer()));
             this.lastDrawTime = DateTime.UtcNow;
-        }
-
-        public override void Resize(Rect newPosition)
-        {
-            base.Resize(newPosition);
-            Rect right_position = Position;
-            Rect left_position = Position;
-            left_position.Width = Position.Width / 2;
-            right_position.Width = Position.Width - left_position.Width;
-            right_position.X += left_position.Width;
-            editor.Resize(left_position);
-            preview.Resize(right_position);
         }
 
         public override void PreDraw()
@@ -74,18 +63,12 @@ namespace EditorFramework.Widgets
             }
         }
 
-        public override void DrawElements()
-        {
-            editor.Draw();
-            preview.Draw();
-        }
 
-
-        public override bool HandleEvent(Event e)
+        public override bool HandleEvent(EventBase e)
         {
-            switch (e.Type)
+            switch (e)
             {
-                case EventType.Quit:
+                case QuitEvent:
                     Environment.Exit(1);
                     return false;
             }

@@ -2,19 +2,22 @@
 using EditorCore.Cursor;
 using EditorCore.Selection;
 using EditorCore.Server;
+using EditorFramework.ApplicationApi;
+using EditorFramework.Events;
+using EditorFramework.Layout;
 using Microsoft.Extensions.ObjectPool;
-using SDL_Sharp;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Management;
 using System.Text;
 using System.Threading.Tasks;
 using TextBuffer;
 
 namespace EditorFramework.Widgets
 {
-    internal class PowerEditWindow: InputTextWindow
+    public class PowerEditWindow: InputTextWindow
     {
         public EditorCursor usingCursor;
         string editType;
@@ -64,8 +67,8 @@ namespace EditorFramework.Widgets
             }
         }
 
-        public PowerEditWindow(EditorServer server, EditorCursor usingCursor, Rect position, string editType) : 
-                               base(new EditorBuffer(server, server.CommandProvider.Tokenizer, null, "", new PersistentCTextBuffer()), position)
+        public PowerEditWindow(IApplication app, ILayoutManager layout, EditorServer server, EditorCursor usingCursor, string editType) : 
+                               base(app, layout, new EditorBuffer(server, server.CommandProvider.Tokenizer, null, "", new PersistentCTextBuffer()))
         {
             (long begin, long end, string text) = server.CommandProvider.ExampleScript(editType);
             buffer.SetText(text);
@@ -92,26 +95,20 @@ namespace EditorFramework.Widgets
             usingCursor.Commit();
         }
 
-        public override bool HandleEvent(Event e)
+        public override bool HandleEvent(EventBase e)
         {
-            switch (e.Type)
+            switch (e)
             {
-                case EventType.Quit:
+                case QuitEvent:
                     Environment.Exit(1);
                     return false;
-                case EventType.KeyDown:
-                    if (e.Keyboard.Keysym.Scancode == Scancode.Escape)
-                    {
-                        DeleteSelf();
-                        return false;
-                    }
-                    if (e.Keyboard.Keysym.Scancode == Scancode.Return && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0)
-                    {
-                        Apply();
-                        DeleteSelf();
-                        return false;
-                    }
-                    break;
+                case KeyChordEvent key when key.Is(KeyCode.Escape):
+                    DeleteSelf();
+                    return false;
+                case KeyChordEvent key when key.Is(KeyCode.Enter, KeyMode.Ctrl):
+                    Apply();
+                    DeleteSelf();
+                    return false;
             }
             return base.HandleEvent(e);
         }

@@ -1,13 +1,14 @@
 ﻿using RegexTokenizer;
-using SDL_Sharp;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace SDL2Interface
+namespace EditorFramework
 {
+    public record Color(byte r, byte g, byte b, byte a);
+
     public class ColorTheme
     {
         public static Color GetColor(TokenType type)

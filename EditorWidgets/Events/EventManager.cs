@@ -2,17 +2,27 @@
 
 namespace EditorFramework.Events
 {
-    public class EventManager(Func<BaseEvent, bool> handler, int maxChordLength = 32, double chordTimeout = 1000, double mouseClickTimeout = 200)
+    public class EventManager
     {
-        internal readonly Func<BaseEvent, bool> Handler = handler;
-        internal int MaxChordLength = maxChordLength;
-        internal double ChordTimeout = chordTimeout;
-        internal double MouseClickTreshold = mouseClickTimeout;
+        internal readonly Func<EventBase, bool> Handler;
+        private readonly int maxChordLength;
+        internal int MaxChordLength;
+        internal double ChordTimeout;
+        internal double MouseClickTreshold;
         internal List<KeyEvent> Chord = [];
         internal List<MouseClickEvent> ButtonSequence = [];
-        internal ConcurrentQueue<BaseEvent> Queue = [];
+        internal ConcurrentQueue<EventBase> Queue = [];
 
-        public void AddEvent(BaseEvent item)
+        public EventManager(Func<EventBase, bool> handler, int maxChordLength = 32, double chordTimeout = 1000, double mouseClickTimeout = 200)
+        {
+            this.maxChordLength = maxChordLength;
+            Handler = handler;
+            MaxChordLength = maxChordLength;
+            ChordTimeout = chordTimeout;
+            MouseClickTreshold = mouseClickTimeout;
+        }
+
+        public void AddEvent(EventBase item)
         {
             Queue.Enqueue(item);
         }

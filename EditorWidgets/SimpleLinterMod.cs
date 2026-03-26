@@ -7,16 +7,16 @@ using System.Diagnostics;
 using System.Text;
 using System.Text.RegularExpressions;
 
-namespace SDL2Interface
+namespace EditorFramework
 {
-    internal class SimpleLinterMod
+    public class SimpleLinterMod
     {
-        internal static void Init(EditorServer server)
+        public static void Init(EditorServer server)
         {
             server.ActionOnFileSave += OnFileSave;
         }
 
-        internal static void OnFileSave(EditorFile file)
+        public static void OnFileSave(EditorFile file)
         {
             Task.Run(async () =>
             {

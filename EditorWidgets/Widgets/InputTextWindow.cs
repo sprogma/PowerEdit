@@ -1,9 +1,11 @@
 ﻿using EditorCore.Buffer;
 using EditorCore.Cursor;
 using EditorCore.Selection;
+using EditorFramework.ApplicationApi;
+using EditorFramework.Events;
+using EditorFramework.Layout;
 using Microsoft.ApplicationInsights.Metrics.Extensibility;
-using SDL_Sharp;
-using SDL2Interface;
+using Microsoft.CodeAnalysis.Operations;
 using System;
 using System.Collections.Generic;
 using System.Configuration;
@@ -19,820 +21,493 @@ namespace EditorFramework.Widgets
     public class InputTextWindow : SimpleTextWindow
     {
         public EditorCursor? cursor;
-        bool relativeNumbers = true;
-        long enteredLineNumber = 0;
-        bool jumpInput = false;
+        public bool relativeNumbers = true;
+        public long enteredLineNumber = 0;
+        public bool jumpInput = false;
 
-        public InputTextWindow(EditorBuffer buffer, Rect position) : base(buffer, position)
+        public InputTextWindow(IApplication app, ILayoutManager layout, EditorBuffer buffer) : base(app, layout, buffer)
         {
             this.cursor = buffer.Cursor;
-        }
-
-        public override void PreDraw()
-        {
-            base.PreDraw();
-            if (cursor == null || !textRenderer.fontSizeLoaded)
-            {
-                return;
-            }
-            /* align offset to see cursor */
-            if (cursor.Selections.Count > 0)
-            {
-                long cursorLine = cursor.Selections[0].EndLine;
-                if (cursorLine < viewOffset + 3)
-                {
-                    viewOffset = cursorLine - 3;
-                }
-                if (cursorLine > viewOffset + H / textRenderer.FontLineStep - 4)
-                {
-                    viewOffset = cursorLine - H / textRenderer.FontLineStep + 4;
-                }
-            }
-        }
-
-        public override void DrawElements()
-        {
-            if (!textRenderer.Ready) return;
-
-            SDL.SetRenderDrawColor(renderer, 0, 0, 0, 0);
-            SDL.RenderFillRect(renderer, ref Position);
-
-            int leftBarSize = 0;
-
-            if (showNumbers)
-            {
-                if (relativeNumbers && cursor?.Selections.Count == 1)
-                {
-                    long cursorLine = cursor.Selections[0].EndLine;
-                    int maxPower = 4;
-                    long dummyValue = 0;
-                    /* draw numbers */
-                    for (int t = 0; t < H / textRenderer.FontLineStep; ++t)
-                    {
-                        int i = t + (int)viewOffset;
-                        (long index, string? s, _) = buffer.GetLine(i);
-                        if (s != null)
-                        {
-                            long num = i;
-                            if (num < cursorLine)
-                            {
-                                num = 100 - (cursorLine - num);
-                            }
-                            else
-                            {
-                                num = num - cursorLine;
-                            }
-                            if (num == 0)
-                            {
-                                Rect rect = new(Position.X + 5, Position.Y + t * textRenderer.FontLineStep, Position.Width - 10, textRenderer.FontLineStep);
-                                SDL.SetRenderDrawColor(renderer, 0, 20, 20, 255);
-                                SDL.RenderFillRect(renderer, ref rect);
-                            }
-                            else
-                            {
-                                textRenderer.DrawTextLine(Position.X + 5, Position.Y + t * textRenderer.FontLineStep, num.ToString().PadLeft(maxPower), 0, [], ref dummyValue);
-                            }
-                        }
-                    }
-                    leftBarSize = (int)((maxPower + 0.5) * textRenderer.FontStep);
-                }
-                else
-                {
-                    SimpleTextWindowDrawSimpleNumbers(ref leftBarSize);
-                }
-            }
-
-            /* find current error */
-            string? message = null;
-            long errorPosition = 0;
-            if (cursor?.Selections.Count == 1) 
-            {
-                var selection = cursor?.Selections[0]!;
-                (long line, _) = buffer.GetPositionOffsets(selection.End);
-                (long begin, long length) = buffer.GetLineOffsets(line);
-                long end = begin + length;
-                lock (buffer.ErrorMarks)
-                {
-                    long mindiff = long.MaxValue;
-                    for (int i = 0; i < buffer.ErrorMarks.Count; ++i)
-                    {
-                        if (begin <= buffer.ErrorMarks[i].position && buffer.ErrorMarks[i].position < end)
-                        {
-                            long diff = Math.Abs(buffer.ErrorMarks[i].position - selection.End);
-                            if (diff < mindiff)
-                            {
-                                mindiff = diff;
-                                message = buffer.ErrorMarks[i].message;
-                                errorPosition = buffer.ErrorMarks[i].position;
-                            }
-                        }
-                    }
-                }
-            }
-
-            SimpleTextWindowDrawText(leftBarSize);
-
-            /* underline error */
-            if (message != null)
-            {
-                int selectionWidth = (int)(4 * textRenderer.currentScale);
-                SDL.SetRenderDrawColor(renderer, 255, 166, 0, 255);
-                (long line, long offset) = buffer.GetPositionOffsets(errorPosition);
-                int x = leftBarSize + Position.X + 5 + (int)offset * textRenderer.FontStep - textRenderer.FontStep / 2;
-                int y = Position.Y + (int)(line - viewOffset) * textRenderer.FontLineStep + textRenderer.FontLineStep - selectionWidth;
-                Rect r = new(x, y, 2 * textRenderer.FontStep, selectionWidth);
-                SDL.RenderFillRect(renderer, ref r);
-            }
-
-            /* draw cursor */
-            if (cursor != null)
-            {
-                SDL.SetRenderDrawColor(renderer, 255, 255, 255, 255);
-                int selectionWidth = (int)(5 * textRenderer.currentScale);
-                long minLine = viewOffset;
-                long maxLine = minLine + (H / textRenderer.FontLineStep) + 1;
-                long minPos = buffer.GetLineOffsets(minLine).begin;
-                long maxPos = buffer.GetLineOffsets(maxLine).begin;
-                maxPos = (maxPos == 0 ? buffer.Text.Length + 1 : maxPos + (W / textRenderer.FontStep) + 1);
-
-                foreach (var selection in cursor.Selections)
-                {
-                    /* draw vericall line */
-                    if (minPos <= selection.End && selection.End < maxPos)
-                    {
-                        (long line, long offset) = buffer.GetPositionOffsets(selection.End);
-                        Rect r = new(leftBarSize + Position.X + 5 + (int)offset * textRenderer.FontStep, Position.Y + (int)(line - viewOffset) * textRenderer.FontLineStep, 5, textRenderer.FontLineStep);
-                        SDL.RenderFillRect(renderer, ref r);
-                    }
-
-                    (long line, long offset) begin, end;
-                    if (selection.Min < minPos)
-                    {
-                        begin = (minLine, 0);
-                    }
-                    else if (selection.Min >= maxPos)
-                    {
-                        begin = (maxLine+1, 0);
-                    }
-                    else
-                    {
-                        begin = buffer.GetPositionOffsets(selection.Min);
-                    }
-                    if (selection.Max < minPos)
-                    {
-                        end = (minLine, 0);
-                    }
-                    else if (selection.Max >= maxPos)
-                    {
-                        end = (maxLine + 1, 0);
-                    }
-                    else
-                    {
-                        end = buffer.GetPositionOffsets(selection.Max);
-                    }
-
-                    long beginLine = Math.Max(begin.line, minLine);
-                    long endLine = Math.Min(end.line, maxLine);
-                    for (long line = beginLine; line <= endLine; line++)
-                    {
-                        long startOffset = (line == begin.line) ? begin.offset : 0;
-                        long endOffset = (line == end.line) ? end.offset : buffer.Text.GetLineOffsets(line).length;
-
-                        int width = (int)(endOffset - startOffset) * textRenderer.FontStep;
-                        if (width <= 0) continue;
-                        Rect r = new(
-                            leftBarSize + Position.X + 5 + (int)startOffset * textRenderer.FontStep,
-                            Position.Y + (int)(line - viewOffset) * textRenderer.FontLineStep + textRenderer.FontLineStep - selectionWidth,
-                            width,
-                            selectionWidth
-                        );
-                        SDL.RenderFillRect(renderer, ref r);
-                    }
-                }
-            }
-
-            /* draw current error */
-            if (message != null)
-            {
-                long dummyValue = 0;
-                textRenderer.Scale(0.8);
-                textRenderer.DrawTextLine(Position.X + 200, Position.Y + H - 5 - textRenderer.FontLineStep, message, 0, [], ref dummyValue);
-                textRenderer.Scale(1.25);
-            }
         }
 
 
         [DllImport("user32.dll", EntryPoint = "keybd_event")]
         static extern void WinapiKeybdEvent(byte bVk, byte bScan, uint dwFlags, UIntPtr dwExtraInfo);
 
-        public override bool HandleEvent(Event e)
+        public override bool HandleEvent(EventBase e)
         {
-            switch (e.Type)
+            switch (e)
             {
-                case EventType.Quit:
+                case QuitEvent:
                     Environment.Exit(1);
                     return false;
-                case EventType.TextInput:
+                case TextInputEvent input:
                     if (!jumpInput)
                     {
-                        byte[] s = GetTextInputBytes(e.Text);
-                        Console.WriteLine($"Input text: {s}");
+                        Console.WriteLine($"Input text: {input.Text}");
                         /* clear all selection */
                         cursor?.Fork();
                         cursor?.Selections.DeleteString();
-                        cursor?.Selections.InsertBytes(s);
+                        cursor?.Selections.InsertBytes(input.Text);
                         cursor?.Commit();
                     }
                     return false;
-                case EventType.KeyUp:
-                    if (e.Keyboard.Keysym.Scancode == Scancode.CapsLock)
+                case KeyChordEvent key when key.LastKey.Key == KeyCode.CapsLock:
+                    if (enteredLineNumber != 0)
                     {
-                        if (enteredLineNumber != 0)
+                        long offset = enteredLineNumber;
+                        if (enteredLineNumber > 50)
                         {
-                            long offset = enteredLineNumber;
-                            if (enteredLineNumber > 50)
-                            {
-                                offset = enteredLineNumber - 100;
-                            }
-                            cursor?.Selections.MoveVertical(offset, false);
-                            const int KEYEVENTF_EXTENDEDKEY = 0x1;
-                            const int KEYEVENTF_KEYUP = 0x2;
-                            WinapiKeybdEvent(0x14, 0x45, KEYEVENTF_EXTENDEDKEY, 0);
-                            WinapiKeybdEvent(0x14, 0x45, KEYEVENTF_EXTENDEDKEY | KEYEVENTF_KEYUP, 0);
+                            offset = enteredLineNumber - 100;
                         }
-                        enteredLineNumber = 0;
-                        jumpInput = false;
+                        cursor?.Selections.MoveVertical(offset, false);
+                        const int KEYEVENTF_EXTENDEDKEY = 0x1;
+                        const int KEYEVENTF_KEYUP = 0x2;
+                        WinapiKeybdEvent(0x14, 0x45, KEYEVENTF_EXTENDEDKEY, 0);
+                        WinapiKeybdEvent(0x14, 0x45, KEYEVENTF_EXTENDEDKEY | KEYEVENTF_KEYUP, 0);
                     }
-                    break;
-                case EventType.KeyDown:
-                    if (e.Keyboard.Keysym.Scancode == Scancode.CapsLock)
+                    enteredLineNumber = 0;
+                    jumpInput = false;
+                    return false;
+                case KeyChordEvent key when key.LastKey.Key == KeyCode.CapsLock:
+                    jumpInput = true;
+                    return false;
+                case KeyChordEvent k when KeyCode.D0 <= k.LastKey.Key && k.LastKey.Key <= KeyCode.D9 && k.LastKey.Mode.HasFlag(KeyMode.CapsLock):
+                    enteredLineNumber *= 10;
+                    enteredLineNumber += (int)k.LastKey.Key & 0xF;
+                    return false;
+                case KeyChordEvent key when key.Is(KeyCode.C, KeyMode.Ctrl):
+                    cursor?.Selections.Copy();
+                    return false;
+                case KeyChordEvent key when key.Is(KeyCode.X, KeyMode.Ctrl):
+                    cursor?.Fork();
+                    cursor?.Selections.Copy();
+                    cursor?.Selections.DeleteString();
+                    cursor?.Commit();
+                    return false;
+                case KeyChordEvent key when key.Is(KeyCode.V, KeyMode.Ctrl):
+                    cursor?.Fork();
+                    cursor?.Selections.DeleteString();
+                    cursor?.Selections.Paste();
+                    cursor?.Commit();
+                    return false;
+                case KeyChordEvent key when key.Is(KeyCode.Minus, KeyMode.Ctrl):
+                    Layout.UpdateScale(this, 0.9);
+                    return false;
+                case KeyChordEvent key when key.Is(KeyCode.Equal, KeyMode.Ctrl):
+                    Layout.UpdateScale(this, 1.1);
+                    return false;
+                case KeyChordEvent key when key.Is(KeyCode.D, KeyMode.Ctrl):
+                    if (cursor != null)
                     {
-                        jumpInput = true;
-                        return false;
-                    }
-                    else if (Scancode.D1 <= e.Keyboard.Keysym.Scancode && e.Keyboard.Keysym.Scancode <= Scancode.D0)
-                    {
-                        if (((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Caps) != 0)
+                        cursor.Fork();
+                        long id = 0;
+                        foreach (var x in cursor.Selections)
                         {
-                            enteredLineNumber *= 10;
-                            enteredLineNumber += (e.Keyboard.Keysym.Scancode == Scancode.D0 ? 0 : e.Keyboard.Keysym.Scancode - Scancode.D1 + 1);
-                        }
-                        return false;
-                    }
-                    if (e.Keyboard.Keysym.Scancode == Scancode.C && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0)
-                    {
-                        cursor?.Selections.Copy();
-                        return false;
-                    }
-                    else if (e.Keyboard.Keysym.Scancode == Scancode.X && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0)
-                    {
-                        cursor?.Fork();
-                        cursor?.Selections.Copy();
-                        cursor?.Selections.DeleteString();
-                        cursor?.Commit();
-                        return false;
-                    }
-                    else if (e.Keyboard.Keysym.Scancode == Scancode.V && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0)
-                    {
-                        cursor?.Fork();
-                        cursor?.Selections.DeleteString();
-                        cursor?.Selections.Paste();
-                        cursor?.Commit();
-                        return false;
-                    }
-                    else if (e.Keyboard.Keysym.Scancode == Scancode.Minus && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0)
-                    {
-                        textRenderer.Scale(0.9);
-                        return false;
-                    }
-                    else if (e.Keyboard.Keysym.Scancode == Scancode.Equals && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0)
-                    {
-                        textRenderer.Scale(1.1);
-                        return false;
-                    }
-                    else if (e.Keyboard.Keysym.Scancode == Scancode.D && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0)
-                    {
-                        if (cursor != null)
-                        {
-                            cursor.Fork();
-                            long id = 0;
-                            foreach (var x in cursor.Selections)
+                            if (x.Text.Length == 0)
                             {
-                                if (x.Text.Length == 0)
+                                var line = x.Cursor.Buffer.GetLine(x.EndLine);
+                                if (line.value != null)
                                 {
-                                    var line = x.Cursor.Buffer.GetLine(x.EndLine);
-                                    if (line.value != null)
-                                    {
-                                        x.InsertString(line.offset, line.value + (line.value.EndsWith('\n') ? "" : "\n"));
-                                        x.UpdateFromLineOffset();
-                                    }
-                                }
-                                else
-                                {
-                                    long a = x.Begin, b = x.End;
-                                    x.InsertString(x.Min, x.Text);
+                                    x.InsertString(line.offset, line.value + (line.value.EndsWith('\n') ? "" : "\n"));
                                     x.UpdateFromLineOffset();
                                 }
-                                cursor.Selections[id] = x;
+                            }
+                            else
+                            {
+                                long a = x.Begin, b = x.End;
+                                x.InsertString(x.Min, x.Text);
+                                x.UpdateFromLineOffset();
+                            }
+                            cursor.Selections[id] = x;
+                            id++;
+                        }
+                        cursor.Commit();
+                        return false;
+                    }
+                    break;
+                case KeyChordEvent key when key.Is(KeyCode.A, KeyMode.Ctrl):
+                    cursor?.Selections = new(cursor, [new EditorSelection(cursor, 0, cursor.Buffer.Text.Length)]);
+                    return false;
+                case KeyChordEvent key when key.Is(KeyCode.W, KeyMode.Ctrl):
+                    cursor?.Selections.SwapBeginEnd();
+                    return false;
+                case KeyChordEvent key when key.Is(KeyCode.Q, KeyMode.Ctrl):
+                    cursor?.Selections.UpdateBeginToEnd();
+                    return false;
+                case KeyChordEvent key when key.Is(KeyCode.Z, KeyMode.Ctrl | KeyMode.Shift):
+                    if (buffer.Text is IUndoTextBuffer undoText)
+                    {
+                        TreeWalkWindow treeWin = new (App, GetLayout<TreeWalkWindow>.Value, buffer, undoText);
+                        OpenPopup(new TreeWalkWithPreviewWindow(App, GetLayout<TreeWalkWithPreviewWindow>.Value, treeWin));
+                    }
+                    return false;
+                case KeyChordEvent key when key.Is(KeyCode.Z, KeyMode.Ctrl):
+                    cursor?.Buffer.Undo();
+                    return false;
+                case KeyChordEvent key when key.Is(KeyCode.Y, KeyMode.Ctrl):
+                    cursor?.Buffer.Redo();
+                    return false;
+                case KeyChordEvent key when key.Is(KeyCode.F, KeyMode.Ctrl):
+                    if (cursor != null)
+                    {
+                        OpenPopup(new PowerFindWindow(App, GetLayout<PowerFindWindow>.Value, cursor.Buffer.Server, cursor));
+                        return false;
+                    }
+                    break;
+                case KeyChordEvent key when key.Is(KeyCode.E, KeyMode.Ctrl | KeyMode.Shift):
+                    if (cursor != null)
+                    {
+                        var win = new PowerEditWindow(App, GetLayout<PowerEditWindow>.Value, cursor.Buffer.Server, cursor, "powerEdit");
+                        OpenPopup(new PowerEditWithPreviewWindow(App, GetLayout<PowerEditWithPreviewWindow>.Value, win));
+                        return false;
+                    }
+                    break;
+                case KeyChordEvent key when key.Is(KeyCode.E, KeyMode.Ctrl):
+                    if (cursor != null)
+                    {
+                        var win = new PowerEditWindow(App, GetLayout<PowerEditWindow>.Value, cursor.Buffer.Server, cursor, "edit");
+                        OpenPopup(new PowerEditWithPreviewWindow(App, GetLayout<PowerEditWithPreviewWindow>.Value, win));
+                        return false;
+                    }
+                    break;
+                case KeyChordEvent key when key.Is(KeyCode.R, KeyMode.Ctrl):
+                    /* v.1 - open powerWindow replace */
+                    if (cursor != null)
+                    {
+                        var win = new PowerEditWindow(App, GetLayout<PowerEditWindow>.Value, cursor.Buffer.Server, cursor, "replace");
+                        OpenPopup(new PowerEditWithPreviewWindow(App, GetLayout<PowerEditWithPreviewWindow>.Value, win));
+                        return false;
+                    }
+                    break;
+                case KeyChordEvent key when key.Is(KeyCode.C, KeyMode.Alt):
+                    if (cursor != null)
+                    {
+                        if (cursor.Selections.Count > 1)
+                        {
+                            cursor.Selections = new(cursor, [cursor.Selections[0]]);
+                        }
+                        return false;
+                    }
+                    break;
+                case KeyChordEvent key when key.Is(KeyCode.N, KeyMode.Alt):
+                    if (cursor != null)
+                    {
+                        var lastSelection = cursor.Selections.MaxBy(x => x.Max);
+                        if (lastSelection != null && lastSelection.TextLength != 0)
+                        {
+                            string strToFind = lastSelection.Text;
+                            long next = cursor.Buffer.Text.IndexOf(strToFind, lastSelection.Max);
+                            if (next != -1)
+                            {
+                                cursor.Selections.Add(new EditorSelection(cursor, next, next + lastSelection.TextLength));
+                            }
+                        }
+                        return false;
+                    }
+                    break;
+                case KeyChordEvent key when key.Is(KeyCode.X, KeyMode.Alt):
+                    if (cursor != null)
+                    {
+                        var lastSelection = cursor.Selections.MaxBy(x => x.Max);
+                        if (lastSelection != null && lastSelection.TextLength != 0)
+                        {
+                            string strToFind = lastSelection.Text;
+                            long next = cursor.Buffer.Text.IndexOf(strToFind, lastSelection.Max);
+                            if (next != -1)
+                            {
+                                lastSelection.SetPosition(next, next + lastSelection.TextLength);
+                            }
+                        }
+                        return false;
+                    }
+                    break;
+                case KeyChordEvent key when key.IsNoShift(KeyCode.Home) || key.IsNoShift(KeyCode.J, KeyMode.Alt):
+                    cursor?.Selections.MoveToLineBegin(key.LastKey.Mode.HasFlag(KeyMode.Shift));
+                    return false;
+                case KeyChordEvent key when key.IsNoShift(KeyCode.End) || key.IsNoShift(KeyCode.Semicolon, KeyMode.Alt):
+                    cursor?.Selections.MoveToLineEnd(key.LastKey.Mode.HasFlag(KeyMode.Shift));
+                    return false;
+                case KeyChordEvent key when key.IsNoShift(KeyCode.PageUp):
+                    {
+                        long? step = Layout.PageStepSize;
+                        if (step != null)
+                        {
+                            cursor?.Selections.MoveVertical(-step.Value, key.LastKey.Mode.HasFlag(KeyMode.Shift));
+                            return false;
+                        }
+                    }
+                    break;
+                case KeyChordEvent key when key.IsNoShift(KeyCode.PageDown):
+                    {
+                        long? step = Layout.PageStepSize;
+                        if (step != null)
+                        {
+                            cursor?.Selections.MoveVertical(step.Value, key.LastKey.Mode.HasFlag(KeyMode.Shift));
+                            return false;
+                        }
+                    }
+                    break;
+                case KeyChordEvent key when key.Is(KeyCode.Down, KeyMode.Alt):
+                    if (cursor != null && cursor.Selections.Count == 1)
+                    {
+                        cursor.Fork();
+                        long id = 0;
+                        foreach (var x in cursor.Selections)
+                        {
+                            long MaxLine = x.MaxLine;
+                            var after = x.Cursor.Buffer.GetLine(MaxLine + 1);
+                            if (after.value == null)
+                            {
                                 id++;
+                                continue;
                             }
-                            cursor.Commit();
-                            return false;
-                        }
-                    }
-                    else if (e.Keyboard.Keysym.Scancode == Scancode.A && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0)
-                    {
-                        cursor?.Selections = new(cursor, [new EditorSelection(cursor, 0, cursor.Buffer.Text.Length)]);
-                        return false;
-                    }
-                    else if (e.Keyboard.Keysym.Scancode == Scancode.W && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0)
-                    {
-                        cursor?.Selections.SwapBeginEnd();
-                        return false;
-                    }
-                    else if (e.Keyboard.Keysym.Scancode == Scancode.Q && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0)
-                    {
-                        cursor?.Selections.UpdateBeginToEnd();
-                        return false;
-                    }
-                    else if (e.Keyboard.Keysym.Scancode == Scancode.Z && 
-                            ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0 && 
-                            ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Shift) != 0)
-                    {
-                        Console.WriteLine("MEGA UN");
-                        if (buffer.Text is IUndoTextBuffer undoText)
-                        {
-                            TreeWalkWindow treeWin = new (buffer, undoText, Position);
-                            OpenPopup(new TreeWalkWithPreviewWindow(Position, treeWin));
-                        }
-                        return false;
-                    }
-                    else if (e.Keyboard.Keysym.Scancode == Scancode.Z && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0)
-                    {
-                        Console.WriteLine("UN");
-                        cursor?.Buffer.Undo();
-                        return false;
-                    }
-                    else if (e.Keyboard.Keysym.Scancode == Scancode.Y && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0)
-                    {
-                        Console.WriteLine("RE");
-                        cursor?.Buffer.Redo();
-                        return false;
-                    }
-                    else if (e.Keyboard.Keysym.Scancode == Scancode.F && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0)
-                    {
-                        /* v.1 - open powerWindow */
-                        if (cursor != null)
-                        {
-                            Program.OpenWindow(new PowerFindWindow(cursor.Buffer.Server, cursor, Position));
-                            return false;
-                        }
-                    }
-                    else if (e.Keyboard.Keysym.Scancode == Scancode.E && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0
-                                                                      && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Shift) != 0)
-                    {
-                        /* v.1 - open powerWindow powerEdit */
-                        if (cursor != null)
-                        {
-                            var win = new PowerEditWindow(cursor.Buffer.Server, cursor, Position, "powerEdit");
-                            OpenPopup(new PowerEditWithPreviewWindow(Position, win));
-                            return false;
-                        }
-                    }
-                    else if (e.Keyboard.Keysym.Scancode == Scancode.E && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0)
-                    {
-                        /* v.1 - open powerWindow edit */
-                        if (cursor != null)
-                        {
-                            var win = new PowerEditWindow(cursor.Buffer.Server, cursor, Position, "edit");
-                            OpenPopup(new PowerEditWithPreviewWindow(Position, win));
-                            return false;
-                        }
-                    }
-                    else if (e.Keyboard.Keysym.Scancode == Scancode.R && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0)
-                    {
-                        /* v.1 - open powerWindow replace */
-                        if (cursor != null)
-                        {
-                            var win = new PowerEditWindow(cursor.Buffer.Server, cursor, Position, "replace");
-                            OpenPopup(new PowerEditWithPreviewWindow(Position, win));
-                            return false;
-                        }
-                    }
-                    else if (e.Keyboard.Keysym.Scancode == Scancode.C && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Alt) != 0)
-                    {
-                        if (cursor != null)
-                        {
-                            if (cursor.Selections.Count > 1)
+                            x.DeleteString(after.offset, after.value.Length);
+                            var before = x.Cursor.Buffer.GetLine(x.MinLine);
+                            if (before.value == null)
                             {
-                                cursor.Selections = new(cursor, [cursor.Selections[0]]);
-                            }
-                            return false;
-                        }
-                    }
-                    else if (e.Keyboard.Keysym.Scancode == Scancode.N && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Alt) != 0)
-                    {
-                        if (cursor != null)
-                        {
-                            var lastSelection = cursor.Selections.MaxBy(x => x.Max);
-                            if (lastSelection != null && lastSelection.TextLength != 0)
-                            {
-                                string strToFind = lastSelection.Text;
-                                long next = cursor.Buffer.Text.IndexOf(strToFind, lastSelection.Max);
-                                if (next != -1)
-                                {
-                                    cursor.Selections.Add(new EditorSelection(cursor, next, next + lastSelection.TextLength));
-                                }
-                            }
-                            return false;
-                        }
-                    }
-                    else if (e.Keyboard.Keysym.Scancode == Scancode.X && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Alt) != 0)
-                    {
-                        if (cursor != null)
-                        {
-                            var lastSelection = cursor.Selections.MaxBy(x => x.Max);
-                            if (lastSelection != null && lastSelection.TextLength != 0)
-                            {
-                                string strToFind = lastSelection.Text;
-                                long next = cursor.Buffer.Text.IndexOf(strToFind, lastSelection.Max);
-                                if (next != -1)
-                                {
-                                    lastSelection.SetPosition(next, next + lastSelection.TextLength);
-                                }
-                            }
-                            return false;
-                        }
-                    }
-                    else if (e.Keyboard.Keysym.Scancode == Scancode.Home ||
-                            (e.Keyboard.Keysym.Scancode == Scancode.J && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Alt) != 0))
-                    {
-                        cursor?.Selections.MoveToLineBegin(((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Shift) != 0);
-                        return false;
-                    }
-                    else if (e.Keyboard.Keysym.Scancode == Scancode.End ||
-                            (e.Keyboard.Keysym.Scancode == Scancode.SemiColon && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Alt) != 0))
-                    {
-                        cursor?.Selections.MoveToLineEnd(((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Shift) != 0);
-                        return false;
-                    }
-                    else if (e.Keyboard.Keysym.Scancode == Scancode.PageUp)
-                    {
-                        if (textRenderer.Ready)
-                        {
-                            long step = H / textRenderer.FontLineStep;
-                            cursor?.Selections.MoveVertical(-step, ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Shift) != 0);
-                            return false;
-                        }
-                    }
-                    else if (e.Keyboard.Keysym.Scancode == Scancode.PageDown)
-                    {
-                        if (textRenderer.Ready)
-                        {
-                            long step = H / textRenderer.FontLineStep;
-                            cursor?.Selections.MoveVertical(step, ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Shift) != 0);
-                            return false;
-                        }
-                    }
-                    else if (e.Keyboard.Keysym.Scancode == Scancode.Down && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Alt) != 0)
-                    {
-                        if (cursor != null && cursor.Selections.Count == 1)
-                        {
-                            cursor.Fork();
-                            long id = 0;
-                            foreach (var x in cursor.Selections)
-                            {
-                                long MaxLine = x.MaxLine;
-                                var after = x.Cursor.Buffer.GetLine(MaxLine + 1);
-                                if (after.value == null)
-                                {
-                                    id++;
-                                    continue;
-                                }
-                                x.DeleteString(after.offset, after.value.Length);
-                                var before = x.Cursor.Buffer.GetLine(x.MinLine);
-                                if (before.value == null)
-                                {
-                                    id++;
-                                    continue;
-                                }
-                                x.InsertString(before.offset, after.value);
-                                cursor.Selections[id] = x;
                                 id++;
+                                continue;
                             }
-                            cursor.Commit();
+                            x.InsertString(before.offset, after.value);
+                            cursor.Selections[id] = x;
+                            id++;
                         }
-                        return false;
+                        cursor.Commit();
                     }
-                    else if (e.Keyboard.Keysym.Scancode == Scancode.Up && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Alt) != 0)
+                    return false;
+                case KeyChordEvent key when key.Is(KeyCode.Up, KeyMode.Alt):
+                    if (cursor != null && cursor.Selections.Count == 1)
                     {
-                        if (cursor != null && cursor.Selections.Count == 1)
+                        cursor.Fork();
+                        long id = 0;
+                        foreach (var x in cursor.Selections)
                         {
-                            cursor.Fork();
-                            long id = 0;
-                            foreach (var x in cursor.Selections)
+                            long MinLine = x.MinLine;
+                            var before = x.Cursor.Buffer.GetLine(MinLine - 1);
+                            if (before.value == null)
                             {
-                                long MinLine = x.MinLine;
-                                var before = x.Cursor.Buffer.GetLine(MinLine - 1);
-                                if (before.value == null)
-                                {
-                                    id++;
-                                    continue;
-                                }
-                                x.DeleteString(before.offset, before.value.Length);
-                                var after = x.Cursor.Buffer.GetLine(x.MaxLine + 1);
-                                if (after.value == null)
-                                {
-                                    id++;
-                                    continue;
-                                }
-                                x.InsertString(after.offset, before.value);
-                                cursor.Selections[id] = x;
                                 id++;
+                                continue;
                             }
-                            cursor.Commit();
+                            x.DeleteString(before.offset, before.value.Length);
+                            var after = x.Cursor.Buffer.GetLine(x.MaxLine + 1);
+                            if (after.value == null)
+                            {
+                                id++;
+                                continue;
+                            }
+                            x.InsertString(after.offset, before.value);
+                            cursor.Selections[id] = x;
+                            id++;
                         }
-                        return false;
+                        cursor.Commit();
                     }
-                    else if (e.Keyboard.Keysym.Scancode == Scancode.Down ||
-                            (e.Keyboard.Keysym.Scancode == Scancode.K && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0))
+                    return false;
+                case KeyChordEvent key when key.IsNoShift(KeyCode.Down) || key.IsNoShift(KeyCode.K, KeyMode.Ctrl):
+                    cursor?.Selections.MoveVertical(1, key.LastKey.Mode.HasFlag(KeyMode.Shift));
+                    return false;
+                case KeyChordEvent key when key.IsNoShift(KeyCode.Up) || key.IsNoShift(KeyCode.L, KeyMode.Ctrl):
+                    cursor?.Selections.MoveVertical(-1, key.LastKey.Mode.HasFlag(KeyMode.Shift));
+                    return false;
+                case KeyChordEvent key when key.IsNoShift(KeyCode.Right, KeyMode.Ctrl) || key.IsNoShift(KeyCode.L, KeyMode.Alt):
+                    cursor?.Selections.MoveHorisontalWord(1, key.LastKey.Mode.HasFlag(KeyMode.Shift));
+                    return false;
+                case KeyChordEvent key when key.IsNoShift(KeyCode.Left, KeyMode.Ctrl) || key.IsNoShift(KeyCode.K, KeyMode.Alt):
+                    cursor?.Selections.MoveHorisontalWord(-1, key.LastKey.Mode.HasFlag(KeyMode.Shift));
+                    return false;
+                case KeyChordEvent key when key.IsNoShift(KeyCode.Down, KeyMode.Ctrl):
+                    cursor?.Selections.MoveVertical(10, key.LastKey.Mode.HasFlag(KeyMode.Shift));
+                    return false;
+                case KeyChordEvent key when key.IsNoShift(KeyCode.Up, KeyMode.Ctrl):
+                    cursor?.Selections.MoveVertical(-10, key.LastKey.Mode.HasFlag(KeyMode.Shift));
+                    return false;
+                case KeyChordEvent key when key.IsNoShift(KeyCode.Right) || key.IsNoShift(KeyCode.Semicolon, KeyMode.Ctrl):
+                    cursor?.Selections.MoveHorisontal(1, key.LastKey.Mode.HasFlag(KeyMode.Shift));
+                    return false;
+                case KeyChordEvent key when key.IsNoShift(KeyCode.Left) || key.IsNoShift(KeyCode.J, KeyMode.Ctrl):
+                    cursor?.Selections.MoveHorisontal(-1, key.LastKey.Mode.HasFlag(KeyMode.Shift));
+                    return false;
+                case KeyChordEvent key when key.Is(KeyCode.Tab, KeyMode.Shift):
+                    if (cursor != null)
                     {
-                        cursor?.Selections.MoveVertical(1, ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Shift) != 0);
-                        return false;
-                    }
-                    else if (e.Keyboard.Keysym.Scancode == Scancode.Up ||
-                            (e.Keyboard.Keysym.Scancode == Scancode.L && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0))
-                    {
-                        cursor?.Selections.MoveVertical(-1, ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Shift) != 0);
-                        return false;
-                    }
-                    else if ((e.Keyboard.Keysym.Scancode == Scancode.Right && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0) ||
-                             (e.Keyboard.Keysym.Scancode == Scancode.L && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Alt) != 0))
-                    {
-                        cursor?.Selections.MoveHorisontalWord(1, ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Shift) != 0);
-                        return false;
-                    }
-                    else if ((e.Keyboard.Keysym.Scancode == Scancode.Left && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0) ||
-                             (e.Keyboard.Keysym.Scancode == Scancode.K && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Alt) != 0))
-                    {
-                        cursor?.Selections.MoveHorisontalWord(-1, ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Shift) != 0);
-                        return false;
-                    }
-                    else if (e.Keyboard.Keysym.Scancode == Scancode.Down && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0)
-                    {
-                        cursor?.Selections.MoveVertical(10, ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Shift) != 0);
-                        return false;
-                    }
-                    else if (e.Keyboard.Keysym.Scancode == Scancode.Up && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0)
-                    {
-                        cursor?.Selections.MoveVertical(-10, ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Shift) != 0);
-                        return false;
-                    }
-                    else if (e.Keyboard.Keysym.Scancode == Scancode.Right ||
-                            (e.Keyboard.Keysym.Scancode == Scancode.SemiColon && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0))
-                    {
-                        cursor?.Selections.MoveHorisontal(1, ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Shift) != 0);
-                        return false;
-                    }
-                    else if (e.Keyboard.Keysym.Scancode == Scancode.Left ||
-                            (e.Keyboard.Keysym.Scancode == Scancode.J && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0))
-                    {
-                        cursor?.Selections.MoveHorisontal(-1, ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Shift) != 0);
-                        return false;
-                    }
-                    else if (e.Keyboard.Keysym.Scancode == Scancode.Tab && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Shift) != 0)
-                    {
-                        if (cursor != null)
+                        cursor.Fork();
+                        long id = 0;
+                        foreach (var x in cursor.Selections)
                         {
-                            cursor.Fork();
-                            long id = 0;
-                            foreach (var x in cursor.Selections)
+                            long endLine = x.MaxLine;
+                            for (long line = x.MinLine; line <= endLine; ++line)
+                            {
+                                (long pos, string? str, _) = x.Cursor.Buffer.GetLine(line);
+                                if (str != null)
+                                {
+                                    x.DeleteString(pos, Math.Min(4, str.TakeWhile(char.IsWhiteSpace).Count()));
+                                    x.UpdateFromLineOffset();
+                                }
+                            }
+                            cursor.Selections[id] = x;
+                            id++;
+                        }
+                        cursor.Commit();
+                    }
+                    return false;
+                case KeyChordEvent key when key.Is(KeyCode.Tab):
+                    if (cursor != null)
+                    {
+                        cursor.Fork();
+                        long id = 0;
+                        foreach (var x in cursor.Selections)
+                        {
+                            if (x.TextLength > 0)
                             {
                                 long endLine = x.MaxLine;
                                 for (long line = x.MinLine; line <= endLine; ++line)
                                 {
-                                    (long pos, string? str, _) = x.Cursor.Buffer.GetLine(line);
-                                    if (str != null)
-                                    {
-                                        x.DeleteString(pos, Math.Min(4, str.TakeWhile(char.IsWhiteSpace).Count()));
-                                        x.UpdateFromLineOffset();
-                                    }
-                                }
-                                cursor.Selections[id] = x;
-                                id++;
-                            }
-                            cursor.Commit();
-                        }
-                        return false;
-                    }
-                    else if (e.Keyboard.Keysym.Scancode == Scancode.Tab)
-                    {
-                        if (cursor != null)
-                        {
-                            cursor.Fork();
-                            long id = 0;
-                            foreach (var x in cursor.Selections)
-                            {
-                                if (x.TextLength > 0)
-                                {
-                                    long endLine = x.MaxLine;
-                                    for (long line = x.MinLine; line <= endLine; ++line)
-                                    {
-                                        x.InsertString(x.Cursor.Buffer.GetLine(line).offset, "    ");
-                                        x.UpdateFromLineOffset();
-                                    }
-                                }
-                                else
-                                {
-                                    x.InsertString("    ");
-                                }
-                                cursor.Selections[id] = x;
-                                id++;
-                            }
-                            cursor.Commit();
-                        }
-                        return false;
-                    }
-                    else if ((e.Keyboard.Keysym.Scancode == Scancode.I && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Alt) != 0) ||
-                             (e.Keyboard.Keysym.Scancode == Scancode.I && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0))
-                    {
-                        if (cursor != null)
-                        {
-                            cursor.Fork();
-                            long id = 0;
-                            foreach (var x in cursor.Selections)
-                            {
-                                if (x.TextLength == 0)
-                                {
-                                    x.MoveToLineEnd(false);
-                                    x.MoveVertical(-1, true);
-                                    x.MoveToLineEnd(true);
-                                }
-                                x.DeleteString(x.Min, x.TextLength);
-                                x.UpdateFromLineOffset();
-                                cursor.Selections[id] = x;
-                                id++;
-                            }
-                            cursor.Commit();
-                        }
-                        return false;
-                    }
-                    else if ((e.Keyboard.Keysym.Scancode == Scancode.Backspace && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0) ||
-                             (e.Keyboard.Keysym.Scancode == Scancode.O && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Alt) != 0) ||
-                             (e.Keyboard.Keysym.Scancode == Scancode.O && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0))
-                    {
-                        if (cursor != null)
-                        {
-                            cursor.Fork();
-                            long id = 0;
-                            foreach (var x in cursor.Selections)
-                            {
-                                if (x.TextLength == 0)
-                                {
-                                    x.MoveHorisontalWord(-1, true);
-                                }
-                                x.DeleteString(x.Min, x.TextLength);
-                                x.UpdateFromLineOffset();
-                                cursor.Selections[id] = x;
-                                id++;
-                            }
-                            cursor.Commit();
-                        }
-                        return false;
-                    }
-                    else if (e.Keyboard.Keysym.Scancode == Scancode.Backspace ||
-                            (e.Keyboard.Keysym.Scancode == Scancode.P && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Alt) != 0) ||
-                            (e.Keyboard.Keysym.Scancode == Scancode.P && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0))
-                    {
-                        if (cursor != null)
-                        {
-                            cursor.Fork();
-                            long id = 0;
-                            foreach (var x in cursor.Selections)
-                            {
-                                if (x.TextLength == 0)
-                                {
-                                    if (x.End >= 4 &&
-                                        x.Cursor.Buffer.Text.Substring(x.End - 4, 4).All(x => x == ' '))
-                                    {
-                                        x.DeleteString(x.End - 4, 4);
-                                        x.UpdateFromLineOffset();
-                                    }
-                                    else if (x.End >= 1)
-                                    {
-                                        x.DeleteString(x.End - 1, 1);
-                                        x.UpdateFromLineOffset();
-                                    }
-                                }
-                                else
-                                {
-                                    x.DeleteString(x.Min, x.TextLength);
+                                    x.InsertString(x.Cursor.Buffer.GetLine(line).offset, "    ");
                                     x.UpdateFromLineOffset();
                                 }
-                                cursor.Selections[id] = x;
-                                id++;
                             }
-                            cursor.Commit();
-                        }
-                        return false;
-                    }
-                    else if (e.Keyboard.Keysym.Scancode == Scancode.Delete && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0)
-                    {
-                        if (cursor != null)
-                        {
-                            cursor.Fork();
-                            long id = 0;
-                            foreach (var x in cursor.Selections)
+                            else
                             {
-                                if (x.TextLength == 0)
+                                x.InsertString("    ");
+                            }
+                            cursor.Selections[id] = x;
+                            id++;
+                        }
+                        cursor.Commit();
+                    }
+                    return false;
+                case KeyChordEvent key when key.Is(KeyCode.I, KeyMode.Alt) || key.Is(KeyCode.I, KeyMode.Ctrl):
+                    if (cursor != null)
+                    {
+                        cursor.Fork();
+                        long id = 0;
+                        foreach (var x in cursor.Selections)
+                        {
+                            if (x.TextLength == 0)
+                            {
+                                x.MoveToLineEnd(false);
+                                x.MoveVertical(-1, true);
+                                x.MoveToLineEnd(true);
+                            }
+                            x.DeleteString(x.Min, x.TextLength);
+                            x.UpdateFromLineOffset();
+                            cursor.Selections[id] = x;
+                            id++;
+                        }
+                        cursor.Commit();
+                    }
+                    return false;
+                case KeyChordEvent key when key.Is(KeyCode.Backspace, KeyMode.Ctrl) || key.Is(KeyCode.O, KeyMode.Alt) || key.Is(KeyCode.O, KeyMode.Ctrl):
+                    if (cursor != null)
+                    {
+                        cursor.Fork();
+                        long id = 0;
+                        foreach (var x in cursor.Selections)
+                        {
+                            if (x.TextLength == 0)
+                            {
+                                x.MoveHorisontalWord(-1, true);
+                            }
+                            x.DeleteString(x.Min, x.TextLength);
+                            x.UpdateFromLineOffset();
+                            cursor.Selections[id] = x;
+                            id++;
+                        }
+                        cursor.Commit();
+                    }
+                    return false;
+                case KeyChordEvent key when key.Is(KeyCode.Backspace) || key.Is(KeyCode.P, KeyMode.Alt) || key.Is(KeyCode.P, KeyMode.Ctrl):
+                    if (cursor != null)
+                    {
+                        cursor.Fork();
+                        long id = 0;
+                        foreach (var x in cursor.Selections)
+                        {
+                            if (x.TextLength == 0)
+                            {
+                                if (x.End >= 4 &&
+                                    x.Cursor.Buffer.Text.Substring(x.End - 4, 4).All(x => x == ' '))
                                 {
-                                    x.MoveHorisontalWord(1, true);
+                                    x.DeleteString(x.End - 4, 4);
+                                    x.UpdateFromLineOffset();
                                 }
+                                else if (x.End >= 1)
+                                {
+                                    x.DeleteString(x.End - 1, 1);
+                                    x.UpdateFromLineOffset();
+                                }
+                            }
+                            else
+                            {
                                 x.DeleteString(x.Min, x.TextLength);
-                                cursor.Selections[id] = x;
-                                id++;
+                                x.UpdateFromLineOffset();
                             }
-                            cursor.Commit();
+                            cursor.Selections[id] = x;
+                            id++;
                         }
-                        return false;
+                        cursor.Commit();
                     }
-                    else if (e.Keyboard.Keysym.Scancode == Scancode.Delete)
+                    return false;
+                case KeyChordEvent key when key.Is(KeyCode.Delete, KeyMode.Ctrl):
+                    if (cursor != null)
                     {
-                        if (cursor != null)
+                        cursor.Fork();
+                        long id = 0;
+                        foreach (var x in cursor.Selections)
                         {
-                            cursor.Fork();
-                            long id = 0;
-                            long textLength = cursor.Buffer.Text.Length;
-                            foreach (var x in cursor.Selections)
+                            if (x.TextLength == 0)
                             {
-                                if (x.TextLength == 0 && x.End < textLength)
-                                {
-                                    x.DeleteString(x.End, 1);
-                                }
-                                else
-                                {
-                                    x.DeleteString(x.Min, x.TextLength);
-                                }
-                                cursor.Selections[id] = x;
-                                id++;
+                                x.MoveHorisontalWord(1, true);
                             }
-                            cursor.Commit();
+                            x.DeleteString(x.Min, x.TextLength);
+                            cursor.Selections[id] = x;
+                            id++;
                         }
-                        return false;
+                        cursor.Commit();
                     }
-                    else if (e.Keyboard.Keysym.Scancode == Scancode.Return)
+                    return false;
+                case KeyChordEvent key when key.Is(KeyCode.Delete):
+                    if (cursor != null)
                     {
-                        cursor?.Fork();
-                        /* clear all selection */
-                        cursor?.Selections.DeleteString();
-                        /* find previous line with text, and use it's indent */
-                        if (cursor?.Selections.Count > 1)
+                        cursor.Fork();
+                        long id = 0;
+                        long textLength = cursor.Buffer.Text.Length;
+                        foreach (var x in cursor.Selections)
                         {
-                            cursor?.Selections.InsertString("\n");
-                        }
-                        else
-                        {
-                            if (cursor != null)
+                            if (x.TextLength == 0 && x.End < textLength)
                             {
-                                long id = 0;
-                                foreach (var x in cursor.Selections)
-                                {
-                                    long line = x.EndLine;
-                                    string? content = null;
-                                    while (line >= 0 && string.IsNullOrWhiteSpace(content = x.Cursor.Buffer.GetLine(line).value))
-                                    {
-                                        line--;
-                                    }
-                                    line++;
-                                    if (content != null)
-                                    {
-                                        int indent = content.TakeWhile(char.IsWhiteSpace).Count();
-                                        x.InsertString("\n" + new string(' ', indent));
-                                    }
-                                    cursor.Selections[id] = x;
-                                    id++;
-                                }
+                                x.DeleteString(x.End, 1);
                             }
+                            else
+                            {
+                                x.DeleteString(x.Min, x.TextLength);
+                            }
+                            cursor.Selections[id] = x;
+                            id++;
                         }
-                        cursor?.Commit();
-                        return false;
+                        cursor.Commit();
                     }
-                    else if ((e.Keyboard.Keysym.Scancode == Scancode.N && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Alt) != 0) ||
-                             (e.Keyboard.Keysym.Scancode == Scancode.N && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0))
+                    return false;
+                case KeyChordEvent key when key.Is(new KeyBindingItem(KeyCode.Enter, ModeMask:KeyMode.None)):
+                    cursor?.Fork();
+                    /* clear all selection */
+                    cursor?.Selections.DeleteString();
+                    /* find previous line with text, and use it's indent */
+                    if (cursor?.Selections.Count > 1)
                     {
-                        cursor?.Fork();
-                        /* clear all selection */
-                        cursor?.Selections.DeleteString();
-                        /* find previous line with text, and use it's indent */
+                        cursor?.Selections.InsertString("\n");
+                    }
+                    else
+                    {
                         if (cursor != null)
                         {
                             long id = 0;
                             foreach (var x in cursor.Selections)
                             {
-                                x.MoveToLineEnd();
                                 long line = x.EndLine;
                                 string? content = null;
-                                while (line >= 0 && string.IsNullOrWhiteSpace(content = x.Cursor.Buffer.GetLine(line).Item2))
+                                while (line >= 0 && string.IsNullOrWhiteSpace(content = x.Cursor.Buffer.GetLine(line).value))
                                 {
                                     line--;
                                 }
@@ -846,15 +521,41 @@ namespace EditorFramework.Widgets
                                 id++;
                             }
                         }
-                        cursor?.Commit();
-                        return false;
                     }
-                    else if ((e.Keyboard.Keysym.Scancode == Scancode.Q && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0))
+                    cursor?.Commit();
+                    return false;
+                case KeyChordEvent key when key.Is(KeyCode.N, KeyMode.Alt) || key.Is(KeyCode.N, KeyMode.Ctrl):
+                    cursor?.Fork();
+                    /* clear all selection */
+                    cursor?.Selections.DeleteString();
+                    /* find previous line with text, and use it's indent */
+                    if (cursor != null)
                     {
-                        DeleteSelf();
-                        return false;
+                        long id = 0;
+                        foreach (var x in cursor.Selections)
+                        {
+                            x.MoveToLineEnd();
+                            long line = x.EndLine;
+                            string? content = null;
+                            while (line >= 0 && string.IsNullOrWhiteSpace(content = x.Cursor.Buffer.GetLine(line).Item2))
+                            {
+                                line--;
+                            }
+                            line++;
+                            if (content != null)
+                            {
+                                int indent = content.TakeWhile(char.IsWhiteSpace).Count();
+                                x.InsertString("\n" + new string(' ', indent));
+                            }
+                            cursor.Selections[id] = x;
+                            id++;
+                        }
                     }
-                    break;
+                    cursor?.Commit();
+                    return false;
+                case KeyChordEvent key when key.Is(KeyCode.Q, KeyMode.Ctrl):
+                    DeleteSelf();
+                    return false;
             }
             return base.HandleEvent(e);
         }

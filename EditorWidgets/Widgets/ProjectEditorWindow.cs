@@ -3,8 +3,10 @@ using EditorCore.Buffer;
 using EditorCore.File;
 using EditorCore.Selection;
 using EditorCore.Server;
+using EditorFramework.ApplicationApi;
+using EditorFramework.Events;
+using EditorFramework.Layout;
 using RegexTokenizer;
-using SDL_Sharp;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -13,32 +15,31 @@ using TextBuffer;
 
 namespace EditorFramework.Widgets
 {
-    internal class ProjectEditorWindow : BaseWindow
+    public class ProjectEditorWindow : BaseWindow
     {
         // todo: make when will be async
         // public readonly ConcurrentDictionary<string, Task<EditorFile>> OpeningFiles = new();
         public Lock FilesLock = new();
         public List<EditorFile> Files;
         public EditorServer Server;
-        protected BaseWindow Child;
+        public BaseWindow Child;
         protected Action<ProjectEditorWindow, EditorFile> OpenFileCallback;
         protected Action<ProjectEditorWindow, EditorFile> RaiseFileCallback;
 
-        public ProjectEditorWindow(Action<ProjectEditorWindow, EditorFile> openFileCallback,
+        public ProjectEditorWindow(IApplication app, ILayoutManager layout, 
+                                   Action<ProjectEditorWindow, EditorFile> openFileCallback,
                                    Action<ProjectEditorWindow, EditorFile> raiseFileCallback,
                                    BaseWindow child,
-                                   ICommandProvider provider,
-                                   Rect position) : base(position)
+                                   ICommandProvider provider) : base(app, layout)
         {
             Files = [];
             Server = new(provider);
             Child = child;
-            Child.Resize(position);
             OpenFileCallback = openFileCallback;
             RaiseFileCallback = raiseFileCallback;
         }
 
-        internal EditorFile CreateFile(string? name = null, string? externsion = null)
+        public EditorFile CreateFile(string? name = null, string? externsion = null)
         {
             var file = Server.CreateFile(name, externsion);
             using (FilesLock.EnterScope())
@@ -67,54 +68,41 @@ namespace EditorFramework.Widgets
             return file;
         }
 
-        public override void DrawElements()
+        public override bool HandleEvent(EventBase e)
         {
-            Child.Draw();
-        }
-
-        public override bool HandleEvent(Event e)
-        {
-            switch (e.Type)
+            switch (e)
             {
-                case EventType.Quit:
+                case QuitEvent:
                     Environment.Exit(1);
                     return false;
-                case EventType.KeyDown:
+                case KeyChordEvent key when key.Is(KeyCode.T, KeyMode.Ctrl):
+                    CreateFile(null, null);
+                    return false;
+                case KeyChordEvent key when key.Is(KeyCode.O, KeyMode.Ctrl):
+                    PromptTextWindow promptWindow = new(App, GetLayout<PromptTextWindow>.Value, new EditorBuffer(Server, BaseTokenizer.CreateBaseTokenizer(), null, null, new PersistentCTextBuffer()));
+                    promptWindow.cursor?.Buffer.Text.SetText("enter path to file to open");
+                    promptWindow.cursor?.Selections = new(promptWindow.cursor, [new EditorSelection(promptWindow.cursor, 0, promptWindow.buffer.Text.Length)]);
+                    OpenPopup(promptWindow);
+                    Popup?.OnQuit += (x) =>
                     {
-                        if (e.Keyboard.Keysym.Scancode == Scancode.T && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0)
+                        if (x is PromptTextWindow itw)
                         {
-                            CreateFile(null, null);
-                            return false;
-                        }
-                        if (e.Keyboard.Keysym.Scancode == Scancode.O && ((int)e.Keyboard.Keysym.Mod & (int)KeyModifier.Ctrl) != 0)
-                        {
-                            PromptTextWindow promptWindow = new(new EditorBuffer(Server, BaseTokenizer.CreateBaseTokenizer(), null, null, new PersistentCTextBuffer()), Position);
-                            promptWindow.cursor?.Buffer.Text.SetText("enter path to file to open");
-                            promptWindow.cursor?.Selections = new(promptWindow.cursor, [new EditorSelection(promptWindow.cursor, 0, promptWindow.buffer.Text.Length)]);
-                            OpenPopup(promptWindow);
-                            Popup?.OnQuit += (x) =>
+                            string filename = itw.buffer.Text.Substring(0);
+                            if (!File.Exists(filename))
                             {
-                                if (x is PromptTextWindow itw)
-                                {
-                                    string filename = itw.buffer.Text.Substring(0);
-                                    if (!File.Exists(filename))
-                                    {
-                                        ReleasePopup();
-                                        OpenPopup(new AlertWindow($"Error - File {filename} doesn't exists or is a directory", Position, ("Ok", () => { })));
-                                        return;
-                                    }
-                                    Console.WriteLine($"opening file {filename}");
-                                    OpenFile(filename);
-                                }
-                                else
-                                {
-                                    throw new Exception($"Error: window isn't InputTextWindow (have {x.GetType()})");
-                                }
-                            };
-                            return false;
+                                ReleasePopup();
+                                OpenPopup(new AlertWindow(App, GetLayout<AlertWindow>.Value, $"Error - File {filename} doesn't exists or is a directory", ("Ok", () => { })));
+                                return;
+                            }
+                            Console.WriteLine($"opening file {filename}");
+                            OpenFile(filename);
                         }
-                    }
-                    break;
+                        else
+                        {
+                            throw new Exception($"Error: window isn't InputTextWindow (have {x.GetType()})");
+                        }
+                    };
+                    return false;
             }
             bool res = Child.Event(e);
             if (Child.IsDeleted)

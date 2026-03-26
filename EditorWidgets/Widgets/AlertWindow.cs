@@ -16,19 +16,18 @@ namespace EditorFramework.Widgets
         public (string Text, Action Callback)[] Buttons;
         public int Selected = 0;
 
-        public AlertWindow(IApplication app, string text, Rect position, params (string text, Action callback)[] buttons) : base(app, position)
+        public AlertWindow(IApplication app, ILayoutManager layout, string text, params (string text, Action callback)[] buttons) : base(app, layout)
         {
             Debug.Assert(buttons.Length > 0);
             this.Text = text;
-            this.Position = position;
             this.Buttons = buttons;
         }
 
-        public override bool HandleEvent(BaseEvent e)
+        public override bool HandleEvent(EventBase e)
         {
             switch (e)
             {
-                case EventQuit:
+                case QuitEvent:
                     Environment.Exit(1);
                     return false;
 

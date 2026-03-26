@@ -20,22 +20,22 @@ namespace EditorFramework.Widgets
     {
         public EditorFile file;
 
-        public FileEditorWindow(IApplication App, EditorFile file, Rect position) : base(App, file.Buffer, position)
+        public FileEditorWindow(IApplication App, ILayoutManager layout, EditorFile file) : base(App, layout, file.Buffer)
         {
             this.file = file;
         }
 
-        public override bool HandleEvent(BaseEvent e)
+        public override bool HandleEvent(EventBase e)
         {
             switch (e)
             {
-                case EventQuit:
+                case QuitEvent:
                     Environment.Exit(1);
                     break;
                 case KeyChordEvent chord when chord.Is(KeyCode.S, KeyMode.Ctrl):
                     if (file.filename == null)
                     {
-                        PromptTextWindow promptWindow = new(new EditorBuffer(file.Server, BaseTokenizer.CreateBaseTokenizer(), null, null, new PersistentCTextBuffer()), Position);
+                        PromptTextWindow promptWindow = new(App, GetLayout<PromptTextWindow>.Value, new EditorBuffer(file.Server, BaseTokenizer.CreateBaseTokenizer(), null, null, new PersistentCTextBuffer()));
                         promptWindow.cursor?.Buffer.Text.SetText("enter path to file to save into");
                         promptWindow.cursor?.Selections = new(promptWindow.cursor, [new EditorSelection(promptWindow.cursor, 0, promptWindow.buffer.Text.Length)]);
                         OpenPopup(promptWindow);
@@ -46,7 +46,7 @@ namespace EditorFramework.Widgets
                                 string newFilename = itw.buffer.Text.Substring(0);
                                 if (string.IsNullOrWhiteSpace(newFilename)) {
                                     ReleasePopup();
-                                    OpenPopup(new AlertWindow(App, $"Error - Empty filename", Position, ("Ok", () => { }))); 
+                                    OpenPopup(new AlertWindow(App, GetLayout<AlertWindow>.Value, $"Error - Empty filename", ("Ok", () => { }))); 
                                     return;
                                 }
                                    
@@ -56,20 +56,20 @@ namespace EditorFramework.Widgets
                                     if (Directory.Exists(newFilename))
                                     {
                                         ReleasePopup();
-                                        OpenPopup(new AlertWindow(App, $"Error - this is name of existing directory", Position, ("Ok", () => { })));
+                                        OpenPopup(new AlertWindow(App, GetLayout<AlertWindow>.Value, $"Error - this is name of existing directory", ("Ok", () => { })));
                                         return;
                                     }
                                     string? directory = Path.GetDirectoryName(newFilename);
                                     if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
                                     {
                                         ReleasePopup();
-                                        OpenPopup(new AlertWindow(App, $"Error - parent directory of file doesn't exists. Create it?", Position, 
+                                        OpenPopup(new AlertWindow(App, GetLayout<AlertWindow>.Value, $"Error - parent directory of file doesn't exists. Create it?", 
                                                 ("Yes, create", () => {
                                                     string? dirname = Path.GetDirectoryName(newFilename);
                                                     if (string.IsNullOrEmpty(dirname))
                                                     {
                                                         ReleasePopup();
-                                                        OpenPopup(new AlertWindow(App, $"Error - Empty directory name : {e}", Position, ("Ok", () => { })));
+                                                        OpenPopup(new AlertWindow(App, GetLayout<AlertWindow>.Value, $"Error - Empty directory name : {e}", ("Ok", () => { })));
                                                         return;
                                                     }
                                                     try
@@ -79,7 +79,7 @@ namespace EditorFramework.Widgets
                                                     catch (Exception e)
                                                     {
                                                         ReleasePopup();
-                                                        OpenPopup(new AlertWindow(App, $"Error - failed to create directory {dirname} : {e}", Position, ("Ok", () => { })));
+                                                        OpenPopup(new AlertWindow(App, GetLayout<AlertWindow>.Value, $"Error - failed to create directory {dirname} : {e}", ("Ok", () => { })));
                                                         return;
                                                     }
                                                     Console.WriteLine($"file saved as {newFilename}");
@@ -94,7 +94,7 @@ namespace EditorFramework.Widgets
                                 catch (Exception e) 
                                 {
                                     ReleasePopup();
-                                    OpenPopup(new AlertWindow(App, $"Error - can't save as this file: {e.Message}", Position, ("Ok", ()=>{})));
+                                    OpenPopup(new AlertWindow(App, GetLayout<AlertWindow>.Value, $"Error - can't save as this file: {e.Message}", ("Ok", ()=>{})));
                                     return;
                                 }
                                     
@@ -117,7 +117,7 @@ namespace EditorFramework.Widgets
                 case KeyChordEvent chord when chord.Is(KeyCode.Q, KeyMode.Ctrl):
                     if (file.WasChanged)
                     {
-                        OpenPopup(new AlertWindow(App, "Do you want to quit? all progress will be removed.", Position, 
+                        OpenPopup(new AlertWindow(App, GetLayout<AlertWindow>.Value, "Do you want to quit? all progress will be removed.",
                                                     ("no, continue edit", () => { }), 
                                                     ("save and quit", () => { 
                                                     file.Save();
@@ -128,7 +128,7 @@ namespace EditorFramework.Widgets
                                                     else
                                                     {
                                                             ReleasePopup();
-                                                            OpenPopup(new AlertWindow(App, "Error: File save failed [data was't saved]", Position, ("ok", () => { })));
+                                                            OpenPopup(new AlertWindow(App, GetLayout<AlertWindow>.Value, "Error: File save failed [data was't saved]", ("ok", () => { })));
                                                     }
                                                     }), 
                                                     ("yes, discard changes", () => { DeleteSelf(); })));

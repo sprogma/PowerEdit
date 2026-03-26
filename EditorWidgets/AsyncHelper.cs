@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace SDL2Interface
+namespace EditorFramework
 {
     public static class AsyncHelper
     {

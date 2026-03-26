@@ -1,7 +1,6 @@
 ﻿using EditorFramework.ApplicationApi;
 using EditorFramework.Layout;
 using EditorFramework.Events;
-using SDL2Interface;
 using System;
 using System.Collections.Generic;
 using System.Drawing.Configuration;
@@ -58,7 +57,7 @@ namespace EditorFramework.Widgets
         /// </summary>
         /// <param name="e"> Event to handle </param>
         /// <returns> true if event needs to fall down (to next window in queue) </returns>
-        public bool Event(BaseEvent e)
+        public bool Event(EventBase e)
         {
             if (Popup != null)
             {
@@ -70,7 +69,7 @@ namespace EditorFramework.Widgets
             }
         }
 
-        public virtual bool HandleEvent(BaseEvent e)
+        public virtual bool HandleEvent(EventBase e)
         {
             return true;
         }

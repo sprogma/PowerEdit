@@ -17,6 +17,12 @@ namespace SDL2Interface
         internal int baseFontStep;
         internal int baseFontLineStep;
         internal bool fontSizeLoaded = false;
+
+        internal Color Convert(EditorFramework.Color c)
+        {
+            return new(c.r, c.g, c.b, c.a);
+        }
+
         private static Lazy<Task> fontLoadingTask = new(() => Task.Run(() =>
         {
             asciiMapRectangles = new Rect[128];
@@ -73,13 +79,13 @@ namespace SDL2Interface
         static internal Font fontEmoji;
         static internal Rect[] asciiMapRectangles = [];
         static internal Texture asciiMap;
-        internal ColorTheme colorTheme;
+        internal EditorFramework.ColorTheme colorTheme;
 
         internal int FontStep => (int)(baseFontStep * currentScale);
         internal int FontLineStep => (int)(baseFontLineStep * currentScale);
         internal bool Ready => CheckInitializated();
 
-        public TextBufferRenderer(Renderer input_renderer, ColorTheme color_theme)
+        public TextBufferRenderer(Renderer input_renderer, EditorFramework.ColorTheme color_theme)
         {
             currentScale = 0.6;
             colorTheme = color_theme;
@@ -128,7 +134,7 @@ namespace SDL2Interface
                 Color color = new(255, 255, 255, 255);
                 if (currentToken != null)
                 {
-                    color = ColorTheme.GetColor(currentToken.Value.type); 
+                    color = Convert(EditorFramework.ColorTheme.GetColor(currentToken.Value.type)); 
                 }
 
                 int graphemeWidth = (grapheme.Length > 1 || (grapheme[0] >= 0x1100)) ? 2 : 1;

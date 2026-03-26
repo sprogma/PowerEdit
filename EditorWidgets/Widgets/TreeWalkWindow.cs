@@ -1,6 +1,8 @@
 ﻿using EditorCore.Buffer;
+using EditorFramework.ApplicationApi;
+using EditorFramework.Events;
+using EditorFramework.Layout;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using SDL_Sharp;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -13,9 +15,9 @@ using TextBuffer;
 
 namespace EditorFramework.Widgets
 {
-    internal class TreeWalkWindow: BaseWindow
+    public class TreeWalkWindow: BaseWindow
     {
-        private class Node
+        public class Node
         {
             /* navigation fields */
             public Node? up;
@@ -53,25 +55,25 @@ namespace EditorFramework.Widgets
         }
 
         HashSet<Node> used = [];
-        Dictionary<IntPtr, Node> tree;
-        Node current;
-        List<Node> roots;
-        List<Node> initials;
+        public Dictionary<IntPtr, Node> tree;
+        public Node current;
+        public List<Node> roots;
+        public List<Node> initials;
         public IUndoTextBuffer cBuffer;
         public EditorBuffer buffer;
         public bool showNumbers = true;
 
-        const float NodeHeight = 1.0f;
-        const float NodeWidth = 2.0f;
-        const float LineHeight = 1.3f;
-        const float NodeStepWidth = 3.0f;
-        const float MovingSmooth = 10.0f;
+        public const float NodeHeight = 1.0f;
+        public const float NodeWidth = 2.0f;
+        public const float LineHeight = 1.3f;
+        public const float NodeStepWidth = 3.0f;
+        public const float MovingSmooth = 10.0f;
 
-        float Scale = 30.0f;
-        float DestinationScale = 30.0f;
-        Vector2 Camera = new(){ X=0.0f, Y=0.0f };
+        public float Scale = 30.0f;
+        public float DestinationScale = 30.0f;
+        public Vector2 Camera = new(){ X=0.0f, Y=0.0f };
 
-        public TreeWalkWindow(EditorBuffer editBuffer, IUndoTextBuffer textBuffer, Rect position) : base(position)
+        public TreeWalkWindow(IApplication app, ILayoutManager layout, EditorBuffer editBuffer, IUndoTextBuffer textBuffer) : base(app, layout)
         {
             this.buffer = editBuffer;
             this.cBuffer = textBuffer;
@@ -215,139 +217,67 @@ namespace EditorFramework.Widgets
             }
         }
 
-        public override void DrawElements()
-        {
-            SDL.SetRenderDrawColor(renderer, 0, 0, 0, 0);
-            SDL.RenderFillRect(renderer, ref Position);
-
-            /* draw tree, relative to current version */
-            foreach (Node node in tree.Values.Where(x => !x.hidden))
-            {
-                SDL.SetRenderDrawColor(renderer, 255, 0, 0, 0);
-                Vector2 pos = (node.position - Camera) * Scale + new Vector2(Position.Width * 0.5f, Position.Height * 0.5f);
-                float w, h;
-                w = NodeWidth * Scale;
-                h = NodeHeight * Scale;
-                pos -= 0.5f * new Vector2(w, h);
-                Rect rect = new() { X = Position.X + (int)pos.X, Y = Position.Y + (int)pos.Y, Width = (int)w, Height = (int)h};
-                if (node == current)
-                {
-                    SDL.RenderFillRect(renderer, ref rect);
-                }
-                else
-                {
-                    SDL.RenderDrawRect(renderer, ref rect);
-                }
-                pos += 0.5f * new Vector2(w, h);
-                rect = new() { X = Position.X + (int)pos.X, Y = Position.Y + (int)pos.Y, Width = (int)w, Height = (int)h};
-                foreach (Node next in new[]{ node.up, node.right }.OfType<Node>())
-                {
-                    Vector2 nextPos = (next.position - Camera) * Scale + new Vector2(Position.Width * 0.5f, Position.Height * 0.5f);
-                    int x = Position.X + (int)nextPos.X, y = Position.Y + (int)nextPos.Y;
-                    SDL.RenderDrawLine(renderer, rect.X, rect.Y, x, y);
-                }
-                //SDL.SetRenderDrawColor(renderer, 64, 0, 0, 0);
-                //foreach (Node next in node.childs)
-                //{
-                //    Vector2 nextPos = (next.position - Camera) * Scale + new Vector2(position.Width * 0.5f, position.Height * 0.5f);
-                //    int x = position.X + (int)nextPos.X, y = position.Y + (int)nextPos.Y;
-                //    SDL.RenderDrawLine(renderer, rect.X, rect.Y, x, y);
-                //}
-                //SDL.SetRenderDrawColor(renderer, 0, 64, 0, 0);
-                //foreach (Node next in node.parents)
-                //{
-                //    Vector2 nextPos = (next.position - Camera) * Scale + new Vector2(position.Width * 0.5f, position.Height * 0.5f);
-                //    int x = position.X + (int)nextPos.X, y = position.Y + (int)nextPos.Y;
-                //    SDL.RenderDrawLine(renderer, rect.X, rect.Y, x, y);
-                //}
-            }
-
-            {
-                float t = 1.0f / (MovingSmooth + 1.0f);
-                Camera = Camera * (1.0f - t) + current.position * t;
-                Scale = Scale * (1.0f - t) + DestinationScale * t;
-            }
-        }
-
         public string? CurrentPreview()
         {
             return cBuffer.SubstringEx(current.id, 0, Math.Min(32*1024, cBuffer.LengthEx(current.id)));
         }
 
-        public override bool HandleEvent(Event e)
+        public override bool HandleEvent(EventBase e)
         {
-            switch (e.Type)
+            switch (e)
             {
-                case EventType.Quit:
+                case QuitEvent:
                     Environment.Exit(1);
                     return false;
-                case EventType.TextInput:
+                case TextInputEvent:
                     return false;
-                case EventType.KeyDown:
-                    if (e.Keyboard.Keysym.Scancode == Scancode.A)
+                case KeyChordEvent key when key.Is(KeyCode.A):
+                    if (DestinationScale < 10.0f)
                     {
-                        if (DestinationScale < 10.0f)
+                        DestinationScale = 30.0f;
+                    }
+                    else
+                    {
+                        DestinationScale = 5.0f;
+                    }
+                    return false;
+                case KeyChordEvent key when key.Is(KeyCode.C):
+                    if (tree.Values.Any(x => x.hidden))
+                    {
+                        foreach (Node node in tree.Values)
                         {
-                            DestinationScale = 30.0f;
+                            node.hidden = false;
                         }
-                        else
+                    }
+                    else
+                    {
+                        foreach (Node node in tree.Values)
                         {
-                            DestinationScale = 5.0f;
+                            node.hidden = (node.childs.Count == 1 && node.parents.Count != 0);
                         }
-                        return false;
                     }
-                    else if (e.Keyboard.Keysym.Scancode == Scancode.C)
-                    {
-                        if (tree.Values.Any(x => x.hidden))
-                        {
-                            foreach (Node node in tree.Values)
-                            {
-                                node.hidden = false;
-                            }
-                        }
-                        else
-                        {
-                            foreach (Node node in tree.Values)
-                            {
-                                node.hidden = (node.childs.Count == 1 && node.parents.Count != 0);
-                            }
-                        }
-                        current.hidden = false;
-                        CalculateGraphPositions();
-                        return false;
-                    }
-                    else if (e.Keyboard.Keysym.Scancode == Scancode.Up)
-                    {
-                        current = current.up ?? current;
-                        return false;
-                    }
-                    else if (e.Keyboard.Keysym.Scancode == Scancode.Down)
-                    {
-                        current = current.down ?? current;
-                        return false;
-                    }
-                    else if (e.Keyboard.Keysym.Scancode == Scancode.Right)
-                    {
-                        current = current.right ?? current;
-                        return false;
-                    }
-                    else if (e.Keyboard.Keysym.Scancode == Scancode.Left)
-                    {
-                        current = current.left ?? current;
-                        return false;
-                    }
-                    else if (e.Keyboard.Keysym.Scancode == Scancode.Return)
-                    {
-                        buffer.SetVersion(current.id);
-                        DeleteSelf();
-                        return false;
-                    }
-                    else if (e.Keyboard.Keysym.Scancode == Scancode.Escape)
-                    {
-                        DeleteSelf();
-                        return false;
-                    }
-                    break;
+                    current.hidden = false;
+                    CalculateGraphPositions();
+                    return false;
+                case KeyChordEvent key when key.Is(KeyCode.Up):
+                    current = current.up ?? current;
+                    return false;
+                case KeyChordEvent key when key.Is(KeyCode.Down):
+                    current = current.down ?? current;
+                    return false;
+                case KeyChordEvent key when key.Is(KeyCode.Right):
+                    current = current.right ?? current;
+                    return false;
+                case KeyChordEvent key when key.Is(KeyCode.Left):
+                    current = current.left ?? current;
+                    return false;
+                case KeyChordEvent key when key.Is(KeyCode.Enter):
+                    buffer.SetVersion(current.id);
+                    DeleteSelf();
+                    return false;
+                case KeyChordEvent key when key.Is(KeyCode.Escape):
+                    DeleteSelf();
+                    return false;
             }
             return base.HandleEvent(e);
         }

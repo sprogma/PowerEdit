@@ -41,9 +41,17 @@ namespace EditorFramework.Events
         Delete = 0x2E,
         Help = 0x2F,
 
-        // digits
-        D0 = 0x30, D1 = 0x31, D2 = 0x32, D3 = 0x33, D4 = 0x34,
-        D5 = 0x35, D6 = 0x36, D7 = 0x37, D8 = 0x38, D9 = 0x39,
+        // digits [to get number use & 0xF]
+        D1 = 0x31, 
+        D2 = 0x32, 
+        D3 = 0x33, 
+        D4 = 0x34,
+        D5 = 0x35, 
+        D6 = 0x36, 
+        D7 = 0x37, 
+        D8 = 0x38, 
+        D9 = 0x39, 
+        D0 = 0x40,
 
         // keys
         A = 0x41, B = 0x42, C = 0x43, D = 0x44, E = 0x45, F = 0x46, G = 0x47,
@@ -51,6 +59,18 @@ namespace EditorFramework.Events
         O = 0x4F, P = 0x50, Q = 0x51, R = 0x52, S = 0x53, T = 0x54, U = 0x55,
         V = 0x56, W = 0x57, X = 0x58, Y = 0x59, Z = 0x5A,
 
+        // symbols
+        Minus = 0xD0,
+        Equal = 0xD1,
+        OpenBrackets = 0xD2,
+        CloseBrackets = 0xD3,
+        Semicolon = 0xBA,
+        Backslash = 0xE2,
+        Comma = 0xBC,
+        Tilde = 0xC0,
+        Period = 0xBE,
+        Quotes = 0xDE,
+        
         // system
         LeftWindows = 0x5B,
         RightWindows = 0x5C,
@@ -61,8 +81,8 @@ namespace EditorFramework.Events
         NumPad0 = 0x60, NumPad1 = 0x61, NumPad2 = 0x62, NumPad3 = 0x63,
         NumPad4 = 0x64, NumPad5 = 0x65, NumPad6 = 0x66, NumPad7 = 0x67,
         NumPad8 = 0x68, NumPad9 = 0x69,
-        Multiply = 0x6A, Add = 0x6B, Separator = 0x6C,
-        Subtract = 0x6D, Decimal = 0x6E, Divide = 0x6F,
+        NumPadMultiply = 0x6A, NumPadAdd = 0x6B, NumPadSeparator = 0x6C,
+        NumPadSubtract = 0x6D, NumPadDecimal = 0x6E, NumPadDivide = 0x6F,
 
         // fn
         F1 = 0x70, F2 = 0x71, F3 = 0x72, F4 = 0x73, F5 = 0x74, F6 = 0x75,
@@ -75,19 +95,10 @@ namespace EditorFramework.Events
         ScrollLock = 0x91,
 
         // OEM buttons
-        OemSemicolon = 0xBA,
         OemPlus = 0xBB,
-        OemComma = 0xBC,
-        OemMinus = 0xBD,
-        OemPeriod = 0xBE,
         OemQuestion = 0xBF,
-        OemTilde = 0xC0,
-        OemOpenBrackets = 0xDB,
         OemPipe = 0xDC,
-        OemCloseBrackets = 0xDD,
-        OemQuotes = 0xDE,
         Oem8 = 0xDF,
-        OemBackslash = 0xE2
     }
 
     [Flags]
@@ -107,6 +118,7 @@ namespace EditorFramework.Events
         Shift = 0x400,
         Ctrl = 0x800,
         Alt = 0x1000,
+        Win = 0x2000,
     }
 
     [Flags]
@@ -117,26 +129,27 @@ namespace EditorFramework.Events
         Right = 0x4,
     }
 
-    public abstract record BaseEvent()
+    public abstract record EventBase()
     {
-        public readonly DateTime Timestamp = DateTime.UtcNow;
+        public DateTime Timestamp = DateTime.UtcNow;
     }
-    public record EventQuit : BaseEvent;
+    public record QuitEvent : EventBase;
 
     public record TextInputEvent(
-        string Text
-    ) : BaseEvent;
+        byte[] Text
+    ) : EventBase;
 
     public record KeyEvent(
         KeyCode Key,
         KeyMode Mode
-    ) : BaseEvent
+    ) : EventBase
     {
         public readonly KeyCode Key = Key;
         public readonly KeyMode Mode = Mode 
             | (Mode.HasFlag(KeyMode.LeftShift) || Mode.HasFlag(KeyMode.RightShift) ? KeyMode.Shift : KeyMode.None)
             | (Mode.HasFlag(KeyMode.LeftCtrl) || Mode.HasFlag(KeyMode.RightCtrl) ? KeyMode.Ctrl : KeyMode.None)
-            | (Mode.HasFlag(KeyMode.LeftAlt) || Mode.HasFlag(KeyMode.RightAlt) ? KeyMode.Alt : KeyMode.None);
+            | (Mode.HasFlag(KeyMode.LeftAlt) || Mode.HasFlag(KeyMode.RightAlt) ? KeyMode.Alt : KeyMode.None)
+            | (Mode.HasFlag(KeyMode.LeftWin) || Mode.HasFlag(KeyMode.RightWin) ? KeyMode.Win : KeyMode.None);
     }
 
     public record KeyDownEvent(
@@ -151,13 +164,13 @@ namespace EditorFramework.Events
 
     public record KeyChordEvent(
         KeyEvent[] Keys
-    ) : BaseEvent;
+    ) : EventBase;
 
     public record MouseEvent(
         long X,
         long Y,
         MouseButton State
-    ) : BaseEvent;
+    ) : EventBase;
 
     public record MouseMoveEvent(
         long X,
@@ -198,5 +211,5 @@ namespace EditorFramework.Events
 
     public record MouseSequenceEvent(
         MouseClickEvent[] Clicks
-    ) : BaseEvent;
+    ) : EventBase;
 }

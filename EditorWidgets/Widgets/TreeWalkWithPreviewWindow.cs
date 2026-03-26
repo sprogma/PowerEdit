@@ -1,5 +1,7 @@
 ﻿using EditorCore.Buffer;
-using SDL_Sharp;
+using EditorFramework.ApplicationApi;
+using EditorFramework.Events;
+using EditorFramework.Layout;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -9,33 +11,21 @@ using TextBuffer;
 
 namespace EditorFramework.Widgets
 {
-    internal class TreeWalkWithPreviewWindow : BaseWindow
+    public class TreeWalkWithPreviewWindow : BaseWindow
     {
-        TreeWalkWindow tree;
-        SimpleTextWindow preview;
-        DateTime lastDrawTime;
-        bool moditifed;
+        public TreeWalkWindow tree;
+        public SimpleTextWindow preview;
+        public Lock previewLock = new();
+        public DateTime lastDrawTime;
+        public bool moditifed;
 
-        public TreeWalkWithPreviewWindow(Rect position, TreeWalkWindow tree) : base(position)
+        public TreeWalkWithPreviewWindow(IApplication app, ILayoutManager layout, TreeWalkWindow tree) : base(app, layout)
         {
             moditifed = true;
 
             this.tree = tree;
-            this.preview = new(new EditorBuffer(tree.buffer.Server, "loading ...", tree.buffer.Tokenizer, null, "", new ReadonlyTextBuffer()), new());
-            Resize(position);
+            this.preview = new(app, GetLayout<SimpleTextWindow>.Value, new EditorBuffer(tree.buffer.Server, "loading ...", tree.buffer.Tokenizer, null, "", new ReadonlyTextBuffer()));
             this.lastDrawTime = DateTime.UtcNow;
-        }
-
-        public override void Resize(Rect newPosition)
-        {
-            base.Resize(newPosition);
-            Rect right_position = Position;
-            Rect left_position = Position;
-            left_position.Width = Position.Width / 2;
-            right_position.Width = Position.Width - left_position.Width;
-            right_position.X += left_position.Width;
-            tree.Resize(left_position);
-            preview.Resize(right_position);
         }
 
         public override void PreDraw()
@@ -56,7 +46,7 @@ namespace EditorFramework.Widgets
                     }
                     else
                     {
-                        lock (preview)
+                        lock (previewLock)
                         {
                             preview.buffer.SetText(previewString);
                         }
@@ -66,24 +56,15 @@ namespace EditorFramework.Widgets
             }
         }
 
-        public override void DrawElements()
-        {
-            tree.Draw();
-            lock (preview)
-            {
-                preview.Draw();
-            }
-        }
 
-
-        public override bool HandleEvent(Event e)
+        public override bool HandleEvent(EventBase e)
         {
-            switch (e.Type)
+            switch (e)
             {
-                case EventType.Quit:
+                case QuitEvent:
                     Environment.Exit(1);
                     return false;
-                case EventType.KeyDown:
+                case KeyChordEvent:
                     moditifed = true;
                     break;
             }
