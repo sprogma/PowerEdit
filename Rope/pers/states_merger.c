@@ -150,7 +150,7 @@ static struct state *TryMerge(HashTable *table, struct state *base, struct state
 		}
 	}
 	/* found same states: merge them */
-	printf("states %p and %p are same!\n", base, child);
+	print("states %p and %p are same!\n", base, child);
 	merge_state(base, child);
 	printf("merged into %p\n", (base->merged_to ? child : base));
 	return (base->merged_to ? child : base);

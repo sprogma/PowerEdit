@@ -85,6 +85,8 @@ namespace SDL2Interface
             //fileToOpen = ["C:\\Users\\User\\AppData\\Local\\Temp\\copy_10gb.txt"];
             //fileToOpen = ["C:\\Users\\User\\AppData\\Local\\Temp\\big.txt"]; // too big for now
             Console.WriteLine($"Opening files {fileToOpen.Count} \"{fileToOpen}\"...");
+            SDL.SetHint("SDL_WINDOWS_DPI_AWARENESS", "permonitorv2");
+
             if (SDL.Init(SdlInitFlags.Video | SdlInitFlags.Events) != 0)
             {
                 throw new Exception("SDL initialization failed");
@@ -94,9 +96,21 @@ namespace SDL2Interface
                 throw new Exception("SDL TTF initialization failed");
             }
             SDL.SetHint("SDL_RENDER_DRIVER", "direct3d12");
-            if (SDL.CreateWindowAndRenderer(1600, 900, 0, out var window, out var renderer) != 0)
+
+            SDL.GetDisplayDPI(0, out var ddpi, out var hdpi, out var vdpi);
+            double Scale = hdpi / 96.0;
+            int W = (int)(1600 * Scale);
+            int H = (int)(900 * Scale);
+
+            var window = SDL.CreateWindow("PoweEditor", SDL.WINDOWPOS_CENTERED, SDL.WINDOWPOS_CENTERED, W, H, WindowFlags.Shown);
+            if (window.IsNull)
             {
-                throw new Exception("SDL initialization failed");
+                throw new Exception("SDL window initialization failed");
+            }
+            var renderer = SDL.CreateRenderer(window, -1, RendererFlags.Accelerated);
+            if (renderer.IsNull)
+            {
+                throw new Exception("SDL render initialization failed");
             }
 
             Render render = new(new(renderer, new EditorFramework.ColorTheme()), renderer, window);

@@ -129,7 +129,7 @@ void merge_state(struct state *base, struct state *child)
     _reserve_next_versions(base, base->next_versions_len + child->next_versions_len);
     for (int64_t i = 0; i < child->next_versions_len; ++i)
     {
-        printf("New parent\n");
+        print("New parent\n");
         base->next_versions[base->next_versions_len++] = child->next_versions[i];
     }
 
@@ -137,7 +137,7 @@ void merge_state(struct state *base, struct state *child)
     _reserve_previous_versions(base, base->previous_versions_len + child->previous_versions_len);
     for (int64_t i = 0; i < child->previous_versions_len; ++i)
     {
-        printf("New child\n");
+        print("New child\n");
         base->previous_versions[base->previous_versions_len++] = child->previous_versions[i];
     }
 
@@ -151,7 +151,7 @@ void merge_state(struct state *base, struct state *child)
             {
                 if (node->previous_versions[j] == child)
                 {
-                    printf("Change link A\n");
+                    print("Change link A\n");
                     node->previous_versions[j] = base;
                 }
                 else if (node->previous_versions[j] == base)
@@ -170,7 +170,7 @@ void merge_state(struct state *base, struct state *child)
             {
                 if (node->next_versions[j] == child)
                 {
-                    printf("Change link B\n");
+                    print("Change link B\n");
                     node->next_versions[j] = base;
                 }
                 else if (node->next_versions[j] == base)
@@ -213,7 +213,7 @@ void _state_insert_with_buffer(struct project *project, struct state *state, int
             struct segment_info info = { seg->buffer, seg->offset, seg->length + length };
             state->value = RemoveSegment(state->value, position - 1, state->version_id);
             state->value = InsertSegment(state->value, info, segoffset, state->version_id);
-            // printf("Z: Increase length of previous segment [seg->offset=%lld]\n", seg->offset);
+            // print("Z: Increase length of previous segment [seg->offset=%lld]\n", seg->offset);
             return;
         }
     }
@@ -221,7 +221,7 @@ void _state_insert_with_buffer(struct project *project, struct state *state, int
     /* if position is out of range - add text to end */
     if (position == SegmentLength(state->value))
     {
-        // printf("A: Insert %lld length at %lld\n", length, position);
+        // print("A: Insert %lld length at %lld\n", length, position);
         int64_t insert_position = position;
         while (length > 0)
         {
@@ -245,7 +245,7 @@ void _state_insert_with_buffer(struct project *project, struct state *state, int
     /* insert back this segment's prefix */
     if (segment_position < position)
     {
-        // printf("B: Insert %lld length at %lld\n", length, position);
+        // print("B: Insert %lld length at %lld\n", length, position);
         state->value = InsertSegment(state->value, (struct segment_info) { info.buffer, info.offset, position - segment_position }, segment_position, state->version_id);
     }
     /* insert new segment */
@@ -316,7 +316,7 @@ void _state_delete(struct project *project, struct state *state, int64_t positio
         segment = GetSegment(state->value, position, &segment_position);
         memcpy(&info, segment, sizeof(info));
         state->value = RemoveSegment(state->value, position, state->version_id);
-        // printf("Requested %lld -> get %lld of len %lld\n", position, segment_position, info.length);
+        // print("Requested %lld -> get %lld of len %lld\n", position, segment_position, info.length);
         /* insert back prefix */
         prefix = position - segment_position;
         if (prefix > 0)

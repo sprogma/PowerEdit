@@ -1,17 +1,17 @@
-﻿using EditorFramework.Layout;
+﻿using ConsoleInterface;
+using cColor = ConsoleInterface.Color;
+using EditorFramework;
+using EditorFramework.Layout;
 using EditorFramework.Widgets;
 using Humanizer;
 using Markdig.Helpers;
 using Microsoft.CodeAnalysis.Operations;
-using SDL_Sharp;
-using SDL_Sharp.Utility;
 using System;
 using System.Collections.Generic;
 using System.Numerics;
 using System.Runtime.Intrinsics.Arm;
 using System.Text;
 using System.Xml.Linq;
-using static System.Net.Mime.MediaTypeNames;
 
 namespace SDL2Interface
 {
@@ -19,16 +19,16 @@ namespace SDL2Interface
     {
         public Render Render = render;
 
-        public EditorFramework.Layout.Rect Position { get; set; }
+        public Rect Position { get; set; }
 
-        public long? PageStepSize => (Render.textRenderer.Ready ? Render.H / Render.textRenderer.FontLineStep + 1 : 0);
+        public long? PageStepSize => Math.Max(Render.H - 5, 5);
 
-        public virtual void ResizeInternal(BaseWindow window, EditorFramework.Layout.Rect NewSize)
+        public virtual void ResizeInternal(BaseWindow window, Rect NewSize)
         {
             Position = NewSize;
         }
 
-        public void Resize(BaseWindow window, EditorFramework.Layout.Rect NewSize)
+        public void Resize(BaseWindow window, Rect NewSize)
         {
             ResizeInternal(window, NewSize);
             window.Popup?.Layout.Resize(window.Popup, NewSize);
@@ -36,10 +36,7 @@ namespace SDL2Interface
 
         public void UpdateScale(BaseWindow window, double scale)
         {
-            if (Render.textRenderer.Ready)
-            {
-                Render.textRenderer.Scale(scale);
-            }
+            /* ignore */
         }
     }
 
@@ -47,12 +44,12 @@ namespace SDL2Interface
     {
         public HSplitLayout(Render render) : base(render) { }
 
-        public override void ResizeInternal(BaseWindow window, EditorFramework.Layout.Rect NewSize)
+        public override void ResizeInternal(BaseWindow window, Rect NewSize)
         {
             base.ResizeInternal(window, NewSize);
 
-            EditorFramework.Layout.Rect lrect = new(NewSize.X, NewSize.Y, NewSize.W / 2, NewSize.H);
-            EditorFramework.Layout.Rect rrect = new(NewSize.X + lrect.W, NewSize.Y, NewSize.W - lrect.W, NewSize.H);
+            Rect lrect = new(NewSize.X, NewSize.Y, NewSize.W / 2, NewSize.H);
+            Rect rrect = new(NewSize.X + lrect.W, NewSize.Y, NewSize.W - lrect.W, NewSize.H);
 
             if (window is TreeWalkWithPreviewWindow t)
             {
@@ -75,12 +72,11 @@ namespace SDL2Interface
     {
         public TabLayout(Render render) : base(render) { }
 
-        public override void ResizeInternal(BaseWindow window, EditorFramework.Layout.Rect NewSize)
+        public override void ResizeInternal(BaseWindow window, Rect NewSize)
         {
             base.ResizeInternal(window, NewSize);
 
-            long line = (Render.textRenderer.Ready ? Render.textRenderer.FontLineStep : 0);
-            EditorFramework.Layout.Rect rect = new(NewSize.X, NewSize.Y + line, NewSize.W, NewSize.H - line);
+            Rect rect = new(NewSize.X, NewSize.Y + 1, NewSize.W, NewSize.H - 1);
 
             if (window is FileTabsWindow t)
             {
@@ -100,7 +96,7 @@ namespace SDL2Interface
     {
         public FullLayout(Render render) : base(render) { }
 
-        public override void ResizeInternal(BaseWindow window, EditorFramework.Layout.Rect NewSize)
+        public override void ResizeInternal(BaseWindow window, Rect NewSize)
         {
             base.ResizeInternal(window, NewSize);
 
@@ -118,20 +114,13 @@ namespace SDL2Interface
     internal class Render
     {
         static public int W, H;
-        static double Scale;
-        internal TextBufferRenderer textRenderer;
-        public Renderer renderer;
-        public Window SDLWindow;
+        internal ConsoleCanvas Canvas;
+        private ColorTheme colorTheme;
 
-        public Render(TextBufferRenderer textRenderer, Renderer renderer, Window sDLWindow)
+        public Render(ColorTheme colorTheme)
         {
-            this.textRenderer = textRenderer;
-            this.renderer = renderer;
-            SDLWindow = sDLWindow;
-
-            SDL.GetDisplayDPI(0, out var ddpi, out var hdpi, out var vdpi);
-            Scale = hdpi / 96.0;
-            this.textRenderer.Scale(Scale);
+            this.colorTheme = colorTheme;
+            this.Canvas = new();
 
             LayoutRegistry.Register<BaseWindow>(() =>
             {
@@ -155,13 +144,6 @@ namespace SDL2Interface
             });
         }
 
-
-        static SDL_Sharp.Rect Convert(EditorFramework.Layout.Rect rect)
-        {
-            return new SDL_Sharp.Rect((int)rect.X, (int)rect.Y, (int)rect.W, (int)rect.H);
-        }
-
-
         void DrawRecurse(BaseWindow window)
         {
             if (window.Popup != null)
@@ -171,11 +153,8 @@ namespace SDL2Interface
             else
             {
                 // prepare
-                SDL_Sharp.Rect position = new((int)window.Layout.Position.X, (int)window.Layout.Position.Y, (int)window.Layout.Position.W, (int)window.Layout.Position.H);
-                unsafe
-                {
-                    SDL.RenderSetClipRect(renderer, ref position);
-                }
+                Rect position = new((int)window.Layout.Position.X, (int)window.Layout.Position.Y, (int)window.Layout.Position.W, (int)window.Layout.Position.H);
+                Canvas.ClipRect = position;
 
                 window.PreDraw();
 
@@ -184,48 +163,39 @@ namespace SDL2Interface
                 {
                     case AlertWindow alertWindow:
                         {
-                            SDL.SetRenderDrawColor(renderer, 0, 0, 0, 0);
-                            SDL.RenderFillRect(renderer, ref position);
-
-                            long dummyValue = 0;
-                            textRenderer.DrawTextLine(position.X, position.Y, alertWindow.Text, 0, [], ref dummyValue);
-                            int y = position.Y + textRenderer.FontLineStep;
+                            Canvas.FillRect(position, " ", cColor.Default, cColor.Default);
+                            Canvas.AddString(position.X, position.Y, alertWindow.Text);
+                            long y = position.Y + 1;
                             foreach (var (i, (text, _)) in alertWindow.Buttons.Index())
                             {
                                 if (alertWindow.Selected == i)
                                 {
-                                    SDL.SetRenderDrawColor(renderer, 0, 50, 80, 255);
-                                    SDL_Sharp.Rect rect = new((int)(position.X + 40 * Scale), y, (int)(position.Width - 80 * Scale), textRenderer.FontLineStep);
-                                    SDL.RenderFillRect(renderer, ref rect);
+                                    Canvas.ApplyStyle(new(position.X + 4, position.Y, position.W - 4, 1), null, new cColor(0, 50, 80));
                                 }
-                                textRenderer.DrawTextLine((int)(position.X + 50 * Scale), y, text, 0, [], ref dummyValue);
-                                y += textRenderer.FontLineStep;
+                                Canvas.AddString(position.X + 4, y, text);
+                                y++;
                             }
                         }
                         break;
                     case FileTabsWindow tabsWindow:
                         {
-                            int tabWidth = (int)(80 * Scale);
-                            int tabHeight = (int)(25 * Scale);
+                            int tabWidth = 16;
 
-                            SDL_Sharp.Rect header = new(position.X, position.Y, position.Width, tabHeight);
-                            SDL.SetRenderDrawColor(renderer, 0, 25, 40, 255);
-                            SDL.RenderFillRect(renderer, ref header);
-                            SDL_Sharp.Rect tab = new(position.X + 2, position.Y + 2, tabWidth - 4, tabHeight - 4);
-                            SDL.RenderGetClipRect(renderer, out SDL_Sharp.Rect clip);
+                            Rect header = new(position.X, position.Y, position.W, 1);
+                            Canvas.ApplyStyle(header, null, new cColor(0, 25, 40));
+                            Rect tab = new(position.X, position.Y, tabWidth, 1);
+                            Rect clip = Canvas.ClipRect;
                             foreach (var (id, child) in tabsWindow.childs.Index())
                             {
-                                SDL.RenderSetClipRect(renderer, ref tab);
+                                Canvas.ClipRect = tab;
                                 if (tabsWindow.current == id)
                                 {
-                                    SDL.SetRenderDrawColor(renderer, 0, 50, 80, 255);
-                                    SDL.RenderFillRect(renderer, ref tab);
+                                    Canvas.ApplyStyle(tab, null, new cColor(0, 50, 80));
                                 }
-                                long dummyValue = 0;
-                                textRenderer.DrawTextLine(tab.X, tab.Y, child.file.filename ?? "<Unnamed>", 0, [], ref dummyValue);
-                                tab.X += tab.Width + 4;
+                                Canvas.AddString(tab.X, tab.Y, child.file.filename ?? "<Unnamed>");
+                                tab.X += tabWidth;
                             }
-                            SDL.RenderSetClipRect(renderer, ref clip);
+                            Canvas.ClipRect = clip;
                             if (tabsWindow.current < tabsWindow.childs.Count)
                             {
                                 DrawRecurse(tabsWindow.childs[tabsWindow.current]);
@@ -266,53 +236,43 @@ namespace SDL2Interface
             }
 
             // after
-            unsafe
-            {
-                SDL.RenderSetClipRect(renderer, null);
-            }
+            Canvas.ResetClipRect();
         }
 
         private void DrawInputTextFunction(InputTextWindow window)
         {
-            SDL_Sharp.Rect Position = Convert(window.Layout.Position);
+            Rect position = window.Layout.Position;
             {
-                if (window.cursor == null || !textRenderer.fontSizeLoaded)
+                if (window.cursor == null)
                 {
                     return;
                 }
                 /* align offset to see cursor */
-                if (window.cursor.Selections.Count > 0)
+                if (window.cursor?.Selections.Count > 0)
                 {
                     long cursorLine = window.cursor.Selections[0].EndLine;
                     if (cursorLine < window.viewOffset + 3)
                     {
                         window.viewOffset = cursorLine - 3;
                     }
-                    if (cursorLine > window.viewOffset + H / textRenderer.FontLineStep - 4)
+                    if (cursorLine > window.viewOffset + position.H - 4)
                     {
-                        window.viewOffset = cursorLine - H / textRenderer.FontLineStep + 4;
+                        window.viewOffset = cursorLine - position.H + 4;
                     }
                 }
             }
 
-
-
-            if (!textRenderer.Ready) return;
-
-            SDL.SetRenderDrawColor(renderer, 0, 0, 0, 0);
-            SDL.RenderFillRect(renderer, ref Position);
+            Canvas.FillRect(position, " ", cColor.Default, cColor.Default);
 
             int leftBarSize = 0;
-
             if (window.showNumbers)
             {
                 if (window.relativeNumbers && window.cursor?.Selections.Count == 1)
                 {
                     long cursorLine = window.cursor.Selections[0].EndLine;
                     int maxPower = 4;
-                    long dummyValue = 0;
                     /* draw numbers */
-                    for (int t = 0; t < H / textRenderer.FontLineStep; ++t)
+                    for (int t = 0; t < position.H; ++t)
                     {
                         int i = t + (int)window.viewOffset;
                         (long index, string? s, _) = window.buffer.GetLine(i);
@@ -329,17 +289,16 @@ namespace SDL2Interface
                             }
                             if (num == 0)
                             {
-                                SDL_Sharp.Rect rect = new(Position.X + 5, Position.Y + t * textRenderer.FontLineStep, Position.Width - 10, textRenderer.FontLineStep);
-                                SDL.SetRenderDrawColor(renderer, 0, 20, 20, 255);
-                                SDL.RenderFillRect(renderer, ref rect);
+                                Rect rect = new(position.X + 1, position.Y + t, position.W - 1, 1);
+                                Canvas.ApplyStyle(rect, null, new cColor(0, 20, 20));
                             }
                             else
                             {
-                                textRenderer.DrawTextLine(Position.X + 5, Position.Y + t * textRenderer.FontLineStep, num.ToString().PadLeft(maxPower), 0, [], ref dummyValue);
+                                Canvas.AddString(position.X + 1, position.Y + t, num.ToString());
                             }
                         }
                     }
-                    leftBarSize = (int)((maxPower + 0.5) * textRenderer.FontStep);
+                    leftBarSize = (int)(maxPower + 0.5);
                 }
                 else
                 {
@@ -380,25 +339,21 @@ namespace SDL2Interface
             /* underline error */
             if (message != null)
             {
-                int selectionWidth = (int)(4 * textRenderer.currentScale);
-                SDL.SetRenderDrawColor(renderer, 255, 166, 0, 255);
                 (long line, long offset) = window.buffer.GetPositionOffsets(errorPosition);
-                int x = leftBarSize + Position.X + 5 + (int)offset * textRenderer.FontStep - textRenderer.FontStep / 2;
-                int y = Position.Y + (int)(line - window.viewOffset) * textRenderer.FontLineStep + textRenderer.FontLineStep - selectionWidth;
-                SDL_Sharp.Rect r = new(x, y, 2 * textRenderer.FontStep, selectionWidth);
-                SDL.RenderFillRect(renderer, ref r);
+                int x = (int)(leftBarSize + position.X + 1 + offset - 1);
+                int y = (int)(position.Y + line - window.viewOffset);
+                Rect r = new(x, y, 3, 1);
+                Canvas.ApplyStyle(r, null, new cColor(255, 166, 0));
             }
 
             /* draw cursor */
             if (window.cursor != null)
             {
-                SDL.SetRenderDrawColor(renderer, 255, 255, 255, 255);
-                int selectionWidth = (int)(5 * textRenderer.currentScale);
                 long minLine = window.viewOffset;
-                long maxLine = minLine + (H / textRenderer.FontLineStep) + 1;
+                long maxLine = minLine + (position.H) + 1;
                 long minPos = window.buffer.GetLineOffsets(minLine).begin;
                 long maxPos = window.buffer.GetLineOffsets(maxLine).begin;
-                maxPos = (maxPos == 0 ? window.buffer.Text.Length + 1 : maxPos + (W / textRenderer.FontStep) + 1);
+                maxPos = (maxPos == 0 ? window.buffer.Text.Length + 1 : maxPos + position.W + 1);
 
                 foreach (var selection in window.cursor.Selections)
                 {
@@ -406,8 +361,8 @@ namespace SDL2Interface
                     if (minPos <= selection.End && selection.End < maxPos)
                     {
                         (long line, long offset) = window.buffer.GetPositionOffsets(selection.End);
-                        SDL_Sharp.Rect r = new(leftBarSize + Position.X + 5 + (int)offset * textRenderer.FontStep, Position.Y + (int)(line - window.viewOffset) * textRenderer.FontLineStep, 5, textRenderer.FontLineStep);
-                        SDL.RenderFillRect(renderer, ref r);
+                        Rect r = new(leftBarSize + position.X + 1 + offset, position.Y + (int)(line - window.viewOffset) * 1, 1, 1);
+                        Canvas.ApplyStyle(r, null, new cColor(255, 255, 255));
                     }
 
                     (long line, long offset) begin, end;
@@ -443,15 +398,15 @@ namespace SDL2Interface
                         long startOffset = (line == begin.line) ? begin.offset : 0;
                         long endOffset = (line == end.line) ? end.offset : window.buffer.Text.GetLineOffsets(line).length;
 
-                        int width = (int)(endOffset - startOffset) * textRenderer.FontStep;
+                        int width = (int)(endOffset - startOffset);
                         if (width <= 0) continue;
-                        SDL_Sharp.Rect r = new(
-                            leftBarSize + Position.X + 5 + (int)startOffset * textRenderer.FontStep,
-                            Position.Y + (int)(line - window.viewOffset) * textRenderer.FontLineStep + textRenderer.FontLineStep - selectionWidth,
+                        Rect r = new(
+                            leftBarSize + position.X + 1 + startOffset,
+                            position.Y + line - window.viewOffset,
                             width,
-                            selectionWidth
+                            1
                         );
-                        SDL.RenderFillRect(renderer, ref r);
+                        Canvas.ApplyStyle(r, new cColor(0, 0, 0), new cColor(255, 255, 255));
                     }
                 }
             }
@@ -459,138 +414,103 @@ namespace SDL2Interface
             /* draw current error */
             if (message != null)
             {
-                long dummyValue = 0;
-                textRenderer.Scale(0.8);
-                textRenderer.DrawTextLine(Position.X + 200, Position.Y + H - 5 - textRenderer.FontLineStep, message, 0, [], ref dummyValue);
-                textRenderer.Scale(1.25);
+                Canvas.AddString(position.Bx + 5, position.By - 1, $"  {message}", new cColor(255, 0, 0), cColor.Default);
             }
         }
 
         public void Draw(BaseWindow window)
         {
-            SDL.GetWindowSize(SDLWindow, out W, out H);
-            window.Layout.Resize(window, new(0, 0, W, H));
+            Canvas.Clear();
+            window.Layout.Resize(window, new(0, 0, Canvas.Width, Canvas.Height));
             DrawRecurse(window);
         }
 
-
         public void SimpleTextWindowDrawText(SimpleTextWindow window, int leftBarSize)
         {
-            if (!textRenderer.Ready) return;
-
-            long selectionWidth = (long)(8 * textRenderer.currentScale);
-            SDL.SetRenderDrawColor(renderer, 50, 0, 0, 255);
             foreach (var err in window.buffer.ErrorMarks)
             {
                 (long line, long col) = window.buffer.GetPositionOffsets(err.position);
-                long y = window.Layout.Position.Y + (line - window.viewOffset) * textRenderer.FontLineStep;
-                long x = window.Layout.Position.X + 5 + leftBarSize + col * textRenderer.FontStep - textRenderer.FontStep / 2;
-                SDL_Sharp.Rect r = new((int)x, (int)y, 2 * textRenderer.FontStep, (int)textRenderer.FontLineStep);
-                SDL.RenderFillRect(renderer, ref r);
+                long y = window.Layout.Position.Y + line - window.viewOffset;
+                long x = window.Layout.Position.X + 1 + leftBarSize + col - 1;
+                Rect r = new(x, y, 3, 1);
+                Canvas.ApplyStyle(r, null, new cColor(80, 0, 0));
             }
-            SDL.SetRenderDrawColor(renderer, 255, 0, 0, 255);
-            foreach (var err in window.buffer.ErrorMarks)
-            {
-                (long line, long col) = window.buffer.GetPositionOffsets(err.position);
-                long y = window.Layout.Position.Y + (line - window.viewOffset + 1) * textRenderer.FontLineStep - selectionWidth;
-                long x = window.Layout.Position.X + 5 + leftBarSize + col * textRenderer.FontStep - textRenderer.FontStep / 2;
-                SDL_Sharp.Rect r = new((int)x, (int)y, 2 * textRenderer.FontStep, (int)selectionWidth);
-                SDL.RenderFillRect(renderer, ref r);
-            }
-            long lastToken = 0;
-            for (int t = 0; t < H / textRenderer.FontLineStep; ++t)
+            for (int t = 0; t < window.Layout.Position.H; ++t)
             {
                 int i = t + (int)window.viewOffset;
                 (long index, string? s, _) = window.buffer.GetLine(i);
                 if (s != null)
                 {
-                    textRenderer.DrawTextLine(leftBarSize + (int)window.Layout.Position.X + 5, (int)window.Layout.Position.Y + t * textRenderer.FontLineStep, s, index, window.buffer.Tokens, ref lastToken);
+                    // TODO: syntax hilighiting
+                    s = s.TrimEnd('\n');
+                    Canvas.AddString(leftBarSize + window.Layout.Position.X + 1, window.Layout.Position.Y + t, s);
                 }
             }
-
             // draw errors count
-            long dummyValue = 0;
-            textRenderer.Scale(0.8);
-            textRenderer.DrawTextLine((int)window.Layout.Position.X + 5, (int)window.Layout.Position.Y + H - 5 - textRenderer.FontLineStep, $"{window.buffer.ErrorMarks.Count} errors in file", 0, [], ref dummyValue);
-            textRenderer.Scale(1.25);
+            Canvas.AddString(window.Layout.Position.X, window.Layout.Position.By - 2, $"  {window.buffer.ErrorMarks.Count} errors in file", new cColor(255, 0, 0), cColor.Default);
         }
 
         public void SimpleTextWindowDrawSimpleNumbers(SimpleTextWindow window, ref int leftBarSize)
         {
-            if (!textRenderer.Ready) return;
-
             int maxPower = 4;
-            long dummyValue = 0;
             /* draw numbers */
-            for (int t = 0; t < H / textRenderer.FontLineStep; ++t)
+            for (int t = 0; t < window.Layout.Position.H; ++t)
             {
                 int i = t + (int)window.viewOffset;
                 (long index, string? s, _) = window.buffer.GetLine(i);
                 if (s != null)
                 {
                     int num = i;
-                    textRenderer.DrawTextLine((int)window.Layout.Position.X + 5, (int)window.Layout.Position.Y + t * textRenderer.FontLineStep, num.ToString().PadLeft(maxPower), 0, [], ref dummyValue);
+                    Canvas.AddString(window.Layout.Position.X + 1, window.Layout.Position.Y + t, num.ToString().PadLeft(maxPower), new cColor(255, 0, 0), cColor.Default);
                 }
             }
-            leftBarSize = (int)((maxPower + 0.5) * textRenderer.FontStep);
+            leftBarSize = maxPower + 1;
         }
 
         public void DrawTreeView(TreeWalkWindow window)
         {
-            SDL.SetRenderDrawColor(renderer, 0, 0, 0, 0);
-            SDL_Sharp.Rect Position = Convert(window.Layout.Position);
-            SDL.RenderFillRect(renderer, ref Position);
+            Canvas.FillRect(window.Layout.Position, " ", cColor.Default, cColor.Default);
 
-            /* draw tree, relative to current version */
+            Rect position = window.Layout.Position;
+
+            /* draw all lines */
+            long w = (long)(TreeWalkWindow.NodeWidth * window.Scale / 10.0),
+                 h = (long)(TreeWalkWindow.NodeHeight * window.Scale / 10.0);
+
             foreach (var node in window.tree.Values.Where(x => !x.hidden))
             {
-                SDL.SetRenderDrawColor(renderer, 255, 0, 0, 0);
-                Vector2 pos = (node.position - window.Camera) * window.Scale + new Vector2(Position.Width * 0.5f, Position.Height * 0.5f);
-                float w, h;
-                w = TreeWalkWindow.NodeWidth * window.Scale;
-                h = TreeWalkWindow.NodeHeight * window.Scale;
+                Vector2 pos = (node.position - window.Camera) * window.Scale + new Vector2(position.W * 0.5f, position.H * 0.5f);
+                long ix = position.X + (long)Math.Round(pos.X / 10.0), iy = position.Y + (long)Math.Round(pos.Y / 10.0);
+                foreach (var next in new[] { node.up, node.right }.OfType<TreeWalkWindow.Node>())
+                {
+                    Vector2 nextPos = (next.position - window.Camera) * window.Scale + new Vector2(position.W * 0.5f, position.H * 0.5f);
+                    long x = position.X + (long)Math.Round(nextPos.X / 10.0), y = position.Y + (long)Math.Round(nextPos.Y / 10.0);
+
+                    while (x != ix || y != iy)
+                    {
+                        if (x < ix) x++;
+                        if (x > ix) x--;
+                        if (y < iy) y++;
+                        if (y > iy) y--;
+                        Canvas.SetCell(x, y, "*", new cColor(128, 0, 0), cColor.Default);
+                    }
+                }
+            }
+
+            foreach (var node in window.tree.Values.Where(x => !x.hidden))
+            {
+                Vector2 pos = (node.position - window.Camera) * window.Scale + new Vector2(position.W * 0.5f, position.H * 0.5f);
                 pos -= 0.5f * new Vector2(w, h);
-                SDL_Sharp.Rect rect = new() { X = Position.X + (int)pos.X, Y = Position.Y + (int)pos.Y, Width = (int)w, Height = (int)h };
+                long ix = position.X + (long)Math.Round(pos.X / 10.0), iy = position.Y + (long)Math.Round(pos.Y / 10.0);
                 if (node == window.current)
                 {
-                    SDL.RenderFillRect(renderer, ref rect);
+                    Canvas.AddString(ix, iy, $"#{node.id}", new cColor(0, 0, 0), new cColor(255, 0, 0));
                 }
                 else
                 {
-                    int ww = Math.Min(W, H) / 500;
-                    for (int i = 0; i < ww; i++)
-                    {
-                        SDL.RenderDrawRect(renderer, ref rect);
-                        rect.X++;
-                        rect.Y++;
-                        rect.Width-=2;
-                        rect.Height-=2;
-                    }
+                    Canvas.AddString(ix, iy, $"#{node.id}", new cColor(255, 0, 0), new cColor(60, 0, 0));
                 }
-                pos += 0.5f * new Vector2(w, h);
-                rect = new() { X = Position.X + (int)pos.X, Y = Position.Y + (int)pos.Y, Width = (int)w, Height = (int)h };
-                foreach (var next in new[] { node.up, node.right }.OfType<TreeWalkWindow.Node>())
-                {
-                    Vector2 nextPos = (next.position - window.Camera) * window.Scale + new Vector2(Position.Width * 0.5f, Position.Height * 0.5f);
-                    int x = Position.X + (int)nextPos.X, y = Position.Y + (int)nextPos.Y;
-                    SDL.RenderDrawLine(renderer, rect.X, rect.Y, x, y);
-                }
-                //SDL.SetRenderDrawColor(renderer, 64, 0, 0, 0);
-                //foreach (Node next in node.childs)
-                //{
-                //    Vector2 nextPos = (next.position - Camera) * Scale + new Vector2(position.Width * 0.5f, position.Height * 0.5f);
-                //    int x = position.X + (int)nextPos.X, y = position.Y + (int)nextPos.Y;
-                //    SDL.RenderDrawLine(renderer, rect.X, rect.Y, x, y);
-                //}
-                //SDL.SetRenderDrawColor(renderer, 0, 64, 0, 0);
-                //foreach (Node next in node.parents)
-                //{
-                //    Vector2 nextPos = (next.position - Camera) * Scale + new Vector2(position.Width * 0.5f, position.Height * 0.5f);
-                //    int x = position.X + (int)nextPos.X, y = position.Y + (int)nextPos.Y;
-                //    SDL.RenderDrawLine(renderer, rect.X, rect.Y, x, y);
-                //}
             }
-
             {
                 float t = 1.0f / (TreeWalkWindow.MovingSmooth + 1.0f);
                 window.Camera = window.Camera * (1.0f - t) + window.current.position * t;
@@ -599,9 +519,7 @@ namespace SDL2Interface
         }
         public void DrawSimpleWindow(SimpleTextWindow window)
         {
-            SDL.SetRenderDrawColor(renderer, 0, 0, 0, 0);
-            SDL_Sharp.Rect rect = Convert(window.Layout.Position);
-            SDL.RenderFillRect(renderer, ref rect);
+            Canvas.FillRect(window.Layout.Position, " ", cColor.Default, cColor.Default);
 
             int leftBarSize = 0;
 

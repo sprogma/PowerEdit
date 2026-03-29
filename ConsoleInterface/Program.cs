@@ -1,0 +1,271 @@
+﻿using CommandProviderInterface;
+using EditorCore.Buffer;
+using EditorCore.File;
+using EditorCore.Selection;
+using EditorCore.Server;
+using EditorFramework;
+using EditorFramework.ApplicationApi;
+using EditorFramework.Events;
+using EditorFramework.Layout;
+using EditorFramework.Widgets;
+using Lsp;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
+using PowershellCommandProvider;
+using PythonCommandProvider;
+using RegexTokenizer;
+using System.Diagnostics;
+using System.Diagnostics.Tracing;
+using System.Runtime.InteropServices;
+using System.Text;
+using System.Text.RegularExpressions;
+using TextBuffer;
+
+namespace SDL2Interface
+{
+    internal class App : IApplication
+    {
+        public static List<BaseWindow> windows = [];
+
+        public static void OpenWindow(BaseWindow window)
+        {
+            windows.Add(window);
+        }
+
+        internal static void RaiseWindow(BaseWindow window)
+        {
+            windows.Remove(window);
+            windows.Add(window);
+        }
+
+        public void Main(string[] raw_args)
+        {
+            List<string> args = [.. raw_args];
+
+            Console.OutputEncoding = Encoding.UTF8;
+            Console.InputEncoding = Encoding.UTF8;
+
+            List<string?> fileToOpen = [.. args.Where(x => !x.StartsWith("-")).Cast<string?>()];
+            if (fileToOpen.Count == 0)
+            {
+                fileToOpen.Add(null);
+            }
+            //fileToOpen = ["D:\\big.txt"];
+            //fileToOpen = ["C:\\Users\\User\\AppData\\Local\\Temp\\copy_10gb.txt"];
+            //fileToOpen = ["C:\\Users\\User\\AppData\\Local\\Temp\\big.txt"]; // too big for now
+            Console.WriteLine($"Opening files {fileToOpen.Count} \"{fileToOpen}\"...");
+            
+            Render render = new(new EditorFramework.ColorTheme());
+
+            /* create application instance */
+            {
+                ICommandProvider? provider;
+
+                if (args.Contains("--python"))
+                {
+                    args.Remove("--python");
+                    provider = new PythonProvider();
+                }
+                else
+                {
+                    provider = new PowershellProvider();
+                }
+
+                if (provider == null)
+                {
+                    Console.WriteLine("Error: Not selected any provider");
+                    return;
+                }
+
+                FileTabsWindow tabs = new(this, GetLayout<FileTabsWindow>.Value, []);
+
+                ProjectEditorWindow project = new(
+                    this,
+                    GetLayout<ProjectEditorWindow>.Value,
+                    tabs.OpenFile,
+                    tabs.RaiseFile,
+                    tabs,
+                    provider
+                );
+                EditorServer server = new(provider);
+
+                // add "lsp" module
+                SimpleLinterMod.Init(server);
+
+                windows.Add(project);
+
+                foreach (var file in fileToOpen)
+                {
+                    if (file != null)
+                    {
+                        Task.Run(() => project.OpenFile(file));
+                    }
+                    else
+                    {
+                        Task.Run(() => project.CreateFile(null, "c"));
+                    }
+                }
+            }
+
+            if (!args.Contains("--no-interactive"))
+            {
+                EventManager pool = new((e) =>
+                {
+                    foreach (var win in windows.Reverse<BaseWindow>())
+                    {
+                        if (!win.Event(e))
+                        {
+                            return false;
+                        }
+                    }
+                    return true;
+                });
+                while (windows.Count > 0)
+                {
+                    foreach (var win in windows)
+                    {
+                        render.Draw(win);
+                    }
+                    render.Canvas.Flush();
+                    if (Console.KeyAvailable)
+                    {
+                        var key = Console.ReadKey(true);
+                        var e = CreateEvent(key);
+                        foreach (var x in e)
+                        {
+                            pool.AddEvent(x);
+                        }
+                        pool.ProcessEvents();
+                    }
+                }
+            }
+        }
+
+        KeyMode Convert(ConsoleModifiers key)
+        {
+            KeyMode mode = KeyMode.None;
+
+            if ((key & ConsoleModifiers.Shift) != 0) mode |= KeyMode.LeftShift;
+            if ((key & ConsoleModifiers.Control) != 0) mode |= KeyMode.LeftCtrl;
+            if ((key & ConsoleModifiers.Alt) != 0) mode |= KeyMode.LeftAlt;
+
+            #if Windows
+            if (Console.CapsLock) mode |= KeyMode.CapsLock;
+            if (Console.NumberLock) mode |= KeyMode.NumLock;
+            #endif
+
+            return mode;
+        }
+
+
+        KeyCode Convert(ConsoleKey key)
+        {
+            return key switch
+            {
+                // Letters A-Z
+                >= ConsoleKey.A and <= ConsoleKey.Z
+                    => (KeyCode)((int)KeyCode.A + (key - ConsoleKey.A)),
+
+                // Digits D1-D9
+                >= ConsoleKey.D1 and <= ConsoleKey.D9
+                    => (KeyCode)((int)KeyCode.D1 + (key - ConsoleKey.D0)),
+
+                ConsoleKey.D0 => KeyCode.D0,
+
+                // F-клавиши
+                >= ConsoleKey.F1 and <= ConsoleKey.F12
+                    => (KeyCode)((int)KeyCode.F1 + (key - ConsoleKey.F1)),
+                >= ConsoleKey.F13 and <= ConsoleKey.F24
+                    => (KeyCode)((int)KeyCode.F13 + (key - ConsoleKey.F13)),
+
+                // Numpad Digits
+                >= ConsoleKey.NumPad0 and <= ConsoleKey.NumPad0
+                    => (KeyCode)((int)KeyCode.NumPad0 + (key - ConsoleKey.NumPad0)),
+
+                // Numpad Ops
+                ConsoleKey.Multiply => KeyCode.NumPadMultiply,
+                ConsoleKey.Add => KeyCode.NumPadAdd,
+                ConsoleKey.Subtract => KeyCode.NumPadSubtract,
+                ConsoleKey.Decimal => KeyCode.NumPadDecimal,
+                ConsoleKey.Divide => KeyCode.NumPadDivide,
+
+                // Nav & System
+                ConsoleKey.Enter => KeyCode.Enter,
+                ConsoleKey.Escape => KeyCode.Escape,
+                ConsoleKey.Backspace => KeyCode.Backspace,
+                ConsoleKey.Tab => KeyCode.Tab,
+                ConsoleKey.Spacebar => KeyCode.Space,
+                ConsoleKey.Pause => KeyCode.Pause,
+                ConsoleKey.PrintScreen => KeyCode.PrintScreen,
+                ConsoleKey.Insert => KeyCode.Insert,
+                ConsoleKey.Delete => KeyCode.Delete,
+                ConsoleKey.Home => KeyCode.Home,
+                ConsoleKey.End => KeyCode.End,
+                ConsoleKey.PageUp => KeyCode.PageUp,
+                ConsoleKey.PageDown => KeyCode.PageDown,
+                ConsoleKey.Help => KeyCode.Help,
+                ConsoleKey.RightArrow => KeyCode.Right,
+                ConsoleKey.LeftArrow => KeyCode.Left,
+                ConsoleKey.DownArrow => KeyCode.Down,
+                ConsoleKey.UpArrow => KeyCode.Up,
+
+                // Mods
+                ConsoleKey.LeftWindows => KeyCode.LeftWindows,
+                ConsoleKey.RightWindows => KeyCode.RightWindows,
+                ConsoleKey.Applications => KeyCode.Applications,
+                ConsoleKey.Sleep => KeyCode.Sleep,
+
+                // Symbols & OEM
+                ConsoleKey.OemMinus => KeyCode.Minus,
+                ConsoleKey.OemPlus => KeyCode.Equal,
+                ConsoleKey.Oem4 => KeyCode.OpenBrackets,
+                ConsoleKey.Oem6 => KeyCode.CloseBrackets,
+                ConsoleKey.Oem1 => KeyCode.Semicolon,
+                ConsoleKey.Oem7 => KeyCode.Quotes,
+                ConsoleKey.Oem3 => KeyCode.Tilde,
+                ConsoleKey.OemComma => KeyCode.Comma,
+                ConsoleKey.OemPeriod => KeyCode.Period,
+                ConsoleKey.Oem2 => KeyCode.OemQuestion,
+                ConsoleKey.Oem5 => KeyCode.Backslash,
+                ConsoleKey.Oem102 => KeyCode.Backslash,
+
+                _ => 0
+            };
+        }
+
+        private IEnumerable<EventBase> CreateEvent(ConsoleKeyInfo evt)
+        {
+            bool isAlt = (evt.Modifiers & ConsoleModifiers.Alt) != 0;
+            bool isCtrl = (evt.Modifiers & ConsoleModifiers.Control) != 0;
+            if (evt.KeyChar != '\0' && !char.IsControl(evt.KeyChar) && !isAlt && !isCtrl)
+            {
+                return [
+                    new TextInputEvent(Encoding.UTF8.GetBytes([evt.KeyChar])),
+                    new KeyDownEvent(Convert(evt.Key), Convert(evt.Modifiers))
+                ];
+            }
+            else
+            {
+                return [new KeyDownEvent(Convert(evt.Key), Convert(evt.Modifiers))];
+            }
+        }
+
+        public void RemoveWindow(BaseWindow window)
+        {
+            windows.Remove(window);
+        }
+
+        public IEnumerable<BaseWindow> ListWindows()
+        {
+            return windows;
+        }
+    }
+
+    internal class Program
+    {
+        static void Main(string[] raw_args)
+        {
+            App app = new();
+            app.Main(raw_args);
+        }
+    }
+}

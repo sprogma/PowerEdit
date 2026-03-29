@@ -13,6 +13,15 @@
 #define MODIFICATION_INSERT 1
 #define MODIFICATION_DELETE 2
 
+// #define print(...) 
+// 
+// 
+// 
+// 
+// 
+// (__VA_ARGS__)
+#define print(...)
+
 struct segment_info
 {
     struct mapped_buffer *buffer;
