@@ -359,12 +359,12 @@ namespace SDL2Interface
 
                 foreach (var selection in window.cursor.Selections)
                 {
-                    /* draw vericall line */
-                    if (minPos <= selection.End && selection.End < maxPos)
+                    /* draw verical line */
+                    if (minPos <= selection.End && selection.End < maxPos && selection.TextLength == 0)
                     {
                         (long line, long offset) = window.buffer.GetPositionOffsets(selection.End);
                         Rect r = new(leftBarSize + position.X + 1 + offset, position.Y + (int)(line - window.viewOffset) * 1, 1, 1);
-                        Canvas.ApplyStyle(r, null, new cColor(255, 255, 255));
+                        Canvas.ApplyStyle(r, new cColor(0, 0, 0), new cColor(255, 255, 255));  
                     }
 
                     (long line, long offset) begin, end;
@@ -506,12 +506,12 @@ namespace SDL2Interface
 
             foreach (var node in window.tree.Values.Where(x => !x.hidden))
             {
-                Vector2 pos = (node.position - window.Camera) * window.Scale + new Vector2(position.W * 0.5f, position.H * 0.5f);
-                long ix = position.X + (long)Math.Round(pos.X / 10.0), iy = position.Y + (long)Math.Round(pos.Y / 10.0);
+                Vector2 pos = (node.position - window.Camera) * window.Scale / 10.0f + new Vector2(position.W * 0.5f, position.H * 0.5f);
+                long ix = position.X + (long)Math.Round(pos.X), iy = position.Y + (long)Math.Round(pos.Y);
                 foreach (var next in new[] { node.up, node.right }.OfType<TreeWalkWindow.Node>())
                 {
-                    Vector2 nextPos = (next.position - window.Camera) * window.Scale + new Vector2(position.W * 0.5f, position.H * 0.5f);
-                    long x = position.X + (long)Math.Round(nextPos.X / 10.0), y = position.Y + (long)Math.Round(nextPos.Y / 10.0);
+                    Vector2 nextPos = (next.position - window.Camera) * window.Scale / 10.0f + new Vector2(position.W * 0.5f, position.H * 0.5f);
+                    long x = position.X + (long)Math.Round(nextPos.X), y = position.Y + (long)Math.Round(nextPos.Y);
 
                     while (x != ix || y != iy)
                     {
@@ -526,16 +526,16 @@ namespace SDL2Interface
 
             foreach (var node in window.tree.Values.Where(x => !x.hidden))
             {
-                Vector2 pos = (node.position - window.Camera) * window.Scale + new Vector2(position.W * 0.5f, position.H * 0.5f);
+                Vector2 pos = (node.position - window.Camera) * window.Scale / 10.0f + new Vector2(position.W * 0.5f, position.H * 0.5f);
                 pos -= 0.5f * new Vector2(w, h);
-                long ix = position.X + (long)Math.Round(pos.X / 10.0), iy = position.Y + (long)Math.Round(pos.Y / 10.0);
+                long ix = position.X + (long)Math.Round(pos.X), iy = position.Y + (long)Math.Round(pos.Y);
                 if (node == window.current)
                 {
-                    Canvas.AddString(ix, iy, $"#{node.id}", new cColor(0, 0, 0), new cColor(255, 0, 0));
+                    Canvas.AddString(ix, iy, $"#{node.id&0xFFFF:X4}", new cColor(0, 0, 0), new cColor(255, 0, 0));
                 }
                 else
                 {
-                    Canvas.AddString(ix, iy, $"#{node.id}", new cColor(255, 0, 0), new cColor(60, 0, 0));
+                    Canvas.AddString(ix, iy, $"#{node.id&0xFFFF:X4}", new cColor(255, 0, 0), new cColor(60, 0, 0));
                 }
             }
             {

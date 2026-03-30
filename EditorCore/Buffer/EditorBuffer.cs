@@ -91,6 +91,8 @@ namespace EditorCore.Buffer
             SaveCursorState();
 
             SetText(content);
+
+            OnUpdate();
         }
 
         public void SaveCursorState()
@@ -261,7 +263,9 @@ namespace EditorCore.Buffer
 
         public long SetText(string data)
         {
-            return Text.SetText(data);
+            long res = Text.SetText(data);
+            OnUpdate();
+            return res;
         }
 
         public (long offset, string? value, long length) GetLine(long line)

@@ -128,7 +128,7 @@ namespace SDL2Interface
                         render.Draw(win);
                     }
                     render.Canvas.Flush();
-                    if (Console.KeyAvailable)
+                    while (Console.KeyAvailable)
                     {
                         var key = Console.ReadKey(true);
                         var e = CreateEvent(key);
