@@ -1,17 +1,19 @@
 ﻿using ConsoleInterface;
-using cColor = ConsoleInterface.Color;
 using EditorFramework;
 using EditorFramework.Layout;
 using EditorFramework.Widgets;
 using Humanizer;
 using Markdig.Helpers;
 using Microsoft.CodeAnalysis.Operations;
+using RegexTokenizer;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Numerics;
 using System.Runtime.Intrinsics.Arm;
 using System.Text;
 using System.Xml.Linq;
+using cColor = ConsoleInterface.Color;
 
 namespace SDL2Interface
 {
@@ -435,15 +437,40 @@ namespace SDL2Interface
                 Rect r = new(x, y, 3, 1);
                 Canvas.ApplyStyle(r, null, new cColor(80, 0, 0));
             }
+            long lastToken = 0;
             for (int t = 0; t < window.Layout.Position.H; ++t)
             {
+
                 int i = t + (int)window.viewOffset;
                 (long index, string? s, _) = window.buffer.GetLine(i);
                 if (s != null)
                 {
-                    // TODO: syntax hilighiting
-                    s = s.TrimEnd('\n');
-                    Canvas.AddString(leftBarSize + window.Layout.Position.X + 1, window.Layout.Position.Y + t, s);
+                    long x = leftBarSize + window.Layout.Position.X + 1;
+                    long position = index;
+                    var elements = StringInfo.GetTextElementEnumerator(s);
+                    while (elements.MoveNext())
+                    {
+                        string grapheme = elements.GetTextElement();
+                        if (grapheme == "\n") continue;
+                        Token? currentToken = null;
+                        while (lastToken < window.buffer.Tokens.Count && window.buffer.Tokens[(int)lastToken].end < position)
+                        {
+                            lastToken++;
+                        }
+                        if (lastToken < window.buffer.Tokens.Count && window.buffer.Tokens[(int)lastToken].begin <= position)
+                        {
+                            currentToken = window.buffer.Tokens[(int)lastToken];
+                        }
+
+                        cColor color = new(255, 255, 255);
+                        if (currentToken != null)
+                        {
+                            color = new(ColorTheme.GetColor(currentToken.Value.type));
+                        }
+
+                        x += Canvas.SetCell(x, window.Layout.Position.Y + t, grapheme, color);
+                        position += Encoding.UTF8.GetByteCount(grapheme);
+                    }
                 }
             }
             // draw errors count
