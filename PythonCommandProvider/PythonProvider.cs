@@ -1,4 +1,5 @@
-﻿using RegexTokenizer;
+﻿using LoggingLogLevel;
+using RegexTokenizer;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
@@ -36,11 +37,11 @@ namespace PythonCommandProvider
             string? error = null;
             string? output = null;
 
-            Console.WriteLine(inputCode);
+            Logger.Log($"Executing {inputCode}");
 
             try
             {
-                ProcessStartInfo startInfo = new ProcessStartInfo
+                ProcessStartInfo startInfo = new()
                 {
                     FileName = (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ? "python3" : "py.exe"),
                     RedirectStandardInput = true,
@@ -68,16 +69,16 @@ namespace PythonCommandProvider
                         return (null, "ERROR: Process don't completed in 5 seconds\n");
                     }
 
-                    Console.WriteLine("Executable Output:");
-                    Console.WriteLine(output);
-                    Console.WriteLine("Executable Error:");
-                    Console.WriteLine(error);
-                    Console.WriteLine($"Exit Code: {process.ExitCode}");
+                    Logger.Log("Executable Output:");
+                    Logger.Log(output);
+                    Logger.Log("Executable Error:");
+                    Logger.Log(error);
+                    Logger.Log($"Exit Code: {process.ExitCode}");
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"An error occurred: {ex.Message}");
+                Logger.Log(LogLevel.Error, $"An error occurred: {ex.Message}");
             }
 
             if (output == null)
@@ -93,7 +94,7 @@ namespace PythonCommandProvider
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex.ToString());
+                Logger.Log(ex.ToString());
                 return (null, error + "\n" + ex.ToString());
             }
             return (resultArray, null);

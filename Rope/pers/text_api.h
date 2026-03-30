@@ -22,6 +22,11 @@ extern "C"
 {
 #endif
 
+/* logging */
+
+typedef void (*LogCallback)(enum LogLevel level, const char* message);
+ROPE_EXPORT void SetLogger(LogCallback callback);
+
 /* creation and delection */
 
 ROPE_EXPORT struct project *project_create();

@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\CommandProviderInterface\CommandProviderInterface.csproj" />
+    <ProjectReference Include="..\Logging\Logging.csproj" />
     <ProjectReference Include="..\RegexTokenizer\RegexTokenizer.csproj" />
   </ItemGroup>
 

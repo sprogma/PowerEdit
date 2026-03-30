@@ -21,7 +21,7 @@ namespace SDL2Interface
 
         public Rect Position { get; set; }
 
-        public long? PageStepSize => Math.Max(Render.H - 5, 5);
+        public long? PageStepSize => Math.Max(Position.H - 5, 5);
 
         public virtual void ResizeInternal(BaseWindow window, Rect NewSize)
         {
@@ -168,11 +168,11 @@ namespace SDL2Interface
                             long y = position.Y + 1;
                             foreach (var (i, (text, _)) in alertWindow.Buttons.Index())
                             {
+                                Canvas.AddString(position.X + 4, y, text);
                                 if (alertWindow.Selected == i)
                                 {
-                                    Canvas.ApplyStyle(new(position.X + 4, position.Y, position.W - 4, 1), null, new cColor(0, 50, 80));
+                                    Canvas.ApplyStyle(new(position.X + 4, y, position.W - 4, 1), new cColor(0, 0, 0), new cColor(0, 255, 255));
                                 }
-                                Canvas.AddString(position.X + 4, y, text);
                                 y++;
                             }
                         }
@@ -461,7 +461,7 @@ namespace SDL2Interface
                 if (s != null)
                 {
                     int num = i;
-                    Canvas.AddString(window.Layout.Position.X + 1, window.Layout.Position.Y + t, num.ToString().PadLeft(maxPower), new cColor(255, 0, 0), cColor.Default);
+                    Canvas.AddString(window.Layout.Position.X + 1, window.Layout.Position.Y + t, num.ToString().PadLeft(maxPower), cColor.Default, cColor.Default);
                 }
             }
             leftBarSize = maxPower + 1;

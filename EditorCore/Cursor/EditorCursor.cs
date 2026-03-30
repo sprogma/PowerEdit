@@ -1,6 +1,7 @@
 ﻿using EditorCore.Buffer;
 using EditorCore.File;
 using EditorCore.Selection;
+using LoggingLogLevel;
 using RegexTokenizer;
 using System;
 using System.Collections.Generic;
@@ -36,7 +37,7 @@ namespace EditorCore.Cursor
                         {
                             return;
                         }
-                        Console.WriteLine($"get result: {string.Join(' ', enumerable_result.Select(x => x.ToString()))}");
+                        Logger.Log($"get result: {string.Join(';', enumerable_result.Select(x => x.ToString()))}");
                         Selections = new(this, enumerable_result.Where(x => x is EditorSelection).Cast<EditorSelection>().ToArray());
                     }
                     break;
@@ -64,7 +65,7 @@ namespace EditorCore.Cursor
                         {
                             return;
                         }
-                        Console.WriteLine($"get result: {string.Join(' ', result.Select(x => x.ToString()))}");
+                        Logger.Log($"get result: {string.Join(';', result.Select(x => x.ToString()))}");
                         foreach (var x in Selections)
                         {
                             Buffer.DeleteString(x.Min, x.TextLength);
@@ -118,7 +119,7 @@ namespace EditorCore.Cursor
                         {
                             return;
                         }
-                        Console.WriteLine($"get result: {string.Join(' ', result.Select(x => x.ToString()))}");
+                        Logger.Log($"get result: {string.Join(';', result.Select(x => x.ToString()))}");
                         foreach (var x in Selections)
                         {
                             Buffer.DeleteString(x.Min, x.TextLength);

@@ -1,6 +1,7 @@
 ﻿using EditorCore.Buffer;
 using EditorCore.File;
 using EditorCore.Server;
+using LoggingLogLevel;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -21,14 +22,14 @@ namespace EditorFramework
             Task.Run(async () =>
             {
 
-                Console.WriteLine("File saved!");
+                Logger.Log("File saved!");
                 if (file.Buffer.Text.Length > 1024 * 1024)
                 {
                     lock (file.Buffer.ErrorMarks)
                     {
                         file.Buffer.ErrorMarks.Clear();
                     }
-                    Console.WriteLine("-- Too big file, disable linter");
+                    Logger.Log(LogLevel.Warning, "Too big file, disable linter");
                     return;
                 }
                 lock (file.Buffer.ErrorMarks)
@@ -88,13 +89,13 @@ namespace EditorFramework
                     _ => []
                 };
 
-                Console.WriteLine($"Language id: {language}");
+                Logger.Log($"Language id: {language}");
 
                 foreach (var Linter in LinterVariants)
                 {
                     try
                     {
-                        Console.WriteLine(Linter);
+                        Logger.Log($"Using {Linter}");
                         ProcessStartInfo startInfo = new ProcessStartInfo
                         {
                             FileName = Linter.executable,
@@ -135,7 +136,7 @@ namespace EditorFramework
                                         string msg = match.Groups["msg"].Value;
                                         UpdateError(filename, line - 1, col - 1, msg);
                                     }
-                                    Console.WriteLine($"[OUTPUT]: {e.Data}");
+                                    Logger.Log($"[OUTPUT]: {e.Data}");
                                 }
                             };
 
@@ -153,7 +154,7 @@ namespace EditorFramework
                                         UpdateError(filename, line - 1, col - 1, msg);
                                     }
                                     Console.ForegroundColor = ConsoleColor.Red;
-                                    Console.WriteLine($"[ERROR]: {e.Data}");
+                                    Logger.Log(LogLevel.Error, $"{e.Data}");
                                     Console.ResetColor();
                                 }
                             };
@@ -164,7 +165,7 @@ namespace EditorFramework
 
                             await process.WaitForExitAsync();
 
-                            Console.WriteLine("Process Completed.");
+                            Logger.Log("Process Completed.");
                         }
                     }
                     catch (System.ComponentModel.Win32Exception)
@@ -174,7 +175,7 @@ namespace EditorFramework
                     }
                     catch (Exception ex)
                     {
-                        Console.WriteLine($"Processing Error: {ex.Message}");
+                        Logger.Log(LogLevel.Error, $"At processing: {ex.Message}");
                         return;
                     }
                 }

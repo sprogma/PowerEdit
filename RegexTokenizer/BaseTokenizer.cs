@@ -1,4 +1,5 @@
-﻿using System;
+﻿using LoggingLogLevel;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -15,7 +16,7 @@ namespace RegexTokenizer
 
         public static BaseTokenizer CreateTokenizer(string? fileExternsion)
         {
-            Console.WriteLine($"Creating ... {fileExternsion} tokenizer");
+            Logger.Log($"Creating ... {fileExternsion} tokenizer");
             switch (fileExternsion)
             {
                 case "c":

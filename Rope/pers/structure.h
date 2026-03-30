@@ -13,14 +13,17 @@
 #define MODIFICATION_INSERT 1
 #define MODIFICATION_DELETE 2
 
-// #define print(...) 
-// 
-// 
-// 
-// 
-// 
-// (__VA_ARGS__)
-#define print(...)
+enum LogLevel
+{
+    LogInfo,
+    LogWaring,
+    LogError,
+    LogAppStart,
+};
+
+
+__attribute__((format(printf, 2, 3)))
+void Log(enum LogLevel level, const char* format, ...);
 
 struct segment_info
 {

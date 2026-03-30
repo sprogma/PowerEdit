@@ -150,9 +150,9 @@ static struct state *TryMerge(HashTable *table, struct state *base, struct state
 		}
 	}
 	/* found same states: merge them */
-	print("states %p and %p are same!\n", base, child);
+	Log(LogInfo, "states %p and %p are same!", base, child);
 	merge_state(base, child);
-	printf("merged into %p\n", (base->merged_to ? child : base));
+	Log(LogInfo, "merged into %p", (base->merged_to ? child : base));
 	return (base->merged_to ? child : base);
 }
 

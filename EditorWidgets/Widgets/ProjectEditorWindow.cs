@@ -6,6 +6,7 @@ using EditorCore.Server;
 using EditorFramework.ApplicationApi;
 using EditorFramework.Events;
 using EditorFramework.Layout;
+using LoggingLogLevel;
 using RegexTokenizer;
 using System;
 using System.Collections.Concurrent;
@@ -94,7 +95,7 @@ namespace EditorFramework.Widgets
                                 OpenPopup(new AlertWindow(App, GetLayout<AlertWindow>.Value, $"Error - File {filename} doesn't exists or is a directory", ("Ok", () => { })));
                                 return;
                             }
-                            Console.WriteLine($"opening file {filename}");
+                            Logger.Log($"opening file {filename}");
                             OpenFile(filename);
                         }
                         else

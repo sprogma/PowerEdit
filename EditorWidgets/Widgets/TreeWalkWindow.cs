@@ -2,6 +2,7 @@
 using EditorFramework.ApplicationApi;
 using EditorFramework.Events;
 using EditorFramework.Layout;
+using LoggingLogLevel;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using System;
 using System.Collections.Generic;
@@ -119,7 +120,7 @@ namespace EditorFramework.Widgets
             {
                 return;
             }
-            Console.WriteLine($"Set {root}.depth = {depth}");
+            Logger.Log($"Set {root}.depth = {depth}");
             root.depth = depth;
             foreach (Node node in root.childs)
             {

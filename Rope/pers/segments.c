@@ -16,8 +16,8 @@ int64_t glb_next_node = 1;
 static void update(int64_t node) 
 {
     if (!node) return;
-    // print("Updating of %lld [total %lld nodes]\n", node, glb_next_node);
-    // print("total_length = %lld + %lld + %lld\n", _len(glb_nodes[node].left), _len(glb_nodes[node].right), glb_nodes[node].length);
+    // Log(LogInfo, "Updating of %lld [total %lld nodes]", node, glb_next_node);
+    // Log(LogInfo, "total_length = %lld + %lld + %lld", _len(glb_nodes[node].left), _len(glb_nodes[node].right), glb_nodes[node].length);
     glb_nodes[node].total_length = _len(glb_nodes[node].left) + _len(glb_nodes[node].right) + glb_nodes[node].length;
     glb_nodes[node].total_newlines = _cnt(glb_nodes[node].left) + _cnt(glb_nodes[node].right) + glb_nodes[node].newlines;
     int hl = _hgt(glb_nodes[node].left);
@@ -30,7 +30,7 @@ static int64_t _copy_to_version(int64_t node, int64_t this_version)
     if (!node || glb_nodes[node].version_id == this_version) return node;
 
     int64_t new_node = glb_next_node++;
-    // print("A: allocated node %lld [copy from %lld]\n", new_node, node);
+    // Log(LogInfo, "A: allocated node %lld [copy from %lld]", new_node, node);
     memcpy(&glb_nodes[new_node], &glb_nodes[node], sizeof(struct segment));
     glb_nodes[new_node].version_id = this_version;
     update(new_node);
@@ -151,11 +151,11 @@ int64_t _update_newlines(struct segment *node)
 
 
 static int64_t insert_at_pos(int64_t root_idx, int64_t pos, struct segment_info *info, int64_t ver) {
-    // print("Insert: length %lld at %lld\n", info.length, pos);
+    // Log(LogInfo, "Insert: length %lld at %lld", info.length, pos);
     if (root_idx == 0) 
     {
         int64_t new_node = glb_next_node++;
-        // print("B: allocated node %lld\n", new_node);
+        // Log(LogInfo, "B: allocated node %lld", new_node);
         memset(&glb_nodes[new_node], 0, sizeof(glb_nodes[new_node]));
         memcpy(&glb_nodes[new_node], info, sizeof(*info));
         glb_nodes[new_node].offset = info->offset;

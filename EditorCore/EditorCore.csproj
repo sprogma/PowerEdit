@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <OutputType>Exe</OutputType>
+    <OutputType>Library</OutputType>
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
@@ -11,6 +11,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\CommandProviderInterface\CommandProviderInterface.csproj" />
+    <ProjectReference Include="..\Logging\Logging.csproj" />
     <ProjectReference Include="..\RegexTokenizer\RegexTokenizer.csproj" />
     <ProjectReference Include="..\Rope\TextBuffer.csproj" />
   </ItemGroup>

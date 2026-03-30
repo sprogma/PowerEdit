@@ -30,7 +30,7 @@ static void CalculateHash(struct state *state)
 	state->hash.total_hash[0] = h_lo;
 	state->hash.total_hash[1] = h_hi;
 	state->hash.calculated = 1;
-	print("hash of state %p is %llx%llx\n", state, h_hi, h_lo);
+	Log(LogInfo, "hash of state %p is %llx%llx", state, h_hi, h_lo);
 }
 
 

@@ -1,10 +1,11 @@
 ﻿using EditorCore.Buffer;
 using EditorCore.File;
 using EditorCore.Selection;
-using RegexTokenizer;
 using EditorFramework.ApplicationApi;
-using EditorFramework.Layout;
 using EditorFramework.Events;
+using EditorFramework.Layout;
+using LoggingLogLevel;
+using RegexTokenizer;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -82,7 +83,7 @@ namespace EditorFramework.Widgets
                                                         OpenPopup(new AlertWindow(App, GetLayout<AlertWindow>.Value, $"Error - failed to create directory {dirname} : {e}", ("Ok", () => { })));
                                                         return;
                                                     }
-                                                    Console.WriteLine($"file saved as {newFilename}");
+                                                    Logger.Log($"file saved as {newFilename}");
                                                     file.Save(newFilename);
                                                     return;
                                                 }),
@@ -98,7 +99,7 @@ namespace EditorFramework.Widgets
                                     return;
                                 }
                                     
-                                Console.WriteLine($"file saved as {newFilename}");
+                                Logger.Log($"file saved as {newFilename}");
                                 file.Save(newFilename);
                             }
                             else
@@ -110,7 +111,7 @@ namespace EditorFramework.Widgets
                     }
                     else
                     {
-                        Console.WriteLine($"file saved as {file.filename}");
+                        Logger.Log($"file saved as {file.filename}");
                         file.Save();
                     }
                     return false;

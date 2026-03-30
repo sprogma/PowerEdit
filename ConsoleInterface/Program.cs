@@ -8,6 +8,7 @@ using EditorFramework.ApplicationApi;
 using EditorFramework.Events;
 using EditorFramework.Layout;
 using EditorFramework.Widgets;
+using LoggingLogLevel;
 using Lsp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using PowershellCommandProvider;
@@ -39,6 +40,7 @@ namespace SDL2Interface
 
         public void Main(string[] raw_args)
         {
+            Logger.Log(LogLevel.AppStart, "Run console interface");
             List<string> args = [.. raw_args];
 
             Console.OutputEncoding = Encoding.UTF8;
@@ -52,7 +54,7 @@ namespace SDL2Interface
             //fileToOpen = ["D:\\big.txt"];
             //fileToOpen = ["C:\\Users\\User\\AppData\\Local\\Temp\\copy_10gb.txt"];
             //fileToOpen = ["C:\\Users\\User\\AppData\\Local\\Temp\\big.txt"]; // too big for now
-            Console.WriteLine($"Opening files {fileToOpen.Count} \"{fileToOpen}\"...");
+            Logger.Log($"Opening files {fileToOpen.Count} \"{fileToOpen}\"...");
             
             Render render = new(new EditorFramework.ColorTheme());
 
@@ -72,7 +74,7 @@ namespace SDL2Interface
 
                 if (provider == null)
                 {
-                    Console.WriteLine("Error: Not selected any provider");
+                    Logger.Log(LogLevel.Error, "Not selected any provider");
                     return;
                 }
 

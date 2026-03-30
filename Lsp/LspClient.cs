@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+﻿using LoggingLogLevel;
+using System.Diagnostics;
 
 
 
@@ -14,7 +15,7 @@ namespace Lsp
 
         public async Task StartAsync(string serverPath, string arguments)
         {
-            Console.WriteLine("[LOG] Server connected.");
+            Logger.Log("Server connected.");
             _tcs.SetResult(true);
         }
 

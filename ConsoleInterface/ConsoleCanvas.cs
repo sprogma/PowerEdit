@@ -274,8 +274,16 @@ namespace ConsoleInterface
                             LastBackground = current.Background;
                         }
 
-                        buffer.Append(current.Text);
-                        LastX += UnicodeCalculator.GetWidth(current.Text);
+                        if (current.Text.Length != 1 || !char.IsControl(current.Text[0]))
+                        {
+                            buffer.Append(current.Text);
+                            LastX += UnicodeCalculator.GetWidth(current.Text);
+                        }
+                        else
+                        {
+                            buffer.Append('�');
+                            LastX += 1;
+                        }
 
                         PreviousBuffer[y, x] = current;
                     }

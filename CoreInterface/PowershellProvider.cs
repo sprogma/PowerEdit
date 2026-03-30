@@ -1,4 +1,5 @@
-﻿using RegexTokenizer;
+﻿using LoggingLogLevel;
+using RegexTokenizer;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -65,7 +66,7 @@ namespace PowershellCommandProvider
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"ERROR: {ex}");
+                Logger.Log(LogLevel.Error, $"{ex}");
                 return (null, ex.ToString());
             }
         }

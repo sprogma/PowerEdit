@@ -4,6 +4,7 @@ using EditorCore.Selection;
 using EditorFramework.ApplicationApi;
 using EditorFramework.Events;
 using EditorFramework.Layout;
+using LoggingLogLevel;
 using Microsoft.ApplicationInsights.Metrics.Extensibility;
 using Microsoft.CodeAnalysis.Operations;
 using System;
@@ -44,7 +45,7 @@ namespace EditorFramework.Widgets
                 case TextInputEvent input:
                     if (!jumpInput)
                     {
-                        Console.WriteLine($"Input text: {input.Text}");
+                        Logger.Log($"Input text: {input.Text}");
                         /* clear all selection */
                         cursor?.Fork();
                         cursor?.Selections.DeleteString();
