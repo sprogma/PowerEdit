@@ -113,7 +113,7 @@ namespace SDL2Interface
         }
     }
 
-    internal class Render
+    internal class Render: IDisposable
     {
         static public int W, H;
         internal ConsoleCanvas Canvas;
@@ -555,6 +555,12 @@ namespace SDL2Interface
                 SimpleTextWindowDrawSimpleNumbers(window, ref leftBarSize);
             }
             SimpleTextWindowDrawText(window, leftBarSize);
+        }
+
+        public void Dispose()
+        {
+            Canvas.Dispose();
+            GC.SuppressFinalize(this);
         }
     }
 }

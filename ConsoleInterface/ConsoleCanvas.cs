@@ -5,12 +5,14 @@ using System.Text;
 namespace ConsoleInterface
 {
     using EditorFramework.Layout;
+    using LoggingLogLevel;
     using System;
     using System.ComponentModel.DataAnnotations;
     using System.Globalization;
     using System.Runtime.InteropServices;
     using System.Text;
     using Wcwidth;
+    using static System.Net.Mime.MediaTypeNames;
 
     public struct Color
     {
@@ -80,6 +82,9 @@ namespace ConsoleInterface
         private Color LastBackground = Color.Default;
         private bool VTEnabled;
 
+        private bool AltBufferEnabled = false;
+        private Lock AltBufferLock = new();
+
         public int Width { get; private set; }
         public int Height { get; private set; }
         public Rect ClipRect { get; set {
@@ -95,15 +100,50 @@ namespace ConsoleInterface
         {
             Console.OutputEncoding = Encoding.UTF8;
             Console.InputEncoding = Encoding.UTF8;
+
             EnableVirtualTerminal();
+            StartAlternativeBuffer();
             UpdateConsoleSize();
             CreateBuffers(Width, Height);
             ClipRect = new(0, 0, Width, Height);
+
+            Console.CancelKeyPress += (s, e) =>
+            {
+                lock (AltBufferLock)
+                {
+                    if (AltBufferEnabled)
+                    {
+                        EndAlternativeBuffer();
+                    }
+                }
+            };
+        }
+
+        public void StartAlternativeBuffer()
+        {
+            lock (AltBufferLock)
+            {
+                Console.Write("\x1b[?1049h");
+                AltBufferEnabled = true;
+            }
+            //Console.Write("\x1b[7l");
+            //Console.Write($"\x1b[1;{Console.WindowHeight - 1}r");
+        }
+
+        public void EndAlternativeBuffer()
+        {
+            //Console.Write("\x1b[7h");
+            lock (AltBufferLock)
+            {
+                Console.Write("\x1b[?1049l");
+                AltBufferEnabled = false;
+            }
         }
 
         public void Dispose()
         {
             GC.SuppressFinalize(this);
+            EndAlternativeBuffer();
             Console.CursorVisible = true;
         }
 
@@ -240,66 +280,61 @@ namespace ConsoleInterface
 
             StringBuilder buffer = new();
 
-            try
+            for (int y = 0; y < Height; y++)
             {
-                for (int y = 0; y < Height; y++)
+                for (int x = 0; x < Width; x++)
                 {
-                    for (int x = 0; x < Width; x++)
+                    if (Buffer[y, x].Text == "")
+                        continue;
+
+                    Cell current = Buffer[y, x];
+                    Cell previous = PreviousBuffer[y, x];
+
+                    //if (current.Equals(previous))
+                    //    continue;
+
+                    if (LastX != x || LastY != y)
                     {
-                        if (Buffer[y, x].Text == "")
-                            continue;
-
-                        Cell current = Buffer[y, x];
-                        Cell previous = PreviousBuffer[y, x];
-
-                        //if (current.Equals(previous))
-                        //    continue;
-
-                        if (LastX != x || LastY != y)
-                        {
-                            buffer.Append($"\x1b[{y + 1};{x + 1}H");
-                            LastX = x;
-                            LastY = y;
-                        }
-
-                        if (!LastForeground.Equals(current.Foreground))
-                        {
-                            buffer.Append(current.Foreground.AsForeground);
-                            LastForeground = current.Foreground;
-                        }
-
-                        if (!LastBackground.Equals(current.Background))
-                        {
-                            buffer.Append(current.Background.AsBackground);
-                            LastBackground = current.Background;
-                        }
-
-                        if (current.Text.Length != 1 || !char.IsControl(current.Text[0]))
-                        {
-                            buffer.Append(current.Text);
-                            LastX += UnicodeCalculator.GetWidth(current.Text);
-                        }
-                        else
-                        {
-                            buffer.Append('�');
-                            LastX += 1;
-                        }
-
-                        PreviousBuffer[y, x] = current;
+                        buffer.Append($"\x1b[{y + 1};{x + 1}H");
+                        LastX = x;
+                        LastY = y;
                     }
-                }
 
-                if (!LastForeground.IsDefault || !LastBackground.IsDefault)
-                {
-                    buffer.Append("\x1b[0m");
-                }
+                    if (!LastForeground.Equals(current.Foreground))
+                    {
+                        buffer.Append(current.Foreground.AsForeground);
+                        LastForeground = current.Foreground;
+                    }
 
-                Console.Write(buffer);
+                    if (!LastBackground.Equals(current.Background))
+                    {
+                        buffer.Append(current.Background.AsBackground);
+                        LastBackground = current.Background;
+                    }
+
+                    if (current.Text != "\r\n" && (current.Text.Length != 1 || !char.IsControl(current.Text[0])))
+                    {
+                        buffer.Append(current.Text);
+                        LastX += UnicodeCalculator.GetWidth(current.Text);
+                    }
+                    else
+                    {
+                        buffer.Append('�');
+                        LastX += 1;
+                    }
+
+                    PreviousBuffer[y, x] = current;
+                }
             }
-            finally
+
+            if (!LastForeground.IsDefault || !LastBackground.IsDefault)
             {
-                Console.CursorVisible = true;
+                buffer.Append("\x1b[0m");
             }
+
+            Console.Write(buffer);
+
+            Console.CursorVisible = true;
         }
 
         private void EnableVirtualTerminal()

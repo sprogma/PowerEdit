@@ -56,7 +56,7 @@ namespace SDL2Interface
             //fileToOpen = ["C:\\Users\\User\\AppData\\Local\\Temp\\big.txt"]; // too big for now
             Logger.Log($"Opening files {fileToOpen.Count} \"{fileToOpen}\"...");
             
-            Render render = new(new EditorFramework.ColorTheme());
+            using Render render = new(new EditorFramework.ColorTheme());
 
             /* create application instance */
             {
@@ -128,6 +128,7 @@ namespace SDL2Interface
                         render.Draw(win);
                     }
                     render.Canvas.Flush();
+                    Thread.Sleep(10);
                     while (Console.KeyAvailable)
                     {
                         var key = Console.ReadKey(true);
