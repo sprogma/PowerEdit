@@ -33,7 +33,7 @@ namespace EditorFramework.Widgets
                 case QuitEvent:
                     Environment.Exit(1);
                     break;
-                case KeyChordEvent chord when chord.Is(KeyCode.S, KeyMode.Ctrl):
+                case KeyChordEvent chord when chord.Is(KeyCode.S, KeyMode.Ctrl) || chord.Is(KeyCode.S, KeyMode.Alt):
                     if (file.filename == null)
                     {
                         PromptTextWindow promptWindow = new(App, GetLayout<PromptTextWindow>.Value, new EditorBuffer(file.Server, BaseTokenizer.CreateBaseTokenizer(), null, null, new PersistentCTextBuffer()));

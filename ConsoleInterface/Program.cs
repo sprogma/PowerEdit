@@ -129,6 +129,12 @@ namespace SDL2Interface
                     }
                     render.Canvas.Flush();
                     Thread.Sleep(10);
+                    while (render.Canvas.QuitCount > 0)
+                    {
+                        render.Canvas.QuitCount--;
+                        pool.AddEvent(new KeyDownEvent(KeyCode.C, KeyMode.Ctrl));
+                        pool.ProcessEvents();
+                    }
                     while (Console.KeyAvailable)
                     {
                         var key = Console.ReadKey(true);

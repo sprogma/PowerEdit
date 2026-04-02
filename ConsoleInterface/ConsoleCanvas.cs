@@ -84,6 +84,7 @@ namespace ConsoleInterface
 
         private bool AltBufferEnabled = false;
         private Lock AltBufferLock = new();
+        internal int QuitCount = 0;
 
         public int Width { get; private set; }
         public int Height { get; private set; }
@@ -109,13 +110,15 @@ namespace ConsoleInterface
 
             Console.CancelKeyPress += (s, e) =>
             {
-                lock (AltBufferLock)
-                {
-                    if (AltBufferEnabled)
-                    {
-                        EndAlternativeBuffer();
-                    }
-                }
+                QuitCount++;
+                e.Cancel = true;
+                //lock (AltBufferLock)
+                //{
+                //    if (AltBufferEnabled)
+                //    {
+                //        EndAlternativeBuffer();
+                //    }
+                //}
             };
         }
 

@@ -77,16 +77,16 @@ namespace EditorFramework.Widgets
                     enteredLineNumber *= 10;
                     enteredLineNumber += (int)k.LastKey.Key & 0xF;
                     return false;
-                case KeyChordEvent key when key.Is(KeyCode.C, KeyMode.Ctrl):
+                case KeyChordEvent key when key.Is(KeyCode.C, KeyMode.Ctrl) || key.Is(KeyCode.C, KeyMode.Ctrl | KeyMode.Shift):
                     cursor?.Selections.Copy();
                     return false;
-                case KeyChordEvent key when key.Is(KeyCode.X, KeyMode.Ctrl):
+                case KeyChordEvent key when key.Is(KeyCode.X, KeyMode.Ctrl) || key.Is(KeyCode.X, KeyMode.Ctrl | KeyMode.Shift):
                     cursor?.Fork();
                     cursor?.Selections.Copy();
                     cursor?.Selections.DeleteString();
                     cursor?.Commit();
                     return false;
-                case KeyChordEvent key when key.Is(KeyCode.V, KeyMode.Ctrl):
+                case KeyChordEvent key when key.Is(KeyCode.V, KeyMode.Ctrl) || key.Is(KeyCode.V, KeyMode.Ctrl | KeyMode.Shift):
                     cursor?.Fork();
                     cursor?.Selections.DeleteString();
                     cursor?.Selections.Paste();
