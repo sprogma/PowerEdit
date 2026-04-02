@@ -5,6 +5,7 @@ using System.Text;
 namespace ConsoleInterface
 {
     using EditorFramework.Layout;
+    using Humanizer;
     using LoggingLogLevel;
     using System;
     using System.ComponentModel.DataAnnotations;
@@ -103,41 +104,31 @@ namespace ConsoleInterface
             Console.InputEncoding = Encoding.UTF8;
 
             EnableVirtualTerminal();
-            StartAlternativeBuffer();
+            EnableFeatures();
             UpdateConsoleSize();
             CreateBuffers(Width, Height);
             ClipRect = new(0, 0, Width, Height);
-
-            Console.CancelKeyPress += (s, e) =>
-            {
-                QuitCount++;
-                e.Cancel = true;
-                //lock (AltBufferLock)
-                //{
-                //    if (AltBufferEnabled)
-                //    {
-                //        EndAlternativeBuffer();
-                //    }
-                //}
-            };
+            Console.TreatControlCAsInput = true;
         }
 
-        public void StartAlternativeBuffer()
+        public void EnableFeatures()
         {
             lock (AltBufferLock)
             {
                 Console.Write("\x1b[?1049h");
+                Console.Write("\x1b[?2004h");
                 AltBufferEnabled = true;
             }
             //Console.Write("\x1b[7l");
             //Console.Write($"\x1b[1;{Console.WindowHeight - 1}r");
         }
 
-        public void EndAlternativeBuffer()
+        public void DisableFeatures()
         {
             //Console.Write("\x1b[7h");
             lock (AltBufferLock)
             {
+                Console.Write("\x1b[?2004l");
                 Console.Write("\x1b[?1049l");
                 AltBufferEnabled = false;
             }
@@ -146,7 +137,7 @@ namespace ConsoleInterface
         public void Dispose()
         {
             GC.SuppressFinalize(this);
-            EndAlternativeBuffer();
+            DisableFeatures();
             Console.CursorVisible = true;
         }
 
@@ -344,13 +335,20 @@ namespace ConsoleInterface
         {
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
-                IntPtr handle = GetStdHandle(STD_OUTPUT_HANDLE);
-                if (GetConsoleMode(handle, out uint mode))
+                IntPtr hOut = GetStdHandle(STD_OUTPUT_HANDLE);
+                if (GetConsoleMode(hOut, out uint mode))
                 {
-                    mode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
-                    SetConsoleMode(handle, mode);
+                    mode |= ENABLE_VIRTUAL_TERMINAL_OUTPUT;
+                    SetConsoleMode(hOut, mode);
                     VTEnabled = true;
                 }
+                // break all keys so disabled for now
+                //IntPtr hIn = GetStdHandle(STD_INPUT_HANDLE);
+                //if (GetConsoleMode(hIn, out uint modeIn))
+                //{
+                //    modeIn |= ENABLE_VIRTUAL_TERMINAL_INPUT;
+                //    SetConsoleMode(hIn, modeIn);
+                //}
             }
             else
             {
@@ -405,8 +403,18 @@ namespace ConsoleInterface
             PreviousBuffer = newPrevBuffer;
         }
 
+        internal static void SetClipboard(string text)
+        {
+            byte[] bytes = Encoding.UTF8.GetBytes(text);
+            string base64 = Convert.ToBase64String(bytes);
+            string osc52 = $"\x1b]52;c;{base64}\x07";
+            Console.Write(osc52);
+        }
+
         private const int STD_OUTPUT_HANDLE = -11;
-        private const uint ENABLE_VIRTUAL_TERMINAL_PROCESSING = 0x0004;
+        private const int STD_INPUT_HANDLE = -10;
+        private const uint ENABLE_VIRTUAL_TERMINAL_OUTPUT = 0x0004;
+        private const uint ENABLE_VIRTUAL_TERMINAL_INPUT = 0x0200;
 
         [DllImport("kernel32.dll", SetLastError = true)]
         private static extern IntPtr GetStdHandle(int nStdHandle);

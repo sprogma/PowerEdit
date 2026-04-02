@@ -1,4 +1,5 @@
 ﻿using CommandProviderInterface;
+using ConsoleInterface;
 using EditorCore.Buffer;
 using EditorCore.File;
 using EditorCore.Selection;
@@ -38,6 +39,11 @@ namespace SDL2Interface
             windows.Add(window);
         }
 
+        public void SetClipboard(string text)
+        {
+            ConsoleCanvas.SetClipboard(text);
+        }
+
         public void Main(string[] raw_args)
         {
             Logger.Log(LogLevel.AppStart, "Run console interface");
@@ -61,7 +67,7 @@ namespace SDL2Interface
             /* create application instance */
             {
                 ICommandProvider? provider;
-
+                
                 if (args.Contains("--python"))
                 {
                     args.Remove("--python");
@@ -129,19 +135,68 @@ namespace SDL2Interface
                     }
                     render.Canvas.Flush();
                     Thread.Sleep(10);
-                    while (render.Canvas.QuitCount > 0)
-                    {
-                        render.Canvas.QuitCount--;
-                        pool.AddEvent(new KeyDownEvent(KeyCode.C, KeyMode.Ctrl));
-                        pool.ProcessEvents();
-                    }
+
+
                     while (Console.KeyAvailable)
                     {
                         var key = Console.ReadKey(true);
-                        var e = CreateEvent(key);
-                        foreach (var x in e)
+
+                        Logger.Log($"Key {key.Key} int={(int)key.KeyChar} char={key.KeyChar}");
+
+                        if (key.KeyChar == 27)
                         {
-                            pool.AddEvent(x);
+                            var captured = new List<ConsoleKeyInfo> { key };
+
+                            var sw = Stopwatch.StartNew();
+                            while (sw.ElapsedMilliseconds < 30 && !Console.KeyAvailable)
+                            {
+                                Thread.Sleep(1);
+                            }
+
+                            while (Console.KeyAvailable && captured.Count < 6) // get full message
+                            {
+                                captured.Add(Console.ReadKey(true));
+                            }
+
+                            string tail = string.Concat(captured.Skip(1).Select(k => k.KeyChar));
+                            Logger.Log($"Got initial paste, got end as {tail}");
+                            if (tail == "[200~")
+                            {
+                                var pasteBuffer = new StringBuilder();
+                                while (true)
+                                {
+                                    var pKey = Console.ReadKey(true);
+                                    if (pKey.Key == ConsoleKey.Escape)
+                                    {
+                                        // check if it is "[201~"
+                                        var endSw = Stopwatch.StartNew();
+                                        while (endSw.ElapsedMilliseconds < 10 && !Console.KeyAvailable) Thread.Sleep(1);
+
+                                        string endTail = "";
+                                        while (Console.KeyAvailable) endTail += Console.ReadKey(true).KeyChar;
+
+                                        if (endTail == "[201~") break;
+                                        pasteBuffer.Append('\x1b').Append(endTail);
+                                    }
+                                    else pasteBuffer.Append(pKey.KeyChar);
+                                }
+                                pool.AddEvent(new PasteEvent(pasteBuffer.ToString()));
+                                pool.ProcessEvents();
+                                continue;
+                            }
+
+                            // send all events
+                            foreach (var k in captured)
+                            {
+                                foreach (var e in CreateEvent(k)) pool.AddEvent(e);
+                            }
+                            pool.ProcessEvents();
+                            continue;
+                        }
+
+                        foreach (var e in CreateEvent(key))
+                        {
+                            pool.AddEvent(e);
                         }
                         pool.ProcessEvents();
                     }

@@ -53,6 +53,26 @@ namespace EditorFramework.Widgets
                         cursor?.Commit();
                     }
                     return false;
+                case PasteEvent paste:
+                    if (cursor != null)
+                    {
+                        cursor.Fork();
+                        cursor.Selections.DeleteString();
+                        /* check: if there is same string as if after copy -> paste using internal buffers */
+                        Logger.Log("Got paste event");
+                        if (IsInternalInsert(paste.Text, cursor.Selections.GetPaste()))
+                        {
+                            Logger.Log("internal");
+                            cursor.Selections.Paste();
+                        }
+                        else
+                        {
+                            Logger.Log("external");
+                            cursor.Selections.InsertString(paste.Text);
+                        }
+                        cursor.Commit();
+                    }
+                    return false;
                 case KeyChordEvent key when key.LastKey.Key == KeyCode.CapsLock:
                     if (enteredLineNumber != 0)
                     {
@@ -78,7 +98,11 @@ namespace EditorFramework.Widgets
                     enteredLineNumber += (int)k.LastKey.Key & 0xF;
                     return false;
                 case KeyChordEvent key when key.Is(KeyCode.C, KeyMode.Ctrl) || key.Is(KeyCode.C, KeyMode.Ctrl | KeyMode.Shift):
-                    cursor?.Selections.Copy();
+                    if (cursor != null)
+                    {
+                        cursor.Selections.Copy();
+                        App.SetClipboard(string.Join(Environment.NewLine, cursor.Selections.GetPaste()));
+                    }
                     return false;
                 case KeyChordEvent key when key.Is(KeyCode.X, KeyMode.Ctrl) || key.Is(KeyCode.X, KeyMode.Ctrl | KeyMode.Shift):
                     cursor?.Fork();
@@ -560,5 +584,42 @@ namespace EditorFramework.Widgets
             }
             return base.HandleEvent(e);
         }
+
+        public static bool IsInternalInsert(string paste_data, IEnumerable<string> clip)
+        {
+            if (paste_data == null) return false;
+            ReadOnlySpan<char> systemSpan = paste_data.AsSpan();
+            int currentOffset = 0;
+            string lastSeparator = Environment.NewLine;
+            using var enumerator = clip.GetEnumerator();
+            bool hasNext = enumerator.MoveNext();
+            while (hasNext)
+            {
+                string currentClip = enumerator.Current ?? string.Empty;
+                ReadOnlySpan<char> clipSpan = currentClip.AsSpan();
+                if (currentOffset + clipSpan.Length > systemSpan.Length ||
+                    !systemSpan.Slice(currentOffset, clipSpan.Length).SequenceEqual(clipSpan))
+                {
+                    return false;
+                }
+                currentOffset += clipSpan.Length;
+                hasNext = enumerator.MoveNext();
+                // check separator
+                if (hasNext)
+                {
+                    if (currentOffset + lastSeparator.Length > systemSpan.Length) return false;
+
+                    if (!systemSpan.Slice(currentOffset, lastSeparator.Length).SequenceEqual(lastSeparator.AsSpan()))
+                    {
+                        return false;
+                    }
+
+                    currentOffset += lastSeparator.Length;
+                }
+            }
+            return currentOffset == systemSpan.Length;
+        }
+
     }
 }
+

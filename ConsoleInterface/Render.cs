@@ -515,13 +515,17 @@ namespace SDL2Interface
                     long x = position.X + (long)Math.Round(nextPos.X), y = position.Y + (long)Math.Floor(nextPos.Y);
                     long cx = ix, cy = iy;
 
+                    if (y > position.H || iy < position.Y)
+                    {
+                        continue;
+                    }
                     while (cx != x || cy != y)
                     {
                         if (cx < x) cx++;
                         if (cx > x) cx--;
                         if (cy < y) cy++;
                         if (cy > y) cy--;
-                        Canvas.SetCell(cx, cy, "*", new cColor(50, 50, 50), cColor.Default);
+                        Canvas.SetCell(cx, cy, "*", new cColor(100, 100, 100), cColor.Default);
                     }
                 }
             }
@@ -531,6 +535,10 @@ namespace SDL2Interface
                 Vector2 pos = node.position * positionScale - window.Camera + screenOffset;
                 pos -= 0.4f * new Vector2(w, h);
                 long ix = position.X + (long)Math.Round(pos.X), iy = position.Y + (long)Math.Round(pos.Y);
+                if (iy > position.H || iy < position.Y)
+                {
+                    continue;
+                }
                 if (node == window.current)
                 {
                     Canvas.AddString(ix, iy, $"#{node.id&0xFFFF:X4}", new cColor(0, 0, 0), new cColor(255, 255, 255));
@@ -542,22 +550,24 @@ namespace SDL2Interface
             }
             {
                 Vector2 Dest = window.current.position * positionScale;
-                if (window.Camera.X < Dest.X && Math.Abs(window.Camera.X - Dest.X) > 0.6)
-                {
-                    window.Camera.X++;
-                }
-                if (window.Camera.X > Dest.X && Math.Abs(window.Camera.X - Dest.X) > 0.6)
-                {
-                    window.Camera.X--;
-                }
-                if (window.Camera.Y < Dest.Y && Math.Abs(window.Camera.Y - Dest.Y) > 0.6)
-                {
-                    window.Camera.Y++;
-                }
-                if (window.Camera.Y > Dest.Y && Math.Abs(window.Camera.Y - Dest.Y) > 0.6)
-                {
-                    window.Camera.Y--;
-                }
+                window.Camera.X = (float)Math.Round(Dest.X);
+                window.Camera.Y = (float)Math.Round(Dest.Y);
+                //if (window.Camera.X < Dest.X && Math.Abs(window.Camera.X - Dest.X) > 0.6)
+                //{
+                //    window.Camera.X++;
+                //}
+                //if (window.Camera.X > Dest.X && Math.Abs(window.Camera.X - Dest.X) > 0.6)
+                //{
+                //    window.Camera.X--;
+                //}
+                //if (window.Camera.Y < Dest.Y && Math.Abs(window.Camera.Y - Dest.Y) > 0.6)
+                //{
+                //    window.Camera.Y++;
+                //}
+                //if (window.Camera.Y > Dest.Y && Math.Abs(window.Camera.Y - Dest.Y) > 0.6)
+                //{
+                //    window.Camera.Y--;
+                //}
                 window.Scale = window.Scale * 0.9f + window.DestinationScale * 0.1f;
             }
 

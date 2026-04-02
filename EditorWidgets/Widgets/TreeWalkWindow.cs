@@ -35,12 +35,11 @@ namespace EditorFramework.Widgets
             public bool hidden;
             public string Label => name ?? id.ToString();
             public Vector2 position;
-            public DateTime Date;
+            public DateTime? Date;
 
-            public Node(IntPtr id, DateTime date)
+            public Node(IntPtr id)
             {
                 this.id = id;
-                this.Date = date;
                 this.hidden = false;
                 this.childs = [];
                 this.parents = [];

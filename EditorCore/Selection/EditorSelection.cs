@@ -408,6 +408,18 @@ namespace EditorCore.Selection
             }
         }
 
+        public IEnumerable<string> GetPaste()
+        {
+            for (int i = 0; i < size; ++i)
+            {
+                string? value = Clipboards[i];
+                if (value != null)
+                {
+                    yield return value;
+                }
+            }
+        }
+
         public void Paste()
         {
             for (int i = 0; i < size; ++i)
@@ -611,6 +623,10 @@ namespace EditorCore.Selection
         public void Copy()
         {
             Clipboard = Text;
+        }
+        public string? GetPaste()
+        {
+            return Clipboard;
         }
 
         public void Paste()

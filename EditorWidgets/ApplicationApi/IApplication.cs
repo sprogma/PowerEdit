@@ -9,6 +9,8 @@ namespace EditorFramework.ApplicationApi
     {
         public void RemoveWindow(BaseWindow window);
 
+        public void SetClipboard(string text);
+
         public IEnumerable<BaseWindow> ListWindows();
     }
 }

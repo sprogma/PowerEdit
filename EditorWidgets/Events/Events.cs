@@ -166,6 +166,10 @@ namespace EditorFramework.Events
         KeyEvent[] Keys
     ) : EventBase;
 
+    public record PasteEvent(
+        string Text
+    ) : EventBase;
+
     public record MouseEvent(
         long X,
         long Y,
