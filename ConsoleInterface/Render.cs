@@ -560,6 +560,9 @@ namespace SDL2Interface
                 }
                 window.Scale = window.Scale * 0.9f + window.DestinationScale * 0.1f;
             }
+
+            Canvas.FillRect(new(window.Layout.Position) { Y = window.Layout.Position.By, H = 1 }, " ", cColor.Default, cColor.Default);
+            Canvas.AddString(window.Layout.Position.X, window.Layout.Position.By, $"{window.current.Label ?? "<no name>"}: at {window.current.Date} with id {window.current.id:X16}");
         }
         public void DrawSimpleWindow(SimpleTextWindow window)
         {

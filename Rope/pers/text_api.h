@@ -39,6 +39,18 @@ ROPE_EXPORT struct state *project_new_state(struct project *project);
 
 ROPE_EXPORT struct state *state_create_dup(struct project *project, struct state *state);
 
+struct state_info
+{
+	char *name;
+	ptime_t timestamp;
+	int64_t version_id;
+	int64_t depth;
+	int64_t tags_len;
+	int64_t *tags;
+};
+
+ROPE_EXPORT struct state_info state_get_info(struct project *project, struct state *state);
+
 /* modifications */
 
 ROPE_EXPORT void state_moditify(struct project *project, struct state *state, int64_t position, int64_t type, int64_t length, char *buffer);

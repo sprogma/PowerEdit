@@ -35,13 +35,15 @@ namespace EditorFramework.Widgets
             public bool hidden;
             public string Label => name ?? id.ToString();
             public Vector2 position;
+            public DateTime Date;
 
-            public Node(IntPtr id)
+            public Node(IntPtr id, DateTime date)
             {
                 this.id = id;
+                this.Date = date;
                 this.hidden = false;
-                this.childs = new();
-                this.parents = new();
+                this.childs = [];
+                this.parents = [];
             }
 
             public void AddChild(Node child)
@@ -114,7 +116,6 @@ namespace EditorFramework.Widgets
             {
                 return;
             }
-            Logger.Log($"Set {root}.depth = {depth}");
             root.depth = depth;
             foreach (Node node in root.childs)
             {

@@ -78,6 +78,8 @@ struct state
     int64_t version_id;
     int64_t depth;
 
+    char *name;
+
     int32_t moditified;
     int32_t committed;
 

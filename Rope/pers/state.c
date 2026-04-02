@@ -50,6 +50,7 @@ struct state *state_create_empty(struct project *project)
     struct state *res = calloc(1, sizeof(*res));
     res->timestamp = get_time_us();
     res->depth = 0;
+    res->name = NULL;
 
     lockExclusive(&project->lock);
     res->version_id = project->last_version_id++;
@@ -67,6 +68,7 @@ struct state *project_open_file(struct project *project, const char *filename)
     struct state *res = calloc(1, sizeof(*res));
     res->timestamp = get_time_us();
     res->depth = 0;
+    res->name = NULL;
 
     lockExclusive(&project->lock);
     res->version_id = project->last_version_id++;
@@ -90,6 +92,7 @@ struct state *state_create_dup(struct project *project, struct state *state)
     res->depth = state->depth + 1;
     res->hash = state->hash;
     res->timestamp = get_time_us();
+    res->name = NULL;
 
     _reserve_previous_versions(res, res->previous_versions_len + 1);
     res->previous_versions[res->previous_versions_len++] = state;
@@ -110,6 +113,20 @@ struct state *state_create_dup(struct project *project, struct state *state)
 
     freeExclusive(&project->lock);
     return res;
+}
+
+
+struct state_info state_get_info(struct project *project, struct state *state)
+{
+    (void)project;
+    return (struct state_info) {
+        state->name,
+        state->timestamp,
+        state->version_id,
+        state->depth,
+        state->tags_len,
+        state->tags
+    };
 }
 
 void merge_state(struct state *base, struct state *child)
