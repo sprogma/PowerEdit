@@ -64,12 +64,6 @@ namespace EditorFramework.Widgets
         public EditorBuffer buffer;
         public bool showNumbers = true;
 
-        public const float NodeHeight = 1.0f;
-        public const float NodeWidth = 2.0f;
-        public const float LineHeight = 1.3f;
-        public const float NodeStepWidth = 3.0f;
-        public const float MovingSmooth = 10.0f;
-
         public float Scale = 30.0f;
         public float DestinationScale = 30.0f;
         public Vector2 Camera = new(){ X=0.0f, Y=0.0f };
@@ -186,11 +180,11 @@ namespace EditorFramework.Widgets
             roots.ForEach(root => WalkTree(root, (Node x) => {
                 if (!x.hidden)
                 {
-                    x.position.Y = x.depth * LineHeight;  
+                    x.position.Y = x.depth;  
                     if (x.childs.Count == 0)
                     {
                         x.position.X = currentX;
-                        currentX += NodeStepWidth;
+                        currentX++;
                     }
                     else
                     {

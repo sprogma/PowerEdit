@@ -498,50 +498,67 @@ namespace SDL2Interface
         {
             Canvas.FillRect(window.Layout.Position, " ", cColor.Default, cColor.Default);
 
-            Rect position = window.Layout.Position;
-
             /* draw all lines */
-            long w = (long)(TreeWalkWindow.NodeWidth * window.Scale / 10.0),
-                 h = (long)(TreeWalkWindow.NodeHeight * window.Scale / 10.0);
+            long w = 5, h = 1;
+
+            Rect position = window.Layout.Position;
+            Vector2 screenOffset = new(position.W * 0.5f, position.H * 0.5f);
+            Vector2 positionScale = new(Math.Max(w+1, w + (long)(window.Scale / 3.0) - 3), h+(window.Scale > 18.0 ? 1 : 0));
 
             foreach (var node in window.tree.Values.Where(x => !x.hidden))
             {
-                Vector2 pos = (node.position - window.Camera) * window.Scale / 10.0f + new Vector2(position.W * 0.5f, position.H * 0.5f);
-                long ix = position.X + (long)Math.Round(pos.X), iy = position.Y + (long)Math.Round(pos.Y);
-                foreach (var next in new[] { node.up, node.right }.OfType<TreeWalkWindow.Node>())
+                Vector2 pos = node.position * positionScale - window.Camera + screenOffset;
+                long ix = position.X + (long)Math.Round(pos.X), iy = position.Y + (long)Math.Floor(pos.Y);
+                foreach (var next in new[] { node.up/*, node.right*/ }.OfType<TreeWalkWindow.Node>())
                 {
-                    Vector2 nextPos = (next.position - window.Camera) * window.Scale / 10.0f + new Vector2(position.W * 0.5f, position.H * 0.5f);
-                    long x = position.X + (long)Math.Round(nextPos.X), y = position.Y + (long)Math.Round(nextPos.Y);
+                    Vector2 nextPos = next.position * positionScale - window.Camera + screenOffset;
+                    long x = position.X + (long)Math.Round(nextPos.X), y = position.Y + (long)Math.Floor(nextPos.Y);
+                    long cx = ix, cy = iy;
 
-                    while (x != ix || y != iy)
+                    while (cx != x || cy != y)
                     {
-                        if (x < ix) x++;
-                        if (x > ix) x--;
-                        if (y < iy) y++;
-                        if (y > iy) y--;
-                        Canvas.SetCell(x, y, "*", new cColor(128, 0, 0), cColor.Default);
+                        if (cx < x) cx++;
+                        if (cx > x) cx--;
+                        if (cy < y) cy++;
+                        if (cy > y) cy--;
+                        Canvas.SetCell(cx, cy, "*", new cColor(50, 50, 50), cColor.Default);
                     }
                 }
             }
 
             foreach (var node in window.tree.Values.Where(x => !x.hidden))
             {
-                Vector2 pos = (node.position - window.Camera) * window.Scale / 10.0f + new Vector2(position.W * 0.5f, position.H * 0.5f);
-                pos -= 0.5f * new Vector2(w, h);
+                Vector2 pos = node.position * positionScale - window.Camera + screenOffset;
+                pos -= 0.4f * new Vector2(w, h);
                 long ix = position.X + (long)Math.Round(pos.X), iy = position.Y + (long)Math.Round(pos.Y);
                 if (node == window.current)
                 {
-                    Canvas.AddString(ix, iy, $"#{node.id&0xFFFF:X4}", new cColor(0, 0, 0), new cColor(255, 0, 0));
+                    Canvas.AddString(ix, iy, $"#{node.id&0xFFFF:X4}", new cColor(0, 0, 0), new cColor(255, 255, 255));
                 }
                 else
                 {
-                    Canvas.AddString(ix, iy, $"#{node.id&0xFFFF:X4}", new cColor(255, 0, 0), new cColor(60, 0, 0));
+                    Canvas.AddString(ix, iy, $"#{node.id&0xFFFF:X4}", cColor.Default, cColor.Default);
                 }
             }
             {
-                float t = 1.0f / (TreeWalkWindow.MovingSmooth + 1.0f);
-                window.Camera = window.Camera * (1.0f - t) + window.current.position * t;
-                window.Scale = window.Scale * (1.0f - t) + window.DestinationScale * t;
+                Vector2 Dest = window.current.position * positionScale;
+                if (window.Camera.X < Dest.X && Math.Abs(window.Camera.X - Dest.X) > 0.6)
+                {
+                    window.Camera.X++;
+                }
+                if (window.Camera.X > Dest.X && Math.Abs(window.Camera.X - Dest.X) > 0.6)
+                {
+                    window.Camera.X--;
+                }
+                if (window.Camera.Y < Dest.Y && Math.Abs(window.Camera.Y - Dest.Y) > 0.6)
+                {
+                    window.Camera.Y++;
+                }
+                if (window.Camera.Y > Dest.Y && Math.Abs(window.Camera.Y - Dest.Y) > 0.6)
+                {
+                    window.Camera.Y--;
+                }
+                window.Scale = window.Scale * 0.9f + window.DestinationScale * 0.1f;
             }
         }
         public void DrawSimpleWindow(SimpleTextWindow window)

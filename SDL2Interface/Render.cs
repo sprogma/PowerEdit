@@ -537,6 +537,14 @@ namespace SDL2Interface
 
         public void DrawTreeView(TreeWalkWindow window)
         {
+            const float nodeWidth = 2.0f;
+            const float nodeHeight = 1.0f;
+            const float nodeXStep = 3.0f;
+            const float nodeYStep = 1.3f;
+            const float movingSmooth = 10.0f;
+
+            Vector2 positionScale = new(nodeXStep, nodeYStep);
+
             SDL.SetRenderDrawColor(renderer, 0, 0, 0, 0);
             SDL_Sharp.Rect Position = Convert(window.Layout.Position);
             SDL.RenderFillRect(renderer, ref Position);
@@ -545,10 +553,10 @@ namespace SDL2Interface
             foreach (var node in window.tree.Values.Where(x => !x.hidden))
             {
                 SDL.SetRenderDrawColor(renderer, 255, 0, 0, 0);
-                Vector2 pos = (node.position - window.Camera) * window.Scale + new Vector2(Position.Width * 0.5f, Position.Height * 0.5f);
+                Vector2 pos = (node.position * positionScale - window.Camera) * window.Scale + new Vector2(Position.Width * 0.5f, Position.Height * 0.5f);
                 float w, h;
-                w = TreeWalkWindow.NodeWidth * window.Scale;
-                h = TreeWalkWindow.NodeHeight * window.Scale;
+                w = nodeWidth * window.Scale;
+                h = nodeHeight * window.Scale;
                 pos -= 0.5f * new Vector2(w, h);
                 SDL_Sharp.Rect rect = new() { X = Position.X + (int)pos.X, Y = Position.Y + (int)pos.Y, Width = (int)w, Height = (int)h };
                 if (node == window.current)
@@ -571,29 +579,15 @@ namespace SDL2Interface
                 rect = new() { X = Position.X + (int)pos.X, Y = Position.Y + (int)pos.Y, Width = (int)w, Height = (int)h };
                 foreach (var next in new[] { node.up, node.right }.OfType<TreeWalkWindow.Node>())
                 {
-                    Vector2 nextPos = (next.position - window.Camera) * window.Scale + new Vector2(Position.Width * 0.5f, Position.Height * 0.5f);
+                    Vector2 nextPos = (next.position * positionScale - window.Camera) * window.Scale + new Vector2(Position.Width * 0.5f, Position.Height * 0.5f);
                     int x = Position.X + (int)nextPos.X, y = Position.Y + (int)nextPos.Y;
                     SDL.RenderDrawLine(renderer, rect.X, rect.Y, x, y);
                 }
-                //SDL.SetRenderDrawColor(renderer, 64, 0, 0, 0);
-                //foreach (Node next in node.childs)
-                //{
-                //    Vector2 nextPos = (next.position - Camera) * Scale + new Vector2(position.Width * 0.5f, position.Height * 0.5f);
-                //    int x = position.X + (int)nextPos.X, y = position.Y + (int)nextPos.Y;
-                //    SDL.RenderDrawLine(renderer, rect.X, rect.Y, x, y);
-                //}
-                //SDL.SetRenderDrawColor(renderer, 0, 64, 0, 0);
-                //foreach (Node next in node.parents)
-                //{
-                //    Vector2 nextPos = (next.position - Camera) * Scale + new Vector2(position.Width * 0.5f, position.Height * 0.5f);
-                //    int x = position.X + (int)nextPos.X, y = position.Y + (int)nextPos.Y;
-                //    SDL.RenderDrawLine(renderer, rect.X, rect.Y, x, y);
-                //}
             }
 
             {
-                float t = 1.0f / (TreeWalkWindow.MovingSmooth + 1.0f);
-                window.Camera = window.Camera * (1.0f - t) + window.current.position * t;
+                float t = 1.0f / (movingSmooth + 1.0f);
+                window.Camera = window.Camera * (1.0f - t) + window.current.position * positionScale * t;
                 window.Scale = window.Scale * (1.0f - t) + window.DestinationScale * t;
             }
         }
