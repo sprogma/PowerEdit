@@ -52,6 +52,9 @@ namespace TextBuffer
         internal static extern IntPtr project_open_file(IntPtr project, [MarshalAs(UnmanagedType.LPUTF8Str)] string filename);
 
         [DllImport("msrope.dll")]
+        internal static extern int project_save_file(IntPtr project, IntPtr curr_state, [MarshalAs(UnmanagedType.LPUTF8Str)] string tempFile);
+
+        [DllImport("msrope.dll")]
         internal static extern IntPtr state_create_dup(IntPtr project, IntPtr state);
 
         [DllImport("msrope.dll")]

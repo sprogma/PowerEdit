@@ -1,4 +1,5 @@
-﻿using System;
+﻿using LoggingLogLevel;
+using System;
 using System.Collections;
 using System.Collections.ObjectModel;
 using System.Reflection;
@@ -207,9 +208,55 @@ namespace TextBuffer
             return (states, links);
         }
 
-        public void SaveToFile(string filename)
+
+        [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+        private static extern bool ReplaceFile(
+                string lpReplacedFileName,
+                string lpReplacementFileName,
+                string lpBackupFileName,
+                uint dwReplaceFlags,
+                IntPtr lpExclude,
+                IntPtr lpReserved);
+        private const int ERROR_FILE_NOT_FOUND = 2;
+
+        public void SaveToFile(string target_name)
         {
-            File.WriteAllText(filename + ".bak", Substring(0));
+            string sessionGuid = Guid.NewGuid().ToString("N");
+            string tempFile = target_name + "." + sessionGuid + ".tmp";
+            string backupFile = target_name + "." + sessionGuid + ".bak";
+
+            try
+            {
+                if (File.Exists(target_name))
+                {
+                    if (CLibrary.project_save_file(project, curr_state, tempFile) != 0)
+                    {
+                        throw new Exception($"Error while saving file to <{tempFile}>");
+                    }
+                    if (!File.Exists(tempFile))
+                    {
+                        throw new IOException("C-library failed to create the temporary file.");
+                    }
+                    bool success = ReplaceFile(target_name, tempFile, backupFile, 0, 0, 0);
+                    if (!success)
+                    {
+                        int error = Marshal.GetLastWin32Error();
+                        throw new IOException($"Atomic replace failed. Win32 Error: {error}");
+                    }
+                }
+                else
+                {
+                    if (CLibrary.project_save_file(project, curr_state, target_name) != 0)
+                    {
+                        throw new Exception($"Error while saving file to <{target_name}>");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                if (File.Exists(tempFile)) File.Delete(tempFile);
+                Logger.Log($"Failed to save file: {ex.Message}");
+            }
         }
 
         public void SaveCursors(IntPtr state, MarshalingCursor[] cursors)

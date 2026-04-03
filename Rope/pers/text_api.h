@@ -35,6 +35,8 @@ ROPE_EXPORT void project_destroy(struct project *project);
 
 ROPE_EXPORT struct state *project_open_file(struct project *project, const char *filename);
 
+ROPE_EXPORT int project_save_file(struct project *project, struct state *state, const char *filename);
+
 ROPE_EXPORT struct state *project_new_state(struct project *project);
 
 ROPE_EXPORT struct state *state_create_dup(struct project *project, struct state *state);

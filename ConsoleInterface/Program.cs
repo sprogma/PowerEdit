@@ -134,8 +134,6 @@ namespace SDL2Interface
                         render.Draw(win);
                     }
                     render.Canvas.Flush();
-                    Thread.Sleep(10);
-
 
                     while (Console.KeyAvailable)
                     {
@@ -150,7 +148,7 @@ namespace SDL2Interface
                             var sw = Stopwatch.StartNew();
                             while (sw.ElapsedMilliseconds < 30 && !Console.KeyAvailable)
                             {
-                                Thread.Sleep(1);
+                                Thread.Sleep(5);
                             }
 
                             while (Console.KeyAvailable && captured.Count < 6) // get full message
@@ -200,6 +198,8 @@ namespace SDL2Interface
                         }
                         pool.ProcessEvents();
                     }
+
+                    Thread.Sleep(10);
                 }
             }
         }

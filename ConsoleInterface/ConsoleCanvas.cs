@@ -331,6 +331,12 @@ namespace ConsoleInterface
             Console.CursorVisible = true;
         }
 
+        private const uint INPUT_ENABLE_CONSOLE_INPUT = 0x0004u;
+        private const uint INPUT_ENABLE_LINE_INPUT = 0x0002u;
+        private const uint INPUT_ENABLE_MOUSE_INPUT = 0x0010u;
+        private const uint INPUT_ENABLE_EXTENDED_FLAGS = 0x0080u;
+        private const uint INPUT_ENABLE_WINDOW_INPUT = 0x0008u;
+
         private void EnableVirtualTerminal()
         {
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
@@ -342,13 +348,15 @@ namespace ConsoleInterface
                     SetConsoleMode(hOut, mode);
                     VTEnabled = true;
                 }
-                // break all keys so disabled for now
-                //IntPtr hIn = GetStdHandle(STD_INPUT_HANDLE);
-                //if (GetConsoleMode(hIn, out uint modeIn))
-                //{
-                //    modeIn |= ENABLE_VIRTUAL_TERMINAL_INPUT;
-                //    SetConsoleMode(hIn, modeIn);
-                //}
+                IntPtr hIn = GetStdHandle(STD_INPUT_HANDLE);
+                if (GetConsoleMode(hIn, out uint modeIn))
+                {
+                    // i don't know why, but this enable capturing of Ctrl+S event:
+                    // https://stackoverflow.com/questions/39695431/ctrl-s-input-event-in-windows-console-with-readconsoleinputw
+                    modeIn |= INPUT_ENABLE_WINDOW_INPUT | INPUT_ENABLE_MOUSE_INPUT | INPUT_ENABLE_EXTENDED_FLAGS;
+                    modeIn &= ~(INPUT_ENABLE_LINE_INPUT | INPUT_ENABLE_CONSOLE_INPUT);
+                    SetConsoleMode(hIn, modeIn);
+                }
             }
             else
             {
