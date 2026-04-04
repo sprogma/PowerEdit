@@ -65,52 +65,50 @@ namespace SDL2Interface
             using Render render = new(new EditorFramework.ColorTheme());
 
             /* create application instance */
-            {
-                ICommandProvider? provider;
+            ICommandProvider? provider;
                 
-                if (args.Contains("--python"))
+            if (args.Contains("--python"))
+            {
+                args.Remove("--python");
+                provider = new PythonProvider();
+            }
+            else
+            {
+                provider = new PowershellProvider();
+            }
+
+            if (provider == null)
+            {
+                Logger.Log(LogLevel.Error, "Not selected any provider");
+                return;
+            }
+
+            FileTabsWindow tabs = new(this, GetLayout<FileTabsWindow>.Value, []);
+
+            ProjectEditorWindow project = new(
+                this,
+                GetLayout<ProjectEditorWindow>.Value,
+                tabs.OpenFile,
+                tabs.RaiseFile,
+                tabs,
+                provider
+            );
+            EditorServer server = new(provider);
+
+            // add "lsp" module
+            SimpleLinterMod.Init(server);
+
+            windows.Add(project);
+
+            foreach (var file in fileToOpen)
+            {
+                if (file != null)
                 {
-                    args.Remove("--python");
-                    provider = new PythonProvider();
+                    Task.Run(() => project.OpenFile(file));
                 }
                 else
                 {
-                    provider = new PowershellProvider();
-                }
-
-                if (provider == null)
-                {
-                    Logger.Log(LogLevel.Error, "Not selected any provider");
-                    return;
-                }
-
-                FileTabsWindow tabs = new(this, GetLayout<FileTabsWindow>.Value, []);
-
-                ProjectEditorWindow project = new(
-                    this,
-                    GetLayout<ProjectEditorWindow>.Value,
-                    tabs.OpenFile,
-                    tabs.RaiseFile,
-                    tabs,
-                    provider
-                );
-                EditorServer server = new(provider);
-
-                // add "lsp" module
-                SimpleLinterMod.Init(server);
-
-                windows.Add(project);
-
-                foreach (var file in fileToOpen)
-                {
-                    if (file != null)
-                    {
-                        Task.Run(() => project.OpenFile(file));
-                    }
-                    else
-                    {
-                        Task.Run(() => project.CreateFile(null, "c"));
-                    }
+                    Task.Run(() => project.CreateFile(null, "c"));
                 }
             }
 

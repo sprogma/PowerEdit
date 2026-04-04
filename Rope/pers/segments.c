@@ -13,16 +13,39 @@ int64_t glb_next_node = 1;
 #define _cnt(n) (n ? glb_nodes[n].total_newlines : 0)
 
 
-static void update(int64_t node) 
+static void update_weak_ptr(struct segment *node)
 {
     if (!node) return;
-    // Log(LogInfo, "Updating of %lld [total %lld nodes]", node, glb_next_node);
-    // Log(LogInfo, "total_length = %lld + %lld + %lld", _len(glb_nodes[node].left), _len(glb_nodes[node].right), glb_nodes[node].length);
-    glb_nodes[node].total_length = _len(glb_nodes[node].left) + _len(glb_nodes[node].right) + glb_nodes[node].length;
-    glb_nodes[node].total_newlines = _cnt(glb_nodes[node].left) + _cnt(glb_nodes[node].right) + glb_nodes[node].newlines;
-    int hl = _hgt(glb_nodes[node].left);
-    int hr = _hgt(glb_nodes[node].right);
-    glb_nodes[node].height = (hl > hr ? hl : hr) + 1;
+    node->total_length = _len(node->left) + _len(node->right) + node->length;
+    if (_cnt(node->left) == -1 || _cnt(node->right) == -1 || node->newlines == -1)
+    {
+        int64_t at_least_count = 0;
+        if (_cnt(node->left) != -1)
+        {
+            at_least_count += _cnt(node->left);
+        }
+        if (_cnt(node->right) != -1)
+        {
+            at_least_count += _cnt(node->right);
+        }
+        if (node->newlines != -1)
+        {
+            at_least_count += node->newlines;
+        }
+        node->total_newlines = ~at_least_count;
+    }
+    else
+    {
+        node->total_newlines = _cnt(node->left) + _cnt(node->right) + node->newlines;
+    }
+    int64_t hl = _hgt(node->left);
+    int64_t hr = _hgt(node->right);
+    node->height = (hl > hr ? hl : hr) + 1;
+}
+
+static void update_weak(int64_t node) 
+{
+    update_weak_ptr(&glb_nodes[node]);
 }
 
 static int64_t _copy_to_version(int64_t node, int64_t this_version) 
@@ -33,7 +56,7 @@ static int64_t _copy_to_version(int64_t node, int64_t this_version)
     // Log(LogInfo, "A: allocated node %lld [copy from %lld]", new_node, node);
     memcpy(&glb_nodes[new_node], &glb_nodes[node], sizeof(struct segment));
     glb_nodes[new_node].version_id = this_version;
-    update(new_node);
+    update_weak(new_node);
     
     assert(glb_nodes[new_node].buffer->buffer == glb_nodes[node].buffer->buffer);
     
@@ -50,8 +73,8 @@ static int64_t rotate_right(int64_t y, int64_t ver)
     
     glb_nodes[x].right = y;
     
-    update(y); 
-    update(x);
+    update_weak(y); 
+    update_weak(x);
     return x;
 }
 
@@ -64,8 +87,8 @@ static int64_t rotate_left(int64_t x, int64_t ver)
     
     glb_nodes[y].left = x;
     
-    update(x); 
-    update(y);
+    update_weak(x); 
+    update_weak(y);
     return y;
 }
 
@@ -73,7 +96,7 @@ static int64_t rotate_left(int64_t x, int64_t ver)
 
 static int64_t balance(int64_t idx, int64_t ver) 
 {
-    update(idx);
+    update_weak(idx);
     int balance_factor = _hgt(glb_nodes[idx].left) - _hgt(glb_nodes[idx].right);
     if (balance_factor > 1) 
     {
@@ -81,7 +104,7 @@ static int64_t balance(int64_t idx, int64_t ver)
         {
             int64_t tmp = rotate_left(glb_nodes[idx].left, ver);
             glb_nodes[idx].left = tmp;
-            update(idx);
+            update_weak(idx);
         }
         return rotate_right(idx, ver);
     }
@@ -91,7 +114,7 @@ static int64_t balance(int64_t idx, int64_t ver)
         {
             int64_t tmp = rotate_right(glb_nodes[idx].right, ver);
             glb_nodes[idx].right = tmp;
-            update(idx);
+            update_weak(idx);
         }
         return rotate_left(idx, ver);
     }
@@ -146,6 +169,8 @@ int64_t _update_newlines(struct segment *node)
     {
         count += *pos++ == '\n';
     }
+    node->newlines = count;
+    update_weak_ptr(node);
     return count;
 }
 
@@ -159,8 +184,10 @@ static int64_t insert_at_pos(int64_t root_idx, int64_t pos, struct segment_info 
         memset(&glb_nodes[new_node], 0, sizeof(glb_nodes[new_node]));
         memcpy(&glb_nodes[new_node], info, sizeof(*info));
         glb_nodes[new_node].offset = info->offset;
-        glb_nodes[new_node].newlines = _update_newlines(&glb_nodes[new_node]);
-        update(new_node);
+        glb_nodes[new_node].newlines = -1;
+        glb_nodes[new_node].total_newlines = -1;
+        glb_nodes[new_node].total_length = glb_nodes[new_node].length;
+        update_weak(new_node);
         return new_node;
     }
 
@@ -243,13 +270,18 @@ int64_t SegmentLength(struct segment *tree)
 // 0 indexation
 int64_t SegmentNthNewline(int64_t node, int64_t n)
 {
-    if (!node || n < 0 || n >= _cnt(node)) return -1;
+    if (!node || n < 0) return -1;
+    if (!have_node_newlines(&glb_nodes[node], n)) return -1;
 
-    if (n < _cnt(glb_nodes[node].left))
+    if (have_node_newlines(&glb_nodes[glb_nodes[node].left], n+1)) // if it have n+1 newline character - answer is there (becouse of 0 indexation, if we search 0th there must be at least one)
     {
+        update_weak(node);
         return SegmentNthNewline(glb_nodes[node].left, n);
     }
-    else if (n < _cnt(glb_nodes[node].left) + glb_nodes[node].newlines)
+    assert(_cnt(glb_nodes[node].left) >= 0);
+    _update_newlines(&glb_nodes[node]);
+    assert(_cnt(glb_nodes[node].left) >= 0);
+    if (n < _cnt(glb_nodes[node].left) + glb_nodes[node].newlines)
     {
         int64_t count = 1 + n - _cnt(glb_nodes[node].left);
         const char *data = glb_nodes[node].buffer->buffer + glb_nodes[node].offset;
@@ -271,36 +303,99 @@ int64_t SegmentNthNewline(int64_t node, int64_t n)
 }
 
 
+int64_t have_node_newlines(struct segment *node, int64_t at_least)
+{
+    assert(node != NULL);
+    if (node->total_newlines >= 0)
+    {
+        return node->total_newlines >= at_least; // return
+    }
+    if (~node->total_newlines >= at_least)
+    {
+        return 1; // got
+    }
+    // update left first becouse there will be more requests in left subtrees commonly.
+    if (node->left)
+    {
+        if (have_node_newlines(&glb_nodes[node->left], at_least))
+        {
+            return 1;
+        }
+        update_weak_ptr(node);
+        if (node->total_newlines >= 0)
+        {
+            return node->total_newlines >= at_least; // return
+        }
+        if (~node->total_newlines >= at_least)
+        {
+            return 1; // got
+        }
+    }
+    if (node->right)
+    {
+        int64_t left_size = _cnt(node->left);
+        if (left_size < 0) left_size = ~left_size;
+        if (have_node_newlines(&glb_nodes[node->right], at_least - left_size))
+        {
+            return 1;
+        }
+        update_weak_ptr(node);
+        if (node->total_newlines >= 0)
+        {
+            return node->total_newlines >= at_least; // return
+        }
+        if (~node->total_newlines >= at_least)
+        {
+            return 1; // got
+        }
+    }
+    /* need to check current node */
+    _update_newlines(node);
+    assert(node->total_newlines >= 0);
+    return node->total_newlines >= at_least; // return
+}
+
+
 int64_t FindNearestLeft(int64_t node_id, int64_t position)
 {
     if (!node_id || position < 0) return -1;
 
     struct segment *node = &glb_nodes[node_id];
-    if (node->total_newlines == 0) return -1;
+    if (!have_node_newlines(node, 1)) return -1; // if can't find at least 1 newline in node
 
     int64_t left_len = _len(node->left);
 
     if (position >= left_len + node->length)
     {
         int64_t res = FindNearestLeft(node->right, position - left_len - node->length);
+        update_weak_ptr(node);
         if (res != -1) return left_len + node->length + res;
         position = left_len + node->length - 1;
     }
 
-    if (position >= left_len && node->newlines > 0)
+    if (position >= left_len)
     {
-        int64_t search_start = position - left_len;
-        char *data = node->buffer->buffer + node->offset;
-        for (int64_t i = search_start; i >= 0; i--)
+        if (node->newlines == -1)
         {
-            if (data[i] == '\n')
-            {
-                return left_len + i;
-            }
+            _update_newlines(node);
         }
-        position = left_len - 1;
+        if (node->newlines > 0)
+        {
+            int64_t search_start = position - left_len;
+            char *data = node->buffer->buffer + node->offset;
+            for (int64_t i = search_start; i >= 0; i--)
+            {
+                if (data[i] == '\n')
+                {
+                    return left_len + i;
+                }
+            }
+            position = left_len - 1;
+        }
     }
-    return node->left ? FindNearestLeft(node->left, position) : -1;
+    int64_t res = node->left ? FindNearestLeft(node->left, position) : -1;
+    update_weak_ptr(node);
+    return res;
 }
 
 
@@ -309,7 +404,7 @@ int64_t FindNearestRight(int64_t node_id, int64_t position)
     if (!node_id || position < 0) return -1;
 
     struct segment *node = &glb_nodes[node_id];
-    if (node->total_newlines == 0) return -1;
+    if (!have_node_newlines(node, 1)) return -1; // if can't find at least 1 newline in node
 
     int64_t left_len = _len(node->left);
     int64_t node_end = left_len + node->length;
@@ -317,60 +412,87 @@ int64_t FindNearestRight(int64_t node_id, int64_t position)
     if (position < left_len)
     {
         int64_t res = FindNearestRight(node->left, position);
+        update_weak_ptr(node);
         if (res != -1) return res;
         position = left_len;
     }
 
-    if (position < node_end && node->newlines > 0)
+    if (position < node_end)
     {
-        int64_t search_start = position - left_len;
-        char *data = node->buffer->buffer + node->offset;
-        for (int64_t i = search_start; i < node->length; i++)
+        if (node->newlines == -1)
         {
-            if (data[i] == '\n')
+            _update_newlines(node);
+        }
+        if (node->newlines > 0)
+        {
+            int64_t search_start = position - left_len;
+            char *data = node->buffer->buffer + node->offset;
+            for (int64_t i = search_start; i < node->length; i++)
             {
-                return left_len + i;
+                if (data[i] == '\n')
+                {
+                    return left_len + i;
+                }
             }
         }
     }
 
     int64_t res = FindNearestRight(node->right, (position > node_end) ? (position - node_end) : 0);
+    update_weak_ptr(node);
     if (res != -1) return node_end + res;
     return -1;
 }
 
 // count newlines on [0 position)
-int64_t SegmentGetLineNumber(int64_t root_idx, int64_t position)
+int64_t SegmentGetLineNumber(int64_t inode, int64_t position)
 {
     int64_t count = 0;
-    int64_t cur = root_idx;
+    struct segment *node = &glb_nodes[inode];
 
-    while (cur && position > 0)
+    int64_t left_len = _len(node->left);
+    if (position < left_len) // if node is too large return answer from left
     {
-        struct segment *node = &glb_nodes[cur];
-        int64_t left_len = _len(node->left);
-
-        if (position < left_len)
-        {
-            cur = node->left;
-        }
-        else if (position < left_len + node->length)
-        {
-            count += _cnt(node->left);
-            char *data = node->buffer->buffer + node->offset;
-            int64_t local_limit = position - left_len;
-            for (int64_t i = 0; i < local_limit; i++)
-            {
-                count += data[i] == '\n';
-            }
-            break;
-        }
-        else
-        {
-            count += _cnt(node->left) + node->newlines;
-            position -= (left_len + node->length);
-            cur = node->right;
-        }
+        count = SegmentGetLineNumber(node->left, position);
+        update_weak_ptr(node);
+        return count;
     }
+
+    if (node->left && position > left_len) // add left if it fits
+    {
+        if (_cnt(node->left) < 0)
+        {
+            have_node_newlines(&glb_nodes[node->left], INT64_MAX);
+        }
+        assert(_cnt(node->left) >= 0);
+        count += _cnt(node->left);
+    }
+
+    if (position <= left_len + node->length) // add part of current if request ends here
+    {
+        char *data = node->buffer->buffer + node->offset;
+        int64_t local_limit = position - left_len, start_count = count;
+        for (int64_t i = 0; i < local_limit; i++)
+        {
+            count += data[i] == '\n';
+        }
+        if (node->total_newlines < 0 && ~node->total_newlines < count - start_count)
+        {
+            node->total_newlines = ~(count - start_count);
+        }
+        
+        // if end was in this node, there can't be part of it in right child
+        update_weak_ptr(node);
+        return count;
+    }
+
+    if (node->total_newlines < 0)
+    {
+        _update_newlines(node);
+        assert(node->total_newlines >= 0);
+    }
+    count += node->newlines;
+    count += SegmentGetLineNumber(node->right, position - left_len - node->length);
+
+    update_weak_ptr(node);
     return count;
 }

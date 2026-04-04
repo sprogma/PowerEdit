@@ -39,10 +39,10 @@ struct segment
     // tree info
     int64_t left;
     int64_t right;
-    int64_t total_length;
+    int64_t total_length; // may be positive or -1.
     int64_t version_id;
     int64_t height;
-    int64_t total_newlines;
+    int64_t total_newlines; // if positive, it is actural count. if negative, it is inversion of "at least" count.
 };
 
 
@@ -125,6 +125,7 @@ int64_t FindNearestRight(int64_t node_id, int64_t position);
 int64_t SegmentNthNewline(int64_t node, int64_t n);
 
 
+int64_t have_node_newlines(struct segment *node, int64_t at_least);
 struct state *state_create_empty(struct project *project);
 void state_release(struct state *state);
 void _reserve_state(struct project *project, int64_t total_size);

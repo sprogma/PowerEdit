@@ -21,8 +21,7 @@ namespace EditorFramework
         {
             Task.Run(async () =>
             {
-
-                Logger.Log("File saved!");
+                Logger.Log("File saved [simple linter]");
                 if (file.Buffer.Text.Length > 1024 * 1024)
                 {
                     lock (file.Buffer.ErrorMarks)

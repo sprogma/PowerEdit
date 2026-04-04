@@ -84,31 +84,17 @@ struct state *project_open_file(struct project *project, const char *filename)
     return res;
 }
 
-int _dump_nodes_recurse(struct segment* seg, FILE* file)
-{
-    if (seg->left) { _dump_nodes_recurse(&glb_nodes[seg->left], file); }
-    if (fwrite(seg->buffer->buffer + seg->offset, 1, seg->length, file) != seg->length)
-    {
-        return 1;
-    }
-    if (seg->right) { _dump_nodes_recurse(&glb_nodes[seg->right], file); }
-    return 0;
-}
-
 int project_save_file(struct project* project, struct state* state, const char* filename)
 {
     while (state->merged_to) state = state->merged_to;
-
-    /* iterate through tree and save nodes */
-    FILE* file = fopen(filename, "wb");
-    if (!file) { return 1; }
-
-    if (_dump_nodes_recurse(state->value, file))
+    struct state *result_state;
+    struct mapped_buffer *result_buffer;
+    if (create_buffer_from_save(project, state, filename, &result_state, &result_buffer))
     {
-        return 2;
+        return 1;
     }
-
-    fclose(file);
+    while (state->merged_to) state = state->merged_to;
+    merge_state(result_state, state);
     return 0;
 }
 

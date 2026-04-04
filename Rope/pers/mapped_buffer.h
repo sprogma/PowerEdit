@@ -4,6 +4,8 @@
 
 #include "inttypes.h"
 
+struct state;
+struct project;
 
 struct mapped_buffer
 {
@@ -12,6 +14,7 @@ struct mapped_buffer
     int64_t allocated;
 };
 
+int create_buffer_from_save(struct project *project, struct state *state, const char *filename, struct state **result_state, struct mapped_buffer **result_buffer);
 struct mapped_buffer *allocate_buffer_from_file(const char *filename);
 struct mapped_buffer *allocate_buffer(int64_t size);
 void acquire_buffer(struct mapped_buffer *);
