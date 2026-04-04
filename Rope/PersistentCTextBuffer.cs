@@ -231,16 +231,25 @@ namespace TextBuffer
                 {
                     throw new Exception($"Error while saving file to <{tempFile}>");
                 }
-                if (!ReplaceFile(targetFile, tempFile, backupFile, 0, 0, 0))
+                try
                 {
-                    int error = Marshal.GetLastWin32Error();
-                    if (error != ERROR_FILE_NOT_FOUND)
-                    {
-                        throw new IOException($"Atomic replace failed. Win32 Error: {error}");
-                    }
-                    /* this may be first save - store using move */
-                    File.Move(tempFile, targetFile, false);
+                    File.Move(targetFile, backupFile, true);
                 }
+                catch (IOException)
+                {
+                    Logger.Log(LogLevel.Warning, "Can't backup file, may be this is first save.");
+                }
+                File.Move(tempFile, targetFile, false);
+                //if (!ReplaceFile(targetFile, tempFile, backupFile, 0, 0, 0))
+                //{
+                //    int error = Marshal.GetLastWin32Error();
+                //    if (error != ERROR_FILE_NOT_FOUND)
+                //    {
+                //        throw new IOException($"Atomic replace failed. Win32 Error: {error}");
+                //    }
+                //    /* this may be first save - store using move */
+                //    File.Move(tempFile, targetFile, false);
+                //}
             }
             catch (Exception ex)
             {
