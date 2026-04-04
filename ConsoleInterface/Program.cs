@@ -137,7 +137,15 @@ namespace SDL2Interface
                     {
                         var key = Console.ReadKey(true);
 
-                        Logger.Log($"Key {key.Key} int={(int)key.KeyChar} char={key.KeyChar}");
+                        if (char.IsHighSurrogate(key.KeyChar))
+                        {
+                            var nextkey = Console.ReadKey(true);
+                            Debug.Assert(char.IsLowSurrogate(nextkey.KeyChar));
+                            string surrogatePair = new([key.KeyChar, nextkey.KeyChar]);
+                            pool.AddEvent(new TextInputEvent(Encoding.UTF8.GetBytes(surrogatePair)));
+                            continue;
+                        }
+                        Logger.Log($"Key {key.Key} char={(int)key.KeyChar}");
 
                         if (key.KeyChar == 27)
                         {

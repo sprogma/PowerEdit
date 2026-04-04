@@ -39,7 +39,7 @@ namespace RegexTokenizer
                         if (end == -1) { end = content.Length; break; }
                     }
 
-                    result.Add(new Token(TokenType.String, pos, end + 2));
+                    result.Add(new Token(TokenType.String, pos, Math.Min(end + 2, content.Length)));
                     pos = end + 3;
                 }
                 else if (content.StartsWith(pos, "\"\"\""))
@@ -54,7 +54,7 @@ namespace RegexTokenizer
                         if (end == -1) { end = content.Length; break; }
                     }
 
-                    result.Add(new Token(TokenType.String, pos, end + 2));
+                    result.Add(new Token(TokenType.String, pos, Math.Min(end + 2, content.Length)));
                     pos = end + 3;
                 }
                 else if (content.StartsWith(pos, "'"))

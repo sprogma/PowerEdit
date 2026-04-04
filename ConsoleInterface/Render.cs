@@ -194,7 +194,7 @@ namespace SDL2Interface
                                 {
                                     Canvas.ApplyStyle(tab, null, new cColor(0, 50, 80));
                                 }
-                                Canvas.AddString(tab.X, tab.Y, child.file.filename ?? "<Unnamed>");
+                                Canvas.AddString(tab.X, tab.Y, Path.GetFileName(child.file.filename) ?? "<Unnamed>");
                                 tab.X += tabWidth;
                             }
                             Canvas.ClipRect = clip;

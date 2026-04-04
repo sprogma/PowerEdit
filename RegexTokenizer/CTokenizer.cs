@@ -36,7 +36,7 @@ namespace RegexTokenizer
                     end = content.SafeIndexOf("*/", pos + 2);
                     if (end == -1) { end = content.Length; }
 
-                    result.Add(new Token(TokenType.MultilineComment, pos, end + 1));
+                    result.Add(new Token(TokenType.MultilineComment, pos, Math.Min(end + 1, content.Length)));
                     pos = end + 2;
                 }
                 else if (content.StartsWith(pos, "'"))
@@ -84,7 +84,7 @@ namespace RegexTokenizer
                         end = content.SafeIndexOf($"){name}\"", pos + 2 + name.Length + 1);
                         if (end == -1) { end = content.Length; }
 
-                        result.Add(new Token(TokenType.RawString, pos, end + 1 + name.Length + 1));
+                        result.Add(new Token(TokenType.RawString, pos, Math.Min(end + 1 + name.Length + 1, content.Length)));
                         pos = end + 1 + name.Length + 1 + 1;
                     }
                 }

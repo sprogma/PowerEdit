@@ -53,6 +53,7 @@ namespace EditorFramework.Widgets
 
         public EditorFile OpenFile(string filename)
         {
+            filename = Path.GetFullPath(filename);
             EditorFile? file;
             using (FilesLock.EnterScope())
             {

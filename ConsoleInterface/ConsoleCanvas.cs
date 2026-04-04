@@ -284,8 +284,8 @@ namespace ConsoleInterface
                     Cell current = Buffer[y, x];
                     Cell previous = PreviousBuffer[y, x];
 
-                    //if (current.Equals(previous))
-                    //    continue;
+                    if (current.Equals(previous))
+                        continue;
 
                     if (LastX != x || LastY != y)
                     {

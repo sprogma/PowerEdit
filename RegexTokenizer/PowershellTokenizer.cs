@@ -39,7 +39,7 @@ namespace RegexTokenizer
                     end = content.SafeIndexOf("#>", pos + 2);
                     if (end == -1) { end = content.Length; }
 
-                    result.Add(new Token(TokenType.MultilineComment, pos, end + 1));
+                    result.Add(new Token(TokenType.MultilineComment, pos, Math.Min(end + 1, content.Length)));
                     pos = end + 2;
                 }
                 else if (content.StartsWith(pos, "'"))
@@ -92,7 +92,7 @@ namespace RegexTokenizer
                         if (end == -1) { end = content.Length; break; }
                     }
 
-                    result.Add(new Token(TokenType.String, pos, end + 1));
+                    result.Add(new Token(TokenType.String, pos, Math.Min(end + 1, content.Length)));
                     pos = end + 2;
                 }
                 else

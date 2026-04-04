@@ -171,7 +171,7 @@ int StatesMergeWorker(void *param)
 			if (project->states[i]->hash.calculated && project->states[i]->committed && !project->states[i]->merged_to)
 			{
 				struct state *this = get(&table, Key128(project->states[i]->hash.total_hash));
-				if (this == NULL)
+				if (this == NULL || this->merged_to)
 				{
 					insert(&table, Key128(project->states[i]->hash.total_hash), project->states[i]);
 				}

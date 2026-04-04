@@ -79,6 +79,7 @@ struct state *project_open_file(struct project *project, const char *filename)
 
     /* now we need to open file */
     struct mapped_buffer *buffer = allocate_buffer_from_file(filename);
+    if (buffer == NULL) return NULL;
     _state_insert_with_buffer(project, res, 0, buffer, 0, buffer->allocated);
 
     return res;

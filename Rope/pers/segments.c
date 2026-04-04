@@ -17,18 +17,26 @@ static void update_weak_ptr(struct segment *node)
 {
     if (!node) return;
     node->total_length = _len(node->left) + _len(node->right) + node->length;
-    if (_cnt(node->left) == -1 || _cnt(node->right) == -1 || node->newlines == -1)
+    if (_cnt(node->left) < 0 || _cnt(node->right) < 0 || node->newlines < 0)
     {
         int64_t at_least_count = 0;
-        if (_cnt(node->left) != -1)
+        if (_cnt(node->left) < 0)
+        {
+            at_least_count += ~_cnt(node->left);
+        }
+        else
         {
             at_least_count += _cnt(node->left);
         }
-        if (_cnt(node->right) != -1)
+        if (_cnt(node->right) < 0)
+        {
+            at_least_count += ~_cnt(node->right);
+        }
+        else
         {
             at_least_count += _cnt(node->right);
         }
-        if (node->newlines != -1)
+        if (node->newlines >= 0)
         {
             at_least_count += node->newlines;
         }
@@ -450,7 +458,7 @@ int64_t SegmentGetLineNumber(int64_t inode, int64_t position)
     struct segment *node = &glb_nodes[inode];
 
     int64_t left_len = _len(node->left);
-    if (position < left_len) // if node is too large return answer from left
+    if (position <= left_len) // if node is too large return answer from left
     {
         count = SegmentGetLineNumber(node->left, position);
         update_weak_ptr(node);
@@ -488,7 +496,7 @@ int64_t SegmentGetLineNumber(int64_t inode, int64_t position)
     if (node->total_newlines < 0)
     {
         _update_newlines(node);
-        assert(node->total_newlines >= 0);
+        assert(node->newlines >= 0);
     }
     count += node->newlines;
     count += SegmentGetLineNumber(node->right, position - left_len - node->length);
