@@ -64,6 +64,15 @@ namespace EditorCore.Server
             return clients[v];
         }
 
+        public void CloseFile(EditorFile file)
+        {
+            using (FilesLock.EnterScope())
+            {
+                Files.Remove(file);
+                file.Dispose();
+            }
+        }
+
         /* declarations for simplicity */
     }
 }

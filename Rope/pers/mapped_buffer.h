@@ -17,6 +17,7 @@ struct mapped_buffer
 int create_buffer_from_save(struct project *project, struct state *state, const char *filename, struct state **result_state, struct mapped_buffer **result_buffer);
 struct mapped_buffer *allocate_buffer_from_file(const char *filename);
 struct mapped_buffer *allocate_buffer(int64_t size);
+void delete_buffer(struct mapped_buffer *);
 void acquire_buffer(struct mapped_buffer *);
 void release_buffer(struct mapped_buffer *);
 

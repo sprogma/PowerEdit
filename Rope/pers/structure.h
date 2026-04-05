@@ -107,6 +107,9 @@ struct project
     struct state **states;
     int64_t states_len;
     int64_t states_alloc;
+    struct mapped_buffer **buffers;
+    int64_t buffers_len;
+    int64_t buffers_alloc;
     struct mapped_buffer *current_buffer;
     _Atomic int64_t last_version_id;
     HANDLE StopEvent;
@@ -128,7 +131,9 @@ int64_t SegmentNthNewline(int64_t node, int64_t n);
 int64_t have_node_newlines(struct segment *node, int64_t at_least);
 struct state *state_create_empty(struct project *project);
 void state_release(struct state *state);
-void _reserve_state(struct project *project, int64_t total_size);
+void _reserve_states(struct project *project, int64_t total_size);
+void _reserve_buffers(struct project *project, int64_t total_size);
+void _project_add_buffer(struct project* project, struct mapped_buffer* buffer);
 void merge_state(struct state *base, struct state *child);
 int64_t SegmentGetLineNumber(int64_t root_idx, int64_t position);
 

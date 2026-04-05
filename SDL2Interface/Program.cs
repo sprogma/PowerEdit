@@ -360,6 +360,15 @@ namespace SDL2Interface
         {
             return windows;
         }
+
+        public void SetClipboard(string text)
+        {
+            if (SDL.SetClipboardText(text) != 0)
+            {
+                string error = SDL.GetError();
+                Logger.Log(LogLevel.Error, $"Error when copying to buffer: {error}");
+            }
+        }
     }
 
     internal class Program

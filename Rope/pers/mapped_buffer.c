@@ -184,11 +184,29 @@ struct mapped_buffer *allocate_buffer(int64_t size)
     return (struct mapped_buffer *)buf;
 }
 
+void delete_buffer(struct mapped_buffer *_buf)
+{
+    struct mapped_buffer_real *buf = (struct mapped_buffer_real *)_buf;
+
+    if (buf->file_handle == NULL)
+    {
+        free(buf->buffer);
+    }
+    else
+    {
+        UnmapViewOfFile(buf->buffer);
+        CloseHandle(buf->mapping_handle);
+        CloseHandle(buf->file_handle);
+    }
+    free(buf);
+}
+
 void acquire_buffer(struct mapped_buffer *_buf)
 {
     struct mapped_buffer_real *buf = (struct mapped_buffer_real *)_buf;
     buf->links_count++;
 }
+
 void release_buffer(struct mapped_buffer *_buf)
 {
     struct mapped_buffer_real *buf = (struct mapped_buffer_real *)_buf;

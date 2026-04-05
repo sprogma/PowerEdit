@@ -7,6 +7,7 @@ using Markdig.Syntax;
 using Microsoft.CodeAnalysis;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Text;
 using TextBuffer;
 
@@ -51,6 +52,12 @@ namespace EditorFramework.Widgets
             }
         }
 
+        public void CloseFileWindow(FileEditorWindow window)
+        {
+            Debug.Assert(window.IsDeleted);
+            childs.Remove(window);
+        }
+
         public override bool HandleEvent(EventBase e)
         {
             switch (e)
@@ -87,7 +94,7 @@ namespace EditorFramework.Widgets
             bool? res = Child?.Event(e);
             if (Child?.IsDeleted == true)
             {
-                childs.Remove(Child);
+                CloseFileWindow(Child);
                 current = Math.Max(current - 1, 0);
             }
             return res ?? true;

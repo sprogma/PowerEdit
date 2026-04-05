@@ -4,6 +4,7 @@ using System.Collections;
 using System.Collections.ObjectModel;
 using System.Reflection;
 using System.Resources;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
 using static System.Net.Mime.MediaTypeNames;
@@ -38,11 +39,6 @@ namespace TextBuffer
             CLibrary.state_commit(project, curr_state);
             undos = [];
             InitialVersions = [curr_state];
-        }
-
-        ~PersistentCTextBuffer()
-        {
-            CLibrary.project_destroy(project);
         }
 
         public char this[long index] { 
@@ -364,6 +360,22 @@ namespace TextBuffer
         public IntPtr ResolveVersion(IntPtr version)
         {
             return CLibrary.state_resolve(version);
+        }
+        
+        ~PersistentCTextBuffer()
+        {
+            Dispose();
+        }
+
+        private bool IsDisposed = false;
+
+        public void Dispose()
+        {
+            if (IsDisposed) return;
+            IsDisposed = true;
+            GC.SuppressFinalize(this);
+            //Logger.Log(LogLevel.Warning, $"FREE PROJECT AT {project} FROM BUFFER {RuntimeHelpers.GetHashCode(this)}");
+            CLibrary.project_destroy(project);
         }
     }
 }

@@ -11,6 +11,7 @@ using RegexTokenizer;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Text;
 using TextBuffer;
 
@@ -20,8 +21,6 @@ namespace EditorFramework.Widgets
     {
         // todo: make when will be async
         // public readonly ConcurrentDictionary<string, Task<EditorFile>> OpeningFiles = new();
-        public Lock FilesLock = new();
-        public List<EditorFile> Files;
         public EditorServer Server;
         public BaseWindow Child;
         protected Action<ProjectEditorWindow, EditorFile> OpenFileCallback;
@@ -33,7 +32,6 @@ namespace EditorFramework.Widgets
                                    BaseWindow child,
                                    ICommandProvider provider) : base(app, layout)
         {
-            Files = [];
             Server = new(provider);
             Child = child;
             OpenFileCallback = openFileCallback;
@@ -43,10 +41,6 @@ namespace EditorFramework.Widgets
         public EditorFile CreateFile(string? name = null, string? externsion = null)
         {
             var file = Server.CreateFile(name, externsion);
-            using (FilesLock.EnterScope())
-            {
-                Files.Add(file);
-            }
             OpenFileCallback(this, file);
             return file;
         }
@@ -55,16 +49,15 @@ namespace EditorFramework.Widgets
         {
             filename = Path.GetFullPath(filename);
             EditorFile? file;
-            using (FilesLock.EnterScope())
+            using (Server.FilesLock.EnterScope())
             {
-                file = Files.Find(x => x.filename == filename);
+                file = Server.Files.Find(x => x.filename == filename);
                 if (file != null)
                 {
                     RaiseFileCallback(this, file);
                     return file;
                 }
                 file = Server.OpenFile(filename);
-                Files.Add(file);
             }
             OpenFileCallback(this, file);
             return file;

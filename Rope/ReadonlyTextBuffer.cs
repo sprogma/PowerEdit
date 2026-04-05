@@ -122,6 +122,16 @@ namespace TextBuffer
         {
             return Encoding.UTF8.GetBytes(Substring(pos, len));
         }
+
+        ~ReadonlyTextBuffer()
+        {
+            Dispose();
+        }
+
+        public void Dispose()
+        {
+            GC.SuppressFinalize(this);
+        }
     }
 
 }

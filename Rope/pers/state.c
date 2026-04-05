@@ -55,7 +55,7 @@ struct state *state_create_empty(struct project *project)
     lockExclusive(&project->lock);
     res->version_id = project->last_version_id++;
 
-    _reserve_state(project, project->states_len + 1);
+    _reserve_states(project, project->states_len + 1);
     project->states[project->states_len++] = res;
     freeExclusive(&project->lock);
 
@@ -73,7 +73,7 @@ struct state *project_open_file(struct project *project, const char *filename)
     lockExclusive(&project->lock);
     res->version_id = project->last_version_id++;
 
-    _reserve_state(project, project->states_len + 1);
+    _reserve_states(project, project->states_len + 1);
     project->states[project->states_len++] = res;
     freeExclusive(&project->lock);
 
@@ -123,7 +123,7 @@ struct state *state_create_dup(struct project *project, struct state *state)
 
     res->version_id = project->last_version_id++;
 
-    _reserve_state(project, project->states_len + 1);
+    _reserve_states(project, project->states_len + 1);
     project->states[project->states_len++] = res;
 
     freeExclusive(&project->lock);
@@ -307,12 +307,15 @@ void _state_insert(struct project *project, struct state *state, int64_t positio
         if (project->current_buffer->length * 4 > project->current_buffer->allocated * 5)
         {
             buffer = allocate_buffer(length + 8 * 1024 * 1024);
+            project->current_buffer = buffer;
+            _project_add_buffer(project, buffer);
             buffer->length = length;
             offset = 0;
         }
         else /* create buffer for only this modification */
         {
             buffer = allocate_buffer(length);
+            _project_add_buffer(project, buffer);
             buffer->length = length;
             offset = 0;
         }

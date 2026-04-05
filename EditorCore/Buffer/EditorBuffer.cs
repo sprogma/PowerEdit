@@ -23,7 +23,7 @@ namespace EditorCore.Buffer
 
     public delegate void EditorBufferOnUpdate(EditorBuffer buffer);
     public delegate bool EditorBufferOnTextInput(EditorBuffer buffer);
-    public class EditorBuffer
+    public class EditorBuffer : IDisposable
     {
         public EditorBufferOnUpdate? ActionOnUpdate = null;
         public EditorBufferOnTextInput? ActionOnTextInput = null;
@@ -315,6 +315,17 @@ namespace EditorCore.Buffer
                 LoadCursorState();
                 OnUpdate();
             }
+        }
+
+        ~EditorBuffer() 
+        {
+            Dispose();
+        } 
+
+        public void Dispose()
+        {
+            GC.SuppressFinalize(this);
+            Text.Dispose();
         }
     }
 }

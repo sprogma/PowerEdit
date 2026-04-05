@@ -8,10 +8,11 @@
 /* creation and delection */
 
 
-void _reserve_state(struct project *project, int64_t total_size)
+void _reserve_states(struct project *project, int64_t total_size)
 {
 	if (project->states_alloc < total_size)
 	{
+		int64_t oldSize = project->states_alloc;
 		while (project->states_alloc < total_size)
 		{
 			project->states_alloc *= 2;
@@ -23,7 +24,35 @@ void _reserve_state(struct project *project, int64_t total_size)
 		{
 			exit(1);
 		}
+		memset(project->states + oldSize, 0, sizeof(*project->states) * (project->states_alloc - oldSize));
 	}
+}
+
+void _reserve_buffers(struct project *project, int64_t total_size)
+{
+	if (project->buffers_alloc < total_size)
+	{
+		int64_t oldSize = project->buffers_alloc;
+		while (project->buffers_alloc < total_size)
+		{
+			project->buffers_alloc *= 2;
+			project->buffers_alloc |= 1;
+		}
+		void *oldPtr = project->buffers;
+		project->buffers = realloc(oldPtr, sizeof(*project->buffers) * project->buffers_alloc);
+		if (project->buffers == NULL)
+		{
+			exit(1);
+		}
+		memset(project->buffers + oldSize, 0, sizeof(*project->buffers) * (project->buffers_alloc - oldSize));
+	}
+}
+
+
+void _project_add_buffer(struct project* project, struct mapped_buffer *buffer)
+{
+	_reserve_buffers(project, project->buffers_len + 1);
+	project->buffers[project->buffers_len++] = buffer;
 }
 
 
@@ -34,11 +63,16 @@ struct project *project_create()
 	project->states_len = 0;
 	project->states_alloc = 0;
 	project->states = NULL;
+	project->buffers_len = 0;
+	project->buffers_alloc = 0;
+	project->buffers = NULL;
+
 	project->current_buffer = allocate_buffer(1024 * 1024);
+	_project_add_buffer(project, project->current_buffer);
 #ifdef _WIN32
 	project->StopEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
 #endif
-	_reserve_state(project, 1024);
+	_reserve_states(project, 1024);
 
 
 	project->HashWorker = StartNewThread(HashEvaluationWorker, project);
@@ -55,6 +89,10 @@ void project_destroy(struct project *project)
 	for (int64_t i = 0; i < project->states_len; ++i)
 	{
 		state_release(project->states[i]);
+	}
+	for (int64_t i = 0; i < project->buffers_len; ++i)
+	{
+		delete_buffer(project->buffers[i]);
 	}
 	free(project->states);
 	free(project);

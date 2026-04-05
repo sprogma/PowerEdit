@@ -15,12 +15,10 @@ using static System.Runtime.InteropServices.JavaScript.JSType;
 namespace EditorCore.File
 {
     public delegate void EditorFileOnSave(EditorFile file);
-    public class EditorFile
+    public class EditorFile : IDisposable
     {
         public EditorBuffer Buffer { get; internal set; }
         public Server.EditorServer Server { get; internal set; }
-
-        IntPtr last_saved_version;
 
         public bool WasChanged => Buffer.WasChanged;
 
@@ -78,6 +76,17 @@ namespace EditorCore.File
                 }
                 ActionOnSave?.Invoke(this);
             }
+        }
+
+        ~EditorFile()
+        {
+            Dispose();
+        }
+
+        public void Dispose()
+        {
+            GC.SuppressFinalize(this);
+            Buffer.Dispose();
         }
 
         /* declarations for simplicity */

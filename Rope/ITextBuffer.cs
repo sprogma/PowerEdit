@@ -45,7 +45,7 @@ namespace TextBuffer
         public void Clear() => RemoveAt(0, Length);
     }
 
-    public interface ITextBuffer
+    public interface ITextBuffer : IDisposable
     {
         public char this[long index] { get; }
 

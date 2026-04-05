@@ -423,6 +423,7 @@ namespace SDL2Interface
         public void Draw(BaseWindow window)
         {
             Canvas.Clear();
+            (W, H) = (Canvas.Width, Canvas.Height);
             window.Layout.Resize(window, new(0, 0, Canvas.Width, Canvas.Height));
             DrawRecurse(window);
         }

@@ -24,6 +24,16 @@ namespace EditorFramework.Widgets
         public FileEditorWindow(IApplication App, ILayoutManager layout, EditorFile file) : base(App, layout, file.Buffer)
         {
             this.file = file;
+            this.OnQuit += (window) => {
+                if (window is FileEditorWindow few)
+                {
+                    file.Server.CloseFile(few.file);
+                }
+                else
+                {
+                    throw new Exception("Error: couldn't close file.");
+                }
+            };
         }
 
         public override bool HandleEvent(EventBase e)
