@@ -1,14 +1,15 @@
 ﻿using CommandProviderInterface;
+using EditorCore.Buffer;
+using EditorCore.File;
+using Lsp;
+using RegexTokenizer;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reactive;
 using System.Text;
 using System.Threading.Tasks;
 using TextBuffer;
-using Lsp;
-using EditorCore.Buffer;
-using EditorCore.File;
-using RegexTokenizer;
 
 namespace EditorCore.Server
 {
@@ -18,10 +19,11 @@ namespace EditorCore.Server
         public Lock FilesLock = new();
         public List<EditorFile> Files { get; internal set; }
 
-        Dictionary<string, LspClient> clients = [];
+        Dictionary<string, Task<LspClient>> clients = [];
         public EditorBufferOnUpdate? ActionOnBufferUpdate;
         public EditorBufferOnTextInput? ActionOnBufferTextInput;
         public EditorFileOnSave? ActionOnFileSave;
+        public int OpeningFiles = 0;
 
         public EditorServer(ICommandProvider commandProvider)
         {
@@ -35,33 +37,40 @@ namespace EditorCore.Server
             using (FilesLock.EnterScope())
             {
                 Files.Add(new_file);
+                OpeningFiles--;
             }
             return new_file;
         }
 
-        public EditorFile CreateFile(string? name, string? externsion)
+        public EditorFile CreateFile(string? name, string? languageId)
         {
-            EditorFile new_file = new(this, new EditorBuffer(this, BaseTokenizer.CreateTokenizer(externsion), GetLsp(externsion), name, new PersistentCTextBuffer()))
+            EditorFile new_file = new(this, new EditorBuffer(this, BaseTokenizer.CreateTokenizer(languageId), GetLspAsync(languageId), name, languageId, new PersistentCTextBuffer()))
             {
                 filename = name
             };
             using (FilesLock.EnterScope())
             {
                 Files.Add(new_file);
+                OpeningFiles--;
             }
             return new_file;
         }
 
-        public LspClient? GetLsp(string? v)
+        public Task<LspClient>? GetLspAsync(string? languageId)
         {
-            if (v == null) return null;
-            if (clients.TryGetValue(v, out LspClient? value))
+            if (languageId != null && clients.TryGetValue(languageId, out var value))
             {
                 return value;
             }
-            clients[v] = new();
-            //Task.Run(() => clients[v].StartAsync("clangd", "--stdio"));
-            return clients[v];
+            switch (languageId)
+            {
+                case "c":
+                    clients[languageId] = LspClient.StartAsync(Environment.CurrentDirectory, "clangd", "--offset-encoding=utf-8 --background-index --clang-tidy");
+                    break;
+                default:
+                    return null;
+            };
+            return clients[languageId];
         }
 
         public void CloseFile(EditorFile file)

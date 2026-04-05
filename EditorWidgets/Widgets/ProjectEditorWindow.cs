@@ -6,7 +6,7 @@ using EditorCore.Server;
 using EditorFramework.ApplicationApi;
 using EditorFramework.Events;
 using EditorFramework.Layout;
-using LoggingLogLevel;
+using Logging;
 using RegexTokenizer;
 using System;
 using System.Collections.Concurrent;
@@ -38,9 +38,9 @@ namespace EditorFramework.Widgets
             RaiseFileCallback = raiseFileCallback;
         }
 
-        public EditorFile CreateFile(string? name = null, string? externsion = null)
+        public EditorFile CreateFile(string? name = null, string? languageId = null)
         {
-            var file = Server.CreateFile(name, externsion);
+            var file = Server.CreateFile(name, languageId);
             OpenFileCallback(this, file);
             return file;
         }
@@ -57,6 +57,7 @@ namespace EditorFramework.Widgets
                     RaiseFileCallback(this, file);
                     return file;
                 }
+                Server.OpeningFiles++;
                 file = Server.OpenFile(filename);
             }
             OpenFileCallback(this, file);
@@ -74,7 +75,7 @@ namespace EditorFramework.Widgets
                     CreateFile(null, null);
                     return false;
                 case KeyChordEvent key when key.Is(KeyCode.O, KeyMode.Ctrl):
-                    PromptTextWindow promptWindow = new(App, GetLayout<PromptTextWindow>.Value, new EditorBuffer(Server, BaseTokenizer.CreateBaseTokenizer(), null, null, new PersistentCTextBuffer()));
+                    PromptTextWindow promptWindow = new(App, GetLayout<PromptTextWindow>.Value, new EditorBuffer(Server, BaseTokenizer.CreateBaseTokenizer(), null, null, null, new PersistentCTextBuffer()));
                     promptWindow.cursor?.Buffer.Text.SetText("enter path to file to open");
                     promptWindow.cursor?.Selections = new(promptWindow.cursor, [new EditorSelection(promptWindow.cursor, 0, promptWindow.buffer.Text.Length)]);
                     OpenPopup(promptWindow);
@@ -105,7 +106,7 @@ namespace EditorFramework.Widgets
                 DeleteSelf();
                 return false;
             }
-            if (Server.Files.Count == 0)
+            if (Server.Files.Count == 0 && Server.OpeningFiles <= 0)
             {
                 DeleteSelf();
                 return false;

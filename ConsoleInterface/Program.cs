@@ -9,7 +9,7 @@ using EditorFramework.ApplicationApi;
 using EditorFramework.Events;
 using EditorFramework.Layout;
 using EditorFramework.Widgets;
-using LoggingLogLevel;
+using Logging;
 using Lsp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using PowershellCommandProvider;
@@ -105,11 +105,11 @@ namespace SDL2Interface
             {
                 if (file != null)
                 {
-                    Task.Run(() => project.OpenFile(file));
+                    _ = Task.Run(() => project.OpenFile(file));
                 }
                 else
                 {
-                    Task.Run(() => project.CreateFile(null, "c"));
+                    _ = Task.Run(() => project.CreateFile(null, "c"));
                 }
             }
 

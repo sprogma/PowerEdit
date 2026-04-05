@@ -11,6 +11,7 @@ using System.Numerics;
 using System.Runtime.Intrinsics.Arm;
 using System.Text;
 using System.Xml.Linq;
+using static System.Collections.Specialized.BitVector32;
 using static System.Net.Mime.MediaTypeNames;
 
 namespace SDL2Interface
@@ -272,6 +273,7 @@ namespace SDL2Interface
             }
         }
 
+
         private void DrawInputTextFunction(InputTextWindow window)
         {
             SDL_Sharp.Rect Position = Convert(window.Layout.Position);
@@ -301,6 +303,11 @@ namespace SDL2Interface
 
             SDL.SetRenderDrawColor(renderer, 0, 0, 0, 0);
             SDL.RenderFillRect(renderer, ref Position);
+            long minLine = window.viewOffset;
+            long maxLine = minLine + (window.Layout.Position.H / textRenderer.FontLineStep) + 1;
+            long minPos = window.buffer.GetLineOffsets(minLine).begin;
+            long maxPos = window.buffer.GetLineOffsets(maxLine).begin;
+            maxPos = (maxPos == 0 ? window.buffer.Text.Length + 1 : maxPos + (window.Layout.Position.W / textRenderer.FontStep) + 1);
 
             int leftBarSize = 0;
 
@@ -349,7 +356,7 @@ namespace SDL2Interface
 
             /* find current error */
             string? message = null;
-            long errorPosition = 0;
+            (long Begin, long End) errorPosition = (0, 0);
             if (window.cursor?.Selections.Count == 1)
             {
                 var selection = window.cursor?.Selections[0]!;
@@ -361,14 +368,14 @@ namespace SDL2Interface
                     long mindiff = long.MaxValue;
                     for (int i = 0; i < window.buffer.ErrorMarks.Count; ++i)
                     {
-                        if (begin <= window.buffer.ErrorMarks[i].position && window.buffer.ErrorMarks[i].position < end)
+                        if (begin <= window.buffer.ErrorMarks[i].End && window.buffer.ErrorMarks[i].Begin < end)
                         {
-                            long diff = Math.Abs(window.buffer.ErrorMarks[i].position - selection.End);
+                            long diff = Math.Abs(window.buffer.ErrorMarks[i].Middle - selection.End);
                             if (diff < mindiff)
                             {
                                 mindiff = diff;
-                                message = window.buffer.ErrorMarks[i].message;
-                                errorPosition = window.buffer.ErrorMarks[i].position;
+                                message = window.buffer.ErrorMarks[i].Message;
+                                errorPosition = (window.buffer.ErrorMarks[i].Begin, window.buffer.ErrorMarks[i].End);
                             }
                         }
                     }
@@ -380,13 +387,9 @@ namespace SDL2Interface
             /* underline error */
             if (message != null)
             {
-                int selectionWidth = (int)(4 * textRenderer.currentScale);
-                SDL.SetRenderDrawColor(renderer, 255, 166, 0, 255);
-                (long line, long offset) = window.buffer.GetPositionOffsets(errorPosition);
-                int x = leftBarSize + Position.X + 5 + (int)offset * textRenderer.FontStep - textRenderer.FontStep / 2;
-                int y = Position.Y + (int)(line - window.viewOffset) * textRenderer.FontLineStep + textRenderer.FontLineStep - selectionWidth;
-                SDL_Sharp.Rect r = new(x, y, 2 * textRenderer.FontStep, selectionWidth);
-                SDL.RenderFillRect(renderer, ref r);
+                SDL.SetRenderDrawColor(renderer, 255, 0, 0, 255);
+                int selectionWidth = (int)(6 * textRenderer.currentScale);
+                FillLinesFromTo(window, leftBarSize, selectionWidth, minPos, maxPos, minLine, maxLine, errorPosition.Begin, errorPosition.End);
             }
 
             /* draw cursor */
@@ -394,11 +397,6 @@ namespace SDL2Interface
             {
                 SDL.SetRenderDrawColor(renderer, 255, 255, 255, 255);
                 int selectionWidth = (int)(5 * textRenderer.currentScale);
-                long minLine = window.viewOffset;
-                long maxLine = minLine + (window.Layout.Position.H / textRenderer.FontLineStep) + 1;
-                long minPos = window.buffer.GetLineOffsets(minLine).begin;
-                long maxPos = window.buffer.GetLineOffsets(maxLine).begin;
-                maxPos = (maxPos == 0 ? window.buffer.Text.Length + 1 : maxPos + (window.Layout.Position.W / textRenderer.FontStep) + 1);
 
                 foreach (var selection in window.cursor.Selections)
                 {
@@ -410,49 +408,7 @@ namespace SDL2Interface
                         SDL.RenderFillRect(renderer, ref r);
                     }
 
-                    (long line, long offset) begin, end;
-                    if (selection.Min < minPos)
-                    {
-                        begin = (minLine, 0);
-                    }
-                    else if (selection.Min >= maxPos)
-                    {
-                        begin = (maxLine + 1, 0);
-                    }
-                    else
-                    {
-                        begin = window.buffer.GetPositionOffsets(selection.Min);
-                    }
-                    if (selection.Max < minPos)
-                    {
-                        end = (minLine, 0);
-                    }
-                    else if (selection.Max >= maxPos)
-                    {
-                        end = (maxLine + 1, 0);
-                    }
-                    else
-                    {
-                        end = window.buffer.GetPositionOffsets(selection.Max);
-                    }
-
-                    long beginLine = Math.Max(begin.line, minLine);
-                    long endLine = Math.Min(end.line, maxLine);
-                    for (long line = beginLine; line <= endLine; line++)
-                    {
-                        long startOffset = (line == begin.line) ? begin.offset : 0;
-                        long endOffset = (line == end.line) ? end.offset : window.buffer.Text.GetLineOffsets(line).length;
-
-                        int width = (int)(endOffset - startOffset) * textRenderer.FontStep;
-                        if (width <= 0) continue;
-                        SDL_Sharp.Rect r = new(
-                            leftBarSize + Position.X + 5 + (int)startOffset * textRenderer.FontStep,
-                            Position.Y + (int)(line - window.viewOffset) * textRenderer.FontLineStep + textRenderer.FontLineStep - selectionWidth,
-                            width,
-                            selectionWidth
-                        );
-                        SDL.RenderFillRect(renderer, ref r);
-                    }
+                    FillLinesFromTo(window, leftBarSize, selectionWidth, minPos, maxPos, minLine, maxLine, selection.Min, selection.Max);
                 }
             }
 
@@ -463,6 +419,54 @@ namespace SDL2Interface
                 textRenderer.Scale(0.8);
                 textRenderer.DrawTextLine(Position.X + 200, Position.Y + Position.Height - 5 - textRenderer.FontLineStep, message, 0, [], ref dummyValue);
                 textRenderer.Scale(1.25);
+            }
+        }
+
+        private void FillLinesFromTo(SimpleTextWindow window, int leftBarSize, int selectionWidth, long minPos, long maxPos, long minLine, long maxLine, long from, long to)
+        {
+            SDL_Sharp.Rect Position = Convert(window.Layout.Position);
+
+            (long line, long offset) begin, end;
+            if (from < minPos)
+            {
+                begin = (minLine, 0);
+            }
+            else if (from >= maxPos)
+            {
+                begin = (maxLine + 1, 0);
+            }
+            else
+            {
+                begin = window.buffer.GetPositionOffsets(from);
+            }
+            if (to < minPos)
+            {
+                end = (minLine, 0);
+            }
+            else if (to >= maxPos)
+            {
+                end = (maxLine + 1, 0);
+            }
+            else
+            {
+                end = window.buffer.GetPositionOffsets(to);
+            }
+            long beginLine = Math.Max(begin.line, minLine);
+            long endLine = Math.Min(end.line, maxLine);
+            for (long line = beginLine; line <= endLine; line++)
+            {
+                long startOffset = (line == begin.line) ? begin.offset : 0;
+                long endOffset = (line == end.line) ? end.offset : window.buffer.Text.GetLineOffsets(line).length;
+
+                int width = (int)(endOffset - startOffset) * textRenderer.FontStep;
+                if (width <= 0) continue;
+                SDL_Sharp.Rect r = new(
+                    leftBarSize + Position.X + 5 + (int)startOffset * textRenderer.FontStep,
+                    Position.Y + (int)(line - window.viewOffset) * textRenderer.FontLineStep + textRenderer.FontLineStep - selectionWidth,
+                    width,
+                    selectionWidth
+                );
+                SDL.RenderFillRect(renderer, ref r);
             }
         }
 
@@ -478,26 +482,24 @@ namespace SDL2Interface
         {
             if (!textRenderer.Ready) return;
 
+            long minLine = window.viewOffset;
+            long maxLine = minLine + (window.Layout.Position.H / textRenderer.FontLineStep) + 1;
+            long minPos = window.buffer.GetLineOffsets(minLine).begin;
+            long maxPos = window.buffer.GetLineOffsets(maxLine).begin;
+            maxPos = (maxPos == 0 ? window.buffer.Text.Length + 1 : maxPos + (window.Layout.Position.W / textRenderer.FontStep) + 1);
+
             long selectionWidth = (long)(8 * textRenderer.currentScale);
             SDL.SetRenderDrawColor(renderer, 50, 0, 0, 255);
             lock (window.buffer.ErrorMarksLock)
             {
                 foreach (var err in window.buffer.ErrorMarks)
                 {
-                    (long line, long col) = window.buffer.GetPositionOffsets(err.position);
-                    long y = window.Layout.Position.Y + (line - window.viewOffset) * textRenderer.FontLineStep;
-                    long x = window.Layout.Position.X + 5 + leftBarSize + col * textRenderer.FontStep - textRenderer.FontStep / 2;
-                    SDL_Sharp.Rect r = new((int)x, (int)y, 2 * textRenderer.FontStep, (int)textRenderer.FontLineStep);
-                    SDL.RenderFillRect(renderer, ref r);
+                    FillLinesFromTo(window, leftBarSize, textRenderer.FontLineStep, minPos, maxPos, minLine, maxLine, err.Begin, err.End);
                 }
                 SDL.SetRenderDrawColor(renderer, 255, 0, 0, 255);
                 foreach (var err in window.buffer.ErrorMarks)
                 {
-                    (long line, long col) = window.buffer.GetPositionOffsets(err.position);
-                    long y = window.Layout.Position.Y + (line - window.viewOffset + 1) * textRenderer.FontLineStep - selectionWidth;
-                    long x = window.Layout.Position.X + 5 + leftBarSize + col * textRenderer.FontStep - textRenderer.FontStep / 2;
-                    SDL_Sharp.Rect r = new((int)x, (int)y, 2 * textRenderer.FontStep, (int)selectionWidth);
-                    SDL.RenderFillRect(renderer, ref r);
+                    FillLinesFromTo(window, leftBarSize, (int)selectionWidth, minPos, maxPos, minLine, maxLine, err.Begin, err.End);
                 }
             }
             long lastToken = 0;

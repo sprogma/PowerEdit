@@ -1,4 +1,4 @@
-﻿using LoggingLogLevel;
+﻿using Logging;
 using RegexTokenizer;
 using System;
 using System.Collections.Generic;
@@ -16,12 +16,13 @@ namespace PowershellCommandProvider
     {
         public BaseTokenizer Tokenizer => new PowershellTokenizer();
 
+        public string? LanguageId => "powershell";
 
         internal RunspacePool? runSpacePool;
 
         public PowershellProvider()
         {
-            Task.Run(() =>
+            _ = Task.Run(() =>
             {
                 runSpacePool = RunspaceFactory.CreateRunspacePool(1, 1);
                 runSpacePool.Open();

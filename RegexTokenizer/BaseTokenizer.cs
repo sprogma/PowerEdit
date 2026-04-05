@@ -1,4 +1,4 @@
-﻿using LoggingLogLevel;
+﻿using Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -14,22 +14,18 @@ namespace RegexTokenizer
 
         public virtual long MaxContentSize => 256*1024;
 
-        public static BaseTokenizer CreateTokenizer(string? fileExternsion)
+        public static BaseTokenizer CreateTokenizer(string? languageId)
         {
-            Logger.Log($"Creating ... {fileExternsion} tokenizer");
-            switch (fileExternsion)
+            Logger.Log($"Creating ... {languageId} tokenizer");
+            switch (languageId)
             {
                 case "c":
-                case "h":
                     return new CTokenizer();
                 case "cpp":
-                case "hpp":
                     return new CTokenizer();
                 case "py":
                     return new PythonTokenizer();
-                case "ps1":
-                case "psm1":
-                case "psd1":
+                case "powershell":
                     return new PowershellTokenizer();
                 default:
                     break;

@@ -1,5 +1,6 @@
 ﻿using EditorCore.Buffer;
 using Lsp;
+using OmniSharp.Extensions.LanguageServer.Protocol.Client.Capabilities;
 using RegexTokenizer;
 using System;
 using System.Collections.Generic;
@@ -9,6 +10,7 @@ using System.Reflection.PortableExecutable;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
+using System.Xml.Linq;
 using TextBuffer;
 using static System.Runtime.InteropServices.JavaScript.JSType;
 
@@ -29,11 +31,10 @@ namespace EditorCore.File
         {
             this.filename = filename;
             Buffer = new EditorBuffer(server,
-                                      BaseTokenizer.CreateTokenizer(Path.GetExtension(filename)?.TrimStart('.') ?? ""),
-                                      server.GetLsp(Path.GetExtension(filename)?.TrimStart('.') ?? ""),
-                                      this.filename,
-                                      buffer)
-            {
+                                      BaseTokenizer.CreateTokenizer(EditorBuffer.LanguageId(filename)),
+                                      server.GetLspAsync(EditorBuffer.LanguageId(filename)),
+                                      this.filename, EditorBuffer.LanguageId(filename),
+                                      buffer) {
                 WasChanged = false
             };
             Server = server;
@@ -58,8 +59,8 @@ namespace EditorCore.File
                 // update tokenizer
                 string? ext = Path.GetExtension(newFilename)?.TrimStart('.') ?? "";
                 Buffer.Tokenizer = BaseTokenizer.CreateTokenizer(ext);
-                Buffer.Client = Server.GetLsp(ext);
-                Buffer.FilePath = newFilename;
+                Buffer.Client = Server.GetLspAsync(LanguageId());
+                Buffer.Filename = newFilename;
                 Buffer.OnUpdate();
             }
             if (filename != null)
@@ -89,6 +90,9 @@ namespace EditorCore.File
             Buffer.Dispose();
         }
 
+        public string? LanguageId(string name) => EditorBuffer.LanguageId(name);
+
+        public string? LanguageId() => Buffer.LanguageId();
         /* declarations for simplicity */
     }
 }

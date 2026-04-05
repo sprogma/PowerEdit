@@ -5,6 +5,7 @@ using EditorFramework.Widgets;
 using Humanizer;
 using Markdig.Helpers;
 using Microsoft.CodeAnalysis.Operations;
+using OmniSharp.Extensions.LanguageServer.Protocol.Models;
 using RegexTokenizer;
 using System;
 using System.Collections.Generic;
@@ -13,6 +14,7 @@ using System.Numerics;
 using System.Runtime.Intrinsics.Arm;
 using System.Text;
 using System.Xml.Linq;
+using static System.Collections.Specialized.BitVector32;
 using cColor = ConsoleInterface.Color;
 
 namespace SDL2Interface
@@ -244,6 +246,11 @@ namespace SDL2Interface
         private void DrawInputTextFunction(InputTextWindow window)
         {
             Rect position = window.Layout.Position;
+            long minLine = window.viewOffset;
+            long maxLine = minLine + (position.H) + 1;
+            long minPos = window.buffer.GetLineOffsets(minLine).begin;
+            long maxPos = window.buffer.GetLineOffsets(maxLine).begin;
+            maxPos = (maxPos == 0 ? window.buffer.Text.Length + 1 : maxPos + position.W + 1);
             {
                 if (window.cursor == null)
                 {
@@ -310,7 +317,8 @@ namespace SDL2Interface
 
             /* find current error */
             string? message = null;
-            long errorPosition = 0, errorLine = 0, errorOffset = 0;
+            long errorLine = 0, errorOffset = 0;
+            (long Begin, long End) errorPosition = (0, 0);
             if (window.cursor?.Selections.Count == 1)
             {
                 var selection = window.cursor?.Selections[0]!;
@@ -322,16 +330,16 @@ namespace SDL2Interface
                     long mindiff = long.MaxValue;
                     for (int i = 0; i < window.buffer.ErrorMarks.Count; ++i)
                     {
-                        if (begin <= window.buffer.ErrorMarks[i].position && window.buffer.ErrorMarks[i].position < end)
+                        if (begin <= window.buffer.ErrorMarks[i].End && window.buffer.ErrorMarks[i].Begin < end)
                         {
-                            long diff = Math.Abs(window.buffer.ErrorMarks[i].position - selection.End);
+                            long diff = Math.Abs(window.buffer.ErrorMarks[i].Middle - selection.End);
                             if (diff < mindiff)
                             {
                                 mindiff = diff;
                                 errorLine = line;
-                                message = window.buffer.ErrorMarks[i].message;
-                                errorPosition = window.buffer.ErrorMarks[i].position;
-                                errorOffset = errorPosition - begin;
+                                message = window.buffer.ErrorMarks[i].Message;
+                                errorPosition = (window.buffer.ErrorMarks[i].Begin, window.buffer.ErrorMarks[i].End);
+                                errorOffset = errorPosition.Begin - begin;
                             }
                         }
                     }
@@ -349,21 +357,12 @@ namespace SDL2Interface
             /* underline error */
             if (message != null)
             {
-                (long line, long offset) = window.buffer.GetPositionOffsets(errorPosition);
-                int x = (int)(leftBarSize + position.X + 1 + offset - 1);
-                int y = (int)(position.Y + line - window.viewOffset);
-                Rect r = new(x, y, 3, 1);
-                Canvas.ApplyStyle(r, null, new cColor(255, 166, 0));
+                FillStyleFromTo(window, leftBarSize, minLine, maxLine, minPos, maxPos, errorPosition.Begin, errorPosition.End, null, new cColor(255, 166, 0));
             }
 
             /* draw cursor */
             if (window.cursor != null)
             {
-                long minLine = window.viewOffset;
-                long maxLine = minLine + (position.H) + 1;
-                long minPos = window.buffer.GetLineOffsets(minLine).begin;
-                long maxPos = window.buffer.GetLineOffsets(maxLine).begin;
-                maxPos = (maxPos == 0 ? window.buffer.Text.Length + 1 : maxPos + position.W + 1);
 
                 foreach (var selection in window.cursor.Selections)
                 {
@@ -372,52 +371,9 @@ namespace SDL2Interface
                     {
                         (long line, long offset) = window.buffer.GetPositionOffsets(selection.End);
                         Rect r = new(leftBarSize + position.X + 1 + offset, position.Y + (int)(line - window.viewOffset) * 1, 1, 1);
-                        Canvas.ApplyStyle(r, new cColor(0, 0, 0), new cColor(255, 255, 255));  
-                    }
-
-                    (long line, long offset) begin, end;
-                    if (selection.Min < minPos)
-                    {
-                        begin = (minLine, 0);
-                    }
-                    else if (selection.Min >= maxPos)
-                    {
-                        begin = (maxLine + 1, 0);
-                    }
-                    else
-                    {
-                        begin = window.buffer.GetPositionOffsets(selection.Min);
-                    }
-                    if (selection.Max < minPos)
-                    {
-                        end = (minLine, 0);
-                    }
-                    else if (selection.Max >= maxPos)
-                    {
-                        end = (maxLine + 1, 0);
-                    }
-                    else
-                    {
-                        end = window.buffer.GetPositionOffsets(selection.Max);
-                    }
-
-                    long beginLine = Math.Max(begin.line, minLine);
-                    long endLine = Math.Min(end.line, maxLine);
-                    for (long line = beginLine; line <= endLine; line++)
-                    {
-                        long startOffset = (line == begin.line) ? begin.offset : 0;
-                        long endOffset = (line == end.line) ? end.offset : window.buffer.Text.GetLineOffsets(line).length;
-
-                        int width = (int)(endOffset - startOffset);
-                        if (width <= 0) continue;
-                        Rect r = new(
-                            leftBarSize + position.X + 1 + startOffset,
-                            position.Y + line - window.viewOffset,
-                            width,
-                            1
-                        );
                         Canvas.ApplyStyle(r, new cColor(0, 0, 0), new cColor(255, 255, 255));
                     }
+                    FillStyleFromTo(window, leftBarSize, minLine, maxLine, minPos, maxPos, selection.Min, selection.Max);
                 }
             }
 
@@ -431,6 +387,63 @@ namespace SDL2Interface
             }
         }
 
+        private void FillStyleFromTo(SimpleTextWindow window,
+                                     int leftBarSize,
+                                     long minLine,
+                                     long maxLine,
+                                     long minPos,
+                                     long maxPos,
+                                     long from,
+                                     long to,
+                                     cColor? fore = null,
+                                     cColor? back = null)
+        {
+            Rect position = window.Layout.Position;
+            (long line, long offset) begin, end;
+            if (from < minPos)
+            {
+                begin = (minLine, 0);
+            }
+            else if (from >= maxPos)
+            {
+                begin = (maxLine + 1, 0);
+            }
+            else
+            {
+                begin = window.buffer.GetPositionOffsets(from);
+            }
+            if (to < minPos)
+            {
+                end = (minLine, 0);
+            }
+            else if (to >= maxPos)
+            {
+                end = (maxLine + 1, 0);
+            }
+            else
+            {
+                end = window.buffer.GetPositionOffsets(to);
+            }
+
+            long beginLine = Math.Max(begin.line, minLine);
+            long endLine = Math.Min(end.line, maxLine);
+            for (long line = beginLine; line <= endLine; line++)
+            {
+                long startOffset = (line == begin.line) ? begin.offset : 0;
+                long endOffset = (line == end.line) ? end.offset : window.buffer.Text.GetLineOffsets(line).length;
+
+                int width = (int)(endOffset - startOffset);
+                if (width <= 0) continue;
+                Rect r = new(
+                    leftBarSize + position.X + 1 + startOffset,
+                    position.Y + line - window.viewOffset,
+                    width,
+                    1
+                );
+                Canvas.ApplyStyle(r, fore, back);
+            }
+        }
+
         public void Draw(BaseWindow window)
         {
             Canvas.Clear();
@@ -441,15 +454,19 @@ namespace SDL2Interface
 
         public void SimpleTextWindowDrawText(SimpleTextWindow window, int leftBarSize)
         {
-            lock (window.buffer.ErrorMarksLock)
             {
-                foreach (var err in window.buffer.ErrorMarks)
+                Rect position = window.Layout.Position;
+                long minLine = window.viewOffset;
+                long maxLine = minLine + (position.H) + 1;
+                long minPos = window.buffer.GetLineOffsets(minLine).begin;
+                long maxPos = window.buffer.GetLineOffsets(maxLine).begin;
+                maxPos = (maxPos == 0 ? window.buffer.Text.Length + 1 : maxPos + position.W + 1);
+                lock (window.buffer.ErrorMarksLock)
                 {
-                    (long line, long col) = window.buffer.GetPositionOffsets(err.position);
-                    long y = window.Layout.Position.Y + line - window.viewOffset;
-                    long x = window.Layout.Position.X + 1 + leftBarSize + col - 1;
-                    Rect r = new(x, y, 3, 1);
-                    Canvas.ApplyStyle(r, null, new cColor(80, 0, 0));
+                    foreach (var err in window.buffer.ErrorMarks)
+                    {
+                        FillStyleFromTo(window, leftBarSize, minLine, maxLine, minPos, maxPos, err.Begin, err.End, null, new cColor(80, 0, 0));
+                    }
                 }
             }
             long lastToken = 0;

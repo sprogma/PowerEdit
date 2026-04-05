@@ -1,7 +1,7 @@
 ﻿using EditorCore.Buffer;
 using EditorCore.File;
 using EditorCore.Server;
-using LoggingLogLevel;
+using Logging;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -12,6 +12,24 @@ namespace EditorFramework
 {
     public class SimpleLinterMod
     {
+        struct SimpleErrorMark : IErrorMark
+        {
+            public SimpleErrorMark(string message, long begin, long end, ErrorMarkSeverity severity, string? source)
+            {
+                Message = message;
+                Begin = begin;
+                End = end;
+                Severity = severity;
+                Source = source;
+            }
+
+            public string Message { get; init; }
+            public long Begin { get; set; }
+            public long End { get; set; }
+            public ErrorMarkSeverity Severity { get; init; }
+            public string? Source { get; init; }
+        }
+
         public static void Init(EditorServer server)
         {
             server.ActionOnFileSave += OnFileSave;
@@ -19,7 +37,7 @@ namespace EditorFramework
 
         public static void OnFileSave(EditorFile file)
         {
-            Task.Run(async () =>
+            _ = Task.Run(async () =>
             {
                 Logger.Log("File saved [simple linter]");
                 if (file.Buffer.Text.Length > 1024 * 1024)
@@ -35,44 +53,13 @@ namespace EditorFramework
                 {
                     file.Buffer.ErrorMarks.Clear();
                 }
-                string language = Path.GetExtension(file.filename)?[1..]?.ToLower() switch
-                {
-                    "hive" => "hive",
-                    "cpp" or "cxx" or "cc" or "c++" or "hpp" or "hxx" or "hh" => "c++",
-                    "c" or "h" => "c",
-                    "d" or "di" or "dd" => "d",
-                    "go" => "go",
-                    "hs" or "lhs" => "haskell",
-                    "java" or "class" or "jar" => "java",
-                    "js" or "mjs" or "cjs" or "jsx" => "javascript",
-                    "lit" or "lp" => "literate",
-                    "lua" => "lua",
-                    "nim" or "nims" or "nimble" => "nim",
-                    "nix" => "nix",
-                    "m" or "mm" or "M" => "objective-c",
-                    "py" or "pyw" or "pyi" => "python",
-                    "rs" => "rust",
-                    "sh" or "bash" or "zsh" or "ksh" => "shell",
-                    "swift" => "swift",
-                    "yaml" or "yml" => "yaml",
-                    "cs" => "csharp",
-                    "html" or "htm" => "html",
-                    "css" or "scss" or "sass" or "less" => "css",
-                    "ts" or "tsx" => "typescript",
-                    "json" => "json",
-                    "sql" => "sql",
-                    "md" => "markdown",
-                    "rb" => "ruby",
-                    "php" => "php",
-                    "dockerfile" => "docker",
-                    _ => "undefined"
-                };
+                string? language = file.LanguageId();
                 (string executable, string args, string pattern, string? temporary)[] LinterVariants = language switch
                 {
                     "hive" => [("D:/mipt/lang3/a.exe", "--no-output=true --input-file=%f", @"Error:.near.%f:%l:%c>%m", null)],
                     "c" => [("clang", "-std=gnu2x -fsyntax-only -ferror-limit=5000 -Wall -Wextra -D_CRT_SECURE_NO_WARNINGS -D_CRT_NONSTDC_NO_DEPRECATE -fms-extensions -Wno-microsoft %f", @"%f:%l:%c:.+: %m", null),
                             ("gcc", "-fsyntax-only -Wall -Wextra %f", @"%f:%l:%c:.+: %m", null)],
-                    "c++" => [("clang", "-std=gnu++2c -fsyntax-only -ferror-limit=5000 -Wall -Wextra -D_CRT_SECURE_NO_WARNINGS -D_CRT_NONSTDC_NO_DEPRECATE -fms-extensions -Wno-microsoft %f", @"%f:%l:%c:.+: %m", null),
+                    "cpp" => [("clang", "-std=gnu++2c -fsyntax-only -ferror-limit=5000 -Wall -Wextra -D_CRT_SECURE_NO_WARNINGS -D_CRT_NONSTDC_NO_DEPRECATE -fms-extensions -Wno-microsoft %f", @"%f:%l:%c:.+: %m", null),
                               ("g++", "-fsyntax-only -Wall -Wextra %f", @"%f:%l:%c:.+: %m", null)],
                     "d" => [("dmd", "-color=off -o- -w -wi -c %f", @"%f\(%l\):.+: %m", null),
                                 ("ldc2", "--o- --vcolumns -w -c %f", @"%f\(%l,%c\):[^:]+: %m", null),
@@ -94,7 +81,7 @@ namespace EditorFramework
                                         ("ruff", "check --output-format=concise %f", @"%f:%l:%c: %m", null),
                                         ("flake8", "%f", @"%f:%l:%c: %m", null)],
                     "rust" => [("cargo", "clippy --message-format short", @"%f:%l:%c: %m", null)],
-                    "shell" => [("shfmt", "%f", @"%f:%l:%c: %m", null),
+                    "shellscript" => [("shfmt", "%f", @"%f:%l:%c: %m", null),
                                     ("shellcheck", "-f gcc %f", @"%f:%l:%c:.+: %m", null)],
                     "swift" => [("xcrun", "swiftc %f", @"%f:%l:%c:.+: %m", null),
                                     ("swiftc", "%f", @"%f:%l:%c:.+: %m", null)],
@@ -106,7 +93,7 @@ namespace EditorFramework
                     "css" => [("stylelint", "--formatter compact %f", @"%f: line %l, col %c, %m", null)],
                     "json" => [("jsonlint", "-q %f", @"%f: line %l, col %c, %m", null)],
                     "sql" => [("sqlfluff", "lint --format parsable %f", @"%f:%l:%c: %m", null)],
-                    "docker" => [("hadolint", "--no-color %f", @"%f:%l %m", null)],
+                    "dockerfile" => [("hadolint", "--no-color %f", @"%f:%l %m", null)],
                     "markdown" => [("markdownlint", "--style default %f", @"%f:%l %m", null)],
                     "ruby" => [("rubocop", "--format emacs %f", @"%f:%l:%c: .+: %m", null)],
                     "php" => [("php", "-l %f", @"Parse error: %m in %f on line %l", null)],
@@ -151,7 +138,7 @@ namespace EditorFramework
                                 long position = file.Buffer.GetPosition(line, col);
                                 lock (file.Buffer.ErrorMarksLock)
                                 {
-                                    file.Buffer.ErrorMarks.Add(new(msg, position));
+                                    file.Buffer.ErrorMarks.Add(new SimpleErrorMark(msg, Math.Max(position - 1, 0), Math.Min(position + 2, file.Buffer.Text.Length), ErrorMarkSeverity.Error, null));
                                 }
                             }
 

@@ -2,7 +2,7 @@
 using EditorFramework.ApplicationApi;
 using EditorFramework.Events;
 using EditorFramework.Layout;
-using LoggingLogLevel;
+using Logging;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using System;
 using System.Collections.Generic;

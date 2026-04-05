@@ -1,4 +1,4 @@
-﻿using LoggingLogLevel;
+﻿using Logging;
 using RegexTokenizer;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
@@ -17,6 +17,7 @@ namespace PythonCommandProvider
     public class PythonProvider : CommandProviderInterface.ICommandProvider
     {
         public BaseTokenizer Tokenizer => new PythonTokenizer();
+        public string? LanguageId => "python";
 
         public PythonProvider()
         { }

@@ -4,7 +4,7 @@ using EditorCore.Selection;
 using EditorFramework.ApplicationApi;
 using EditorFramework.Events;
 using EditorFramework.Layout;
-using LoggingLogLevel;
+using Logging;
 using RegexTokenizer;
 using System;
 using System.Collections.Generic;
@@ -46,7 +46,7 @@ namespace EditorFramework.Widgets
                 case KeyChordEvent chord when chord.Is(KeyCode.S, KeyMode.Ctrl) || chord.Is(KeyCode.S, KeyMode.Alt):
                     if (file.filename == null)
                     {
-                        PromptTextWindow promptWindow = new(App, GetLayout<PromptTextWindow>.Value, new EditorBuffer(file.Server, BaseTokenizer.CreateBaseTokenizer(), null, null, new PersistentCTextBuffer()));
+                        PromptTextWindow promptWindow = new(App, GetLayout<PromptTextWindow>.Value, new EditorBuffer(file.Server, BaseTokenizer.CreateBaseTokenizer(), null, null, null, new PersistentCTextBuffer()));
                         promptWindow.cursor?.Buffer.Text.SetText("enter path to file to save into");
                         promptWindow.cursor?.Selections = new(promptWindow.cursor, [new EditorSelection(promptWindow.cursor, 0, promptWindow.buffer.Text.Length)]);
                         OpenPopup(promptWindow);

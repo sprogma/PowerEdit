@@ -1,5 +1,6 @@
 ﻿using EditorCore.File;
 using EditorCore.Selection;
+using Logging;
 using Lsp;
 using RegexTokenizer;
 using System;
@@ -10,15 +11,28 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading.Channels;
 using System.Threading.Tasks;
 using TextBuffer;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace EditorCore.Buffer
 {
-    public struct ErrorMark(string message, long position)
+    public enum ErrorMarkSeverity
     {
-        public string message = message;
-        public long position = position;
+        Note,
+        Waring,
+        Error,
+    }
+
+    public interface IErrorMark
+    {
+        public string Message { get; }
+        public long Begin { get; set; }
+        public long End { get; set; }
+        public ErrorMarkSeverity Severity { get; }
+        public string? Source { get; }
+        public long Middle => (Begin + End) / 2;
     }
 
     public delegate void EditorBufferOnUpdate(EditorBuffer buffer);
@@ -37,12 +51,18 @@ namespace EditorCore.Buffer
         public List<Token> Tokens { get; internal set; } = [];
 
         public Lock ErrorMarksLock = new();
-        public List<ErrorMark> ErrorMarks { get; internal set; } = [];
-        public LspClient? Client { get; internal set; }
-        public string? FilePath { get; internal set; }
+        public List<IErrorMark> ErrorMarks { get; internal set; } = [];
+        public Task<LspClient>? PotentialClient { get; internal set; }
+        public Task<LspClient>? Client { get; internal set; }
+        public List<Func<Task>> ClientTasks = [];
+        public Channel<Func<Task>> ClientPipeline = Channel.CreateUnbounded<Func<Task>>();
+        public string? Filename { get; internal set; }
+        public string? GivenLanguageId { get; internal set; }
 
         private IntPtr? last_saved_version = null;
         private bool dirty_was_changed = false;
+
+        CancellationTokenSource endWorkerToken = new();
 
         public bool WasChanged
         {
@@ -64,12 +84,15 @@ namespace EditorCore.Buffer
             }
         }
 
-        public EditorBuffer(Server.EditorServer server, BaseTokenizer tokenizer, LspClient? client, string? filepath, ITextBuffer buffer)
+        private bool WasIgnored = false;
+
+        public EditorBuffer(Server.EditorServer server, BaseTokenizer tokenizer, Task<LspClient>? client, string? filepath, string? languageId, ITextBuffer buffer)
         {
+            GivenLanguageId = languageId;
             Tokenizer = tokenizer;
             Text = buffer;
-            FilePath = filepath;
-            Client = client;
+            Filename = filepath;
+            PotentialClient = Client = client;
             Cursor = new(this);
             Cursor.Selections.Add(new EditorSelection(Cursor, 0));
             Server = server;
@@ -78,23 +101,68 @@ namespace EditorCore.Buffer
             ActionOnUpdate += server.ActionOnBufferUpdate;
             ActionOnTextInput += server.ActionOnBufferTextInput;
 
+            _ = Task.Run(StartWorkerAsync);
+
+            if (Client != null) 
+            { 
+                if (!ClientPipeline.Writer.TryWrite(async () => await (await Client).OpenFileAsync(HandleLSPDisgnostics, Filename, GetId(), LanguageId(), "")))
+                {
+                    throw new Exception("What2?");
+                }
+            }
+
             OnUpdate();
         }
 
-        public EditorBuffer(Server.EditorServer server, string content, BaseTokenizer tokenizer, LspClient? client, string? filepath, ITextBuffer buffer)
+        private void HandleLSPDisgnostics(string sourceId, LSPDiagnostic[] values)
         {
+            // throw new NotImplementedException();
+        }
+
+        public EditorBuffer(Server.EditorServer server, string content, BaseTokenizer tokenizer, Task<LspClient>? client, string? filepath, string? languageId, ITextBuffer buffer)
+        {
+            GivenLanguageId = languageId;
             Tokenizer = tokenizer;
             Text = buffer;
-            FilePath = filepath;
-            Client = client;
+            Filename = filepath;
+            PotentialClient = Client = client;
             Cursor = new(this);
             Cursor.Selections.Add(new EditorSelection(Cursor, 0));
             Server = server;
             SaveCursorState();
 
+            ActionOnUpdate += server.ActionOnBufferUpdate;
+            ActionOnTextInput += server.ActionOnBufferTextInput;
+
+            _ = Task.Run(StartWorkerAsync);
+
+            if (Client != null) { ClientPipeline.Writer.TryWrite(async () => await (await Client).OpenFileAsync(HandleLSPDisgnostics, Filename, GetId(), LanguageId(), "")); }
+
             SetText(content);
 
             OnUpdate();
+        }
+
+        public async Task StartWorkerAsync()
+        {
+            await foreach (var taskFunc in ClientPipeline.Reader.ReadAllAsync())
+            {
+                if (endWorkerToken.IsCancellationRequested) { break; }
+                try
+                {
+                    if (Client != null)
+                        await taskFunc();
+                }
+                catch (Exception ex)
+                {
+                    Logger.Log(LogLevel.Error, $"Error at lsp task {ex.Message}");
+                }
+            }
+        }
+
+        public string GetId()
+        {
+            return RuntimeHelpers.GetHashCode(this).ToString();
         }
 
         public void SaveCursorState()
@@ -130,10 +198,40 @@ namespace EditorCore.Buffer
                 return;
             }
             ActionOnUpdate?.Invoke(this);
-            if (Text.Length <= Client?.MaxContentSize)
+            if (PotentialClient?.IsCompleted == true)
             {
-                //_ = Task.Run(() => Client?.ChangeFileAsync("aboba/aboba", Text.Substring(0)));
+                if (WasIgnored)
+                {
+                    if (Client != null) 
+                    { 
+                        if (!ClientPipeline.Writer.TryWrite(async () => await (await Client).ChangeFileAsync(Filename, GetId(), Text.Substring(0))))
+                        {
+                            throw new InvalidOperationException("What 3?");
+                        }
+                    }
+                    WasIgnored = false;
+                }
+                if (Text.Length <= PotentialClient?.Result.MaxContentSize)
+                {
+                    Client = PotentialClient;
+                    foreach (var x in ClientTasks)
+                    {
+                        if (!ClientPipeline.Writer.TryWrite(x))
+                        {
+                            throw new InvalidOperationException("What?");
+                        }
+                    }
+                }
+                else
+                {
+                    Client = null;
+                }
             }
+            else
+            {
+                WasIgnored = true;
+            }
+            ClientTasks.Clear();
             if (Text.Length <= Tokenizer.MaxContentSize)
             {
                 _ = Task.Run(() => Tokens = Tokenizer.ParseContent(Text.Substring(0)));
@@ -153,6 +251,7 @@ namespace EditorCore.Buffer
                 undoText.Undo();
                 LoadCursorState();
 
+                if (Client != null) { ClientTasks.Add(async () => await (await Client).ChangeFileAsync(Filename, GetId(), Text.Substring(0))); }
                 OnUpdate();
             }
         }
@@ -171,6 +270,7 @@ namespace EditorCore.Buffer
                 }
                 LoadCursorState();
 
+                if (Client != null) { ClientTasks.Add(async () => await (await Client).ChangeFileAsync(Filename, GetId(), Text.Substring(0))); }
                 OnUpdate();
             }
         }
@@ -185,13 +285,17 @@ namespace EditorCore.Buffer
             }
             lock (ErrorMarksLock)
             {
-                Span<ErrorMark> span = CollectionsMarshal.AsSpan(ErrorMarks);
+                Span<IErrorMark> span = CollectionsMarshal.AsSpan(ErrorMarks);
                 for (int i = 0; i < span.Length; i++)
                 {
                     ref var err = ref span[i];
-                    if (err.position >= position)
+                    if (err.Begin >= position)
                     {
-                        err.position += length;
+                        err.Begin += length;
+                    }
+                    if (err.End >= position)
+                    {
+                        err.End += length;
                     }
                 }
             }
@@ -203,6 +307,11 @@ namespace EditorCore.Buffer
             {
                 long length = editableText.Insert(position, data);
                 MoveCursorsInsert(position, length);
+                if (Client != null)
+                {
+                    var (line, col) = GetLineOffsets(position);
+                    ClientTasks.Add(async () => await (await Client).ChangeFileAsync(Filename, GetId(), (int)line, (int)col, data));
+                }
                 return length;
             }
             return 0;
@@ -214,6 +323,11 @@ namespace EditorCore.Buffer
             {
                 long length = editableText.Insert(position, data);
                 MoveCursorsInsert(position, length);
+                if (Client != null)
+                {
+                    var (line, col) = GetLineOffsets(position);
+                    ClientTasks.Add(async () => await (await Client).ChangeFileAsync(Filename, GetId(), (int)line, (int)col, Encoding.UTF8.GetString(data)));
+                }
                 return length;
             }
             return 0;
@@ -233,6 +347,12 @@ namespace EditorCore.Buffer
                     position = 0;
                 }
                 editableText.RemoveAt(position, count);
+                if (Client != null) 
+                { 
+                    var (line, col) = GetLineOffsets(position); 
+                    var (line2, col2) = GetLineOffsets(position + count); 
+                    ClientTasks.Add(async () => await (await Client).ChangeFileAsync(Filename, GetId(), (int)line, (int)col, (int)line2, (int)col2, (int)count));
+                }
                 MoveCursorsDelete(position, count);
             }
         }
@@ -247,17 +367,25 @@ namespace EditorCore.Buffer
             }
             lock (ErrorMarksLock)
             {
-                Span<ErrorMark> span = CollectionsMarshal.AsSpan(ErrorMarks);
+                Span<IErrorMark> span = CollectionsMarshal.AsSpan(ErrorMarks);
                 for (int i = 0; i < span.Length; i++)
                 {
                     ref var err = ref span[i];
-                    if (err.position >= position + length)
+                    if (err.Begin >= position + length)
                     {
-                        err.position -= length;
+                        err.Begin -= length;
                     }
-                    else if (err.position >= position)
+                    else if (err.Begin >= position)
                     {
-                        err.position = position;
+                        err.Begin = position;
+                    }
+                    if (err.End >= position + length)
+                    {
+                        err.End -= length;
+                    }
+                    else if (err.End >= position)
+                    {
+                        err.End = position;
                     }
                 }
             }
@@ -266,6 +394,7 @@ namespace EditorCore.Buffer
         public long SetText(string data)
         {
             long res = Text.SetText(data);
+            if (Client != null) { ClientTasks.Add(async () => await (await Client).ChangeFileAsync(Filename, GetId(), data)); }
             OnUpdate();
             return res;
         }
@@ -315,6 +444,7 @@ namespace EditorCore.Buffer
             {
                 undoText.SetVersion(id);
                 LoadCursorState();
+                if (Client != null) { ClientTasks.Add(async () => await (await Client).ChangeFileAsync(Filename, GetId(), Text.Substring(0))); }
                 OnUpdate();
             }
         }
@@ -327,7 +457,55 @@ namespace EditorCore.Buffer
         public void Dispose()
         {
             GC.SuppressFinalize(this);
+            endWorkerToken.Cancel();
+            ClientPipeline.Writer.Complete();
             Text.Dispose();
+        }
+
+        public string? LanguageId()
+        {
+            if (GivenLanguageId != null) return GivenLanguageId;
+            return LanguageId(Filename);
+        }
+
+        internal static string? LanguageId(string? key)
+        {
+            if (key == null)
+            {
+                return null;
+            }
+            return Path.GetExtension(key)?[1..]?.ToLower() switch
+            {
+                "hive" => "hive",
+                "cpp" or "cxx" or "cc" or "c++" or "hpp" or "hxx" or "hh" => "cpp",
+                "c" or "h" => "c",
+                "d" or "di" or "dd" => "d",
+                "go" => "go",
+                "hs" or "lhs" => "haskell",
+                "java" or "class" or "jar" => "java",
+                "js" or "mjs" or "cjs" or "jsx" => "javascript",
+                "lit" or "lp" => "literate",
+                "lua" => "lua",
+                "nim" or "nims" or "nimble" => "nim",
+                "nix" => "nix",
+                "m" or "mm" or "M" => "objective-c",
+                "py" or "pyw" or "pyi" => "python",
+                "rs" => "rust",
+                "sh" or "bash" or "zsh" or "ksh" => "shellscript",
+                "swift" => "swift",
+                "yaml" or "yml" => "yaml",
+                "cs" => "csharp",
+                "html" or "htm" => "html",
+                "css" or "scss" or "sass" or "less" => "css",
+                "ts" or "tsx" => "typescript",
+                "json" => "json",
+                "sql" => "sql",
+                "md" => "markdown",
+                "rb" => "ruby",
+                "php" => "php",
+                "dockerfile" => "dockerfile",
+                _ => "undefined"
+            };
         }
     }
 }
