@@ -105,6 +105,11 @@ namespace EditorFramework.Widgets
                 DeleteSelf();
                 return false;
             }
+            if (Server.Files.Count == 0)
+            {
+                DeleteSelf();
+                return false;
+            }
             return res;
         }
     }

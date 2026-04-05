@@ -73,7 +73,8 @@ namespace EditorFramework.Widgets
                         return false;
                     }
                     break;
-                case KeyChordEvent k when k.Is(KeyCode.CloseBrackets, KeyMode.Alt):
+                case KeyChordEvent k when k.Is(KeyCode.CloseBrackets, KeyMode.Alt) ||
+                                          k.Is(KeyCode.PageDown, KeyMode.Alt):
                     if (childs.Count > 0)
                     {
                         current++;
@@ -81,7 +82,8 @@ namespace EditorFramework.Widgets
                         return false;
                     }
                     break;
-                case KeyChordEvent k when k.Is(KeyCode.OpenBrackets, KeyMode.Alt):
+                case KeyChordEvent k when k.Is(KeyCode.OpenBrackets, KeyMode.Alt) ||
+                                          k.Is(KeyCode.PageUp, KeyMode.Alt):
                     if (childs.Count > 0)
                     {
                         current += childs.Count - 1;
