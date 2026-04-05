@@ -100,11 +100,12 @@ namespace SDL2Interface
             SDL.SetHint("SDL_RENDER_DRIVER", "direct3d12");
 
             SDL.GetDisplayDPI(0, out var ddpi, out var hdpi, out var vdpi);
+            SDL.GetDisplayBounds(0, out var rect);
             double Scale = hdpi / 96.0;
-            int W = (int)(1600 * Scale);
-            int H = (int)(900 * Scale);
+            int W = (int)(rect.Width * 0.8);
+            int H = (int)(rect.Height * 0.8);
 
-            var window = SDL.CreateWindow("PoweEditor", SDL.WINDOWPOS_CENTERED, SDL.WINDOWPOS_CENTERED, W, H, WindowFlags.Shown);
+            var window = SDL.CreateWindow("PoweEditor", SDL.WINDOWPOS_CENTERED, SDL.WINDOWPOS_CENTERED, W, H, WindowFlags.Shown | WindowFlags.Resizable);
             if (window.IsNull)
             {
                 throw new Exception("SDL window initialization failed");
@@ -190,12 +191,33 @@ namespace SDL2Interface
                     Thread.Sleep(10);
                     while (SDL.PollEvent(out Event evt) != 0)
                     {
-                        var e = CreateEvent(evt);
-                        if (e != null)
+                        if (evt.Type == EventType.WindowEvent)
                         {
-                            pool.AddEvent(e);
-                            pool.ProcessEvents();
+                            W = evt.Window.Data1;
+                            H = evt.Window.Data2;
+                            Render.W = W; Render.H = H;
                         }
+                        if (evt.Type == EventType.KeyDown && evt.Keyboard.Keysym.Scancode == Scancode.F11)
+                        {
+                            WindowFlags flags = SDL.GetWindowFlags(window);
+                            if (flags.HasFlag(WindowFlags.Fullscreen))
+                            {
+                                SDL.SetWindowFullscreen(window, 0);
+                            }
+                            else
+                            {
+                                SDL.SetWindowFullscreen(window, WindowFlags.Fullscreen);
+                            }
+                        }
+                        else
+                        {
+                            var e = CreateEvent(evt);
+                            if (e != null)
+                            {
+                                pool.AddEvent(e);
+                                pool.ProcessEvents();
+                            }
+                        }  
                     }
                 }
             }

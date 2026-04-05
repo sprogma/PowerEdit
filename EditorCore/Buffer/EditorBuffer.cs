@@ -130,7 +130,7 @@ namespace EditorCore.Buffer
             ActionOnUpdate?.Invoke(this);
             if (Text.Length <= Client?.MaxContentSize)
             {
-                _ = Task.Run(() => Client?.ChangeFileAsync("aboba/aboba", Text.Substring(0)));
+                //_ = Task.Run(() => Client?.ChangeFileAsync("aboba/aboba", Text.Substring(0)));
             }
             if (Text.Length <= Tokenizer.MaxContentSize)
             {

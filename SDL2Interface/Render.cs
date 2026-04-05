@@ -288,9 +288,9 @@ namespace SDL2Interface
                     {
                         window.viewOffset = cursorLine - 3;
                     }
-                    if (cursorLine > window.viewOffset + H / textRenderer.FontLineStep - 4)
+                    if (cursorLine > window.viewOffset + window.Layout.Position.H / textRenderer.FontLineStep - 4)
                     {
-                        window.viewOffset = cursorLine - H / textRenderer.FontLineStep + 4;
+                        window.viewOffset = cursorLine - window.Layout.Position.H / textRenderer.FontLineStep + 4;
                     }
                 }
             }
@@ -312,7 +312,7 @@ namespace SDL2Interface
                     int maxPower = 4;
                     long dummyValue = 0;
                     /* draw numbers */
-                    for (int t = 0; t < H / textRenderer.FontLineStep; ++t)
+                    for (int t = 0; t < window.Layout.Position.H / textRenderer.FontLineStep; ++t)
                     {
                         int i = t + (int)window.viewOffset;
                         (long index, string? s, _) = window.buffer.GetLine(i);
@@ -395,10 +395,10 @@ namespace SDL2Interface
                 SDL.SetRenderDrawColor(renderer, 255, 255, 255, 255);
                 int selectionWidth = (int)(5 * textRenderer.currentScale);
                 long minLine = window.viewOffset;
-                long maxLine = minLine + (H / textRenderer.FontLineStep) + 1;
+                long maxLine = minLine + (window.Layout.Position.H / textRenderer.FontLineStep) + 1;
                 long minPos = window.buffer.GetLineOffsets(minLine).begin;
                 long maxPos = window.buffer.GetLineOffsets(maxLine).begin;
-                maxPos = (maxPos == 0 ? window.buffer.Text.Length + 1 : maxPos + (W / textRenderer.FontStep) + 1);
+                maxPos = (maxPos == 0 ? window.buffer.Text.Length + 1 : maxPos + (window.Layout.Position.W / textRenderer.FontStep) + 1);
 
                 foreach (var selection in window.cursor.Selections)
                 {
@@ -461,7 +461,7 @@ namespace SDL2Interface
             {
                 long dummyValue = 0;
                 textRenderer.Scale(0.8);
-                textRenderer.DrawTextLine(Position.X + 200, Position.Y + H - 5 - textRenderer.FontLineStep, message, 0, [], ref dummyValue);
+                textRenderer.DrawTextLine(Position.X + 200, Position.Y + Position.Height - 5 - textRenderer.FontLineStep, message, 0, [], ref dummyValue);
                 textRenderer.Scale(1.25);
             }
         }
@@ -498,7 +498,7 @@ namespace SDL2Interface
                 SDL.RenderFillRect(renderer, ref r);
             }
             long lastToken = 0;
-            for (int t = 0; t < H / textRenderer.FontLineStep; ++t)
+            for (int t = 0; t < window.Layout.Position.H / textRenderer.FontLineStep; ++t)
             {
                 int i = t + (int)window.viewOffset;
                 (long index, string? s, _) = window.buffer.GetLine(i);
@@ -511,7 +511,7 @@ namespace SDL2Interface
             // draw errors count
             long dummyValue = 0;
             textRenderer.Scale(0.8);
-            textRenderer.DrawTextLine((int)window.Layout.Position.X + 5, (int)window.Layout.Position.Y + H - 5 - textRenderer.FontLineStep, $"{window.buffer.ErrorMarks.Count} errors in file", 0, [], ref dummyValue);
+            textRenderer.DrawTextLine((int)window.Layout.Position.X + 5, (int)window.Layout.Position.Y + (int)window.Layout.Position.H - 5 - textRenderer.FontLineStep, $"{window.buffer.ErrorMarks.Count} errors in file", 0, [], ref dummyValue);
             textRenderer.Scale(1.25);
         }
 
@@ -522,7 +522,7 @@ namespace SDL2Interface
             int maxPower = 4;
             long dummyValue = 0;
             /* draw numbers */
-            for (int t = 0; t < H / textRenderer.FontLineStep; ++t)
+            for (int t = 0; t < (int)window.Layout.Position.H / textRenderer.FontLineStep; ++t)
             {
                 int i = t + (int)window.viewOffset;
                 (long index, string? s, _) = window.buffer.GetLine(i);
@@ -565,8 +565,8 @@ namespace SDL2Interface
                 }
                 else
                 {
-                    int ww = Math.Min(W, H) / 500;
-                    for (int i = 0; i < ww; i++)
+                    long ww = Math.Min(window.Layout.Position.W, window.Layout.Position.H) / 500;
+                    for (long i = 0; i < ww; i++)
                     {
                         SDL.RenderDrawRect(renderer, ref rect);
                         rect.X++;
