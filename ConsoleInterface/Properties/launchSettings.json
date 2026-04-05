@@ -2,6 +2,7 @@
   "profiles": {
     "ConsoleInterface": {
       "commandName": "Project",
+      "commandLineArgs": "--python",
       "nativeDebugging": true
     }
   }

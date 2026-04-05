@@ -7,6 +7,13 @@ using System.Text.Json;
 
 namespace PythonCommandProvider
 {
+    using System.Text.Json.Serialization;
+
+    [JsonSerializable(typeof(string[]))]
+    internal partial class PythonJsonContext : JsonSerializerContext
+    {
+    }
+
     public class PythonProvider : CommandProviderInterface.ICommandProvider
     {
         public BaseTokenizer Tokenizer => new PythonTokenizer();
@@ -30,7 +37,7 @@ namespace PythonCommandProvider
         public (IEnumerable<object>?, string?) Execute(string command, object[] args)
         {
             string inputData = "import json\n" +
-                               "output = data = [" + string.Join(',', args.Select(x => JsonSerializer.Serialize(x.ToString()))) + "]\n";
+                               "output = data = " + JsonSerializer.Serialize(args.Select(x => x.ToString()).ToArray(), PythonJsonContext.Default.StringArray) + "\n";
             string inputCode = $"{inputData}\n{command}\n" +
                                "print(json.dumps(list(map(str, output))))";
 
@@ -90,7 +97,7 @@ namespace PythonCommandProvider
 
             try
             {
-                resultArray = JsonSerializer.Deserialize<string[]>(output);
+                resultArray = JsonSerializer.Deserialize(output, PythonJsonContext.Default.StringArray);
             }
             catch (Exception ex)
             {
