@@ -4,7 +4,7 @@ using EditorCore.Selection;
 using EditorFramework.ApplicationApi;
 using EditorFramework.Events;
 using EditorFramework.Layout;
-using Logging;
+using Common;
 using Microsoft.ApplicationInsights.Metrics.Extensibility;
 using Microsoft.CodeAnalysis.Operations;
 using System;

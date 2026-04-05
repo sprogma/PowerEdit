@@ -65,7 +65,50 @@ namespace EditorCore.Server
             switch (languageId)
             {
                 case "c":
-                    clients[languageId] = LspClient.StartAsync(Environment.CurrentDirectory, "clangd", "--offset-encoding=utf-8 --background-index --clang-tidy");
+                    // // This don't works :(
+                    //clients[languageId] = LspClient.StartAsync(Environment.CurrentDirectory,
+                    //                                           "clangd",
+                    //                                           "--offset-encoding=utf-8 --background-index --clang-tidy",
+                    //                                           new Dictionary<string, object>
+                    //                                           {
+                    //                                               {"clangTidy", true },
+                    //                                               {"clangd.config", @"
+                    //                                                    Diagnostics:
+                    //                                                      ClangTidy:
+                    //                                                        Add: ['*']
+                    //                                                        # Remove: [altera*, abseil*, fuchsia*]
+                    //                                                    CompileFlags:
+                    //                                                      Add: [
+                    //                                                        -Weverything, 
+                    //                                                        -fsanitize=undefined, 
+                    //                                                        -D_CRT_SECURE_NO_WARNINGS, 
+                    //                                                        -D_CRT_NONSTDC_NO_DEPRECATE, 
+                    //                                                        -fms-extensions, 
+                    //                                                        -Wno-microsoft,
+                    //                                                        -Wno-c++98-compat,
+                    //                                                        -Wno-pre-c11-compat
+                    //                                                      ]
+                    //                                                    ---
+                    //                                                    If:
+                    //                                                      PathMatch: .*\.(c|h)$
+                    //                                                    CompileFlags:
+                    //                                                      Add: [-std=gnu2y]
+                    //                                                    ---
+                    //                                                    If:
+                    //                                                      PathMatch: .*\.(cpp|cc|cxx|hpp|hxx)$
+                    //                                                    CompileFlags:
+                    //                                                      Add: [-std=gnu++2c]
+                    //                                                    "
+                    //                                           } });
+                    clients[languageId] = LspClient.StartAsync(Environment.CurrentDirectory,
+                                                               "clangd",
+                                                               "--offset-encoding=utf-8 --background-index --clang-tidy",
+                                                               new
+                                                               {
+                                                                   fallbackFlags = new[] { "-Weverything", "-Wno-empty-translation-unit", "-fsanitize=undefined", "-D_CRT_SECURE_NO_WARNINGS", "-D_CRT_NONSTDC_NO_DEPRECATE", "-fms-extensions", "-Wno-microsoft" },
+                                                                   clangTidy = true,
+                                                                   clangTidyChecks = "*"
+                                                               });
                     break;
                 default:
                     return null;

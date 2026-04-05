@@ -1,4 +1,4 @@
-﻿using Logging;
+﻿using Common;
 using RegexTokenizer;
 using System.Collections.ObjectModel;
 using System.Diagnostics;

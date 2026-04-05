@@ -1,6 +1,6 @@
-﻿using EditorCore.File;
+﻿using Common;
+using EditorCore.File;
 using EditorCore.Selection;
-using Logging;
 using Lsp;
 using RegexTokenizer;
 using System;
@@ -18,23 +18,6 @@ using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace EditorCore.Buffer
 {
-    public enum ErrorMarkSeverity
-    {
-        Note,
-        Waring,
-        Error,
-    }
-
-    public interface IErrorMark
-    {
-        public string Message { get; }
-        public long Begin { get; set; }
-        public long End { get; set; }
-        public ErrorMarkSeverity Severity { get; }
-        public string? Source { get; }
-        public long Middle => (Begin + End) / 2;
-    }
-
     public delegate void EditorBufferOnUpdate(EditorBuffer buffer);
     public delegate bool EditorBufferOnTextInput(EditorBuffer buffer);
     public class EditorBuffer : IDisposable
@@ -103,20 +86,17 @@ namespace EditorCore.Buffer
 
             _ = Task.Run(StartWorkerAsync);
 
+            if (Client != null) { _ = Task.Run(async () => { await Client; OnUpdate(); }); }
+
             if (Client != null) 
             { 
-                if (!ClientPipeline.Writer.TryWrite(async () => await (await Client).OpenFileAsync(HandleLSPDisgnostics, Filename, GetId(), LanguageId(), "")))
+                if (!ClientPipeline.Writer.TryWrite(async () => await (await Client).OpenFileAsync(HandleDiagnostics, PositionCallback, Filename, GetId(), LanguageId(), "")))
                 {
                     throw new Exception("What2?");
                 }
             }
 
             OnUpdate();
-        }
-
-        private void HandleLSPDisgnostics(string sourceId, LSPDiagnostic[] values)
-        {
-            // throw new NotImplementedException();
         }
 
         public EditorBuffer(Server.EditorServer server, string content, BaseTokenizer tokenizer, Task<LspClient>? client, string? filepath, string? languageId, ITextBuffer buffer)
@@ -136,11 +116,25 @@ namespace EditorCore.Buffer
 
             _ = Task.Run(StartWorkerAsync);
 
-            if (Client != null) { ClientPipeline.Writer.TryWrite(async () => await (await Client).OpenFileAsync(HandleLSPDisgnostics, Filename, GetId(), LanguageId(), "")); }
+            if (Client != null) { _ = Task.Run(async () => { await Client; OnUpdate(); }); }
+
+            if (Client != null) { ClientPipeline.Writer.TryWrite(async () => await (await Client).OpenFileAsync(HandleDiagnostics, PositionCallback, Filename, GetId(), LanguageId(), "")); }
 
             SetText(content);
 
             OnUpdate();
+        }
+
+        private long PositionCallback(long line, long col) => GetPosition(line, col);
+
+        private void HandleDiagnostics(string sourceId, IEnumerable<IErrorMark> values)
+        {
+            /* clear all previous diagnostics from this source & insert this ones */
+            lock (ErrorMarksLock)
+            {
+                ErrorMarks = [.. ErrorMarks.Where(x => x.Source != sourceId)];
+                ErrorMarks.AddRange(values);
+            }
         }
 
         public async Task StartWorkerAsync()
@@ -162,7 +156,7 @@ namespace EditorCore.Buffer
 
         public string GetId()
         {
-            return RuntimeHelpers.GetHashCode(this).ToString();
+            return $"{RuntimeHelpers.GetHashCode(this).ToString()}.{LanguageId() ?? "unknown"}";
         }
 
         public void SaveCursorState()
@@ -191,7 +185,7 @@ namespace EditorCore.Buffer
             }
         }
 
-        internal void OnUpdate(bool pushHistory = true)
+        internal void OnUpdate()
         {
             if (Cursor == null)
             {
@@ -202,6 +196,7 @@ namespace EditorCore.Buffer
             {
                 if (WasIgnored)
                 {
+                    /* make full syncronization */
                     if (Client != null) 
                     { 
                         if (!ClientPipeline.Writer.TryWrite(async () => await (await Client).ChangeFileAsync(Filename, GetId(), Text.Substring(0))))
@@ -211,20 +206,24 @@ namespace EditorCore.Buffer
                     }
                     WasIgnored = false;
                 }
-                if (Text.Length <= PotentialClient?.Result.MaxContentSize)
-                {
-                    Client = PotentialClient;
-                    foreach (var x in ClientTasks)
-                    {
-                        if (!ClientPipeline.Writer.TryWrite(x))
-                        {
-                            throw new InvalidOperationException("What?");
-                        }
-                    }
-                }
                 else
                 {
-                    Client = null;
+                    /* make partial syncronization */
+                    if (Text.Length <= PotentialClient?.Result.MaxContentSize)
+                    {
+                        Client = PotentialClient;
+                        foreach (var x in ClientTasks)
+                        {
+                            if (!ClientPipeline.Writer.TryWrite(x))
+                            {
+                                throw new InvalidOperationException("What?");
+                            }
+                        }
+                    }
+                    else
+                    {
+                        Client = null;
+                    }
                 }
             }
             else
@@ -305,13 +304,13 @@ namespace EditorCore.Buffer
         {
             if (Text is IEditableTextBuffer editableText)
             {
-                long length = editableText.Insert(position, data);
-                MoveCursorsInsert(position, length);
                 if (Client != null)
                 {
-                    var (line, col) = GetLineOffsets(position);
+                    var (line, col) = GetPositionOffsets(position);
                     ClientTasks.Add(async () => await (await Client).ChangeFileAsync(Filename, GetId(), (int)line, (int)col, data));
                 }
+                long length = editableText.Insert(position, data);
+                MoveCursorsInsert(position, length);
                 return length;
             }
             return 0;
@@ -321,13 +320,13 @@ namespace EditorCore.Buffer
         {
             if (Text is IEditableTextBuffer editableText)
             {
-                long length = editableText.Insert(position, data);
-                MoveCursorsInsert(position, length);
                 if (Client != null)
                 {
-                    var (line, col) = GetLineOffsets(position);
+                    var (line, col) = GetPositionOffsets(position);
                     ClientTasks.Add(async () => await (await Client).ChangeFileAsync(Filename, GetId(), (int)line, (int)col, Encoding.UTF8.GetString(data)));
                 }
+                long length = editableText.Insert(position, data);
+                MoveCursorsInsert(position, length);
                 return length;
             }
             return 0;
@@ -337,6 +336,12 @@ namespace EditorCore.Buffer
         {
             if (Text is IEditableTextBuffer editableText)
             {
+                if (Client != null) 
+                { 
+                    var (line, col) = GetPositionOffsets(position); 
+                    var (line2, col2) = GetPositionOffsets(position + count); 
+                    ClientTasks.Add(async () => await (await Client).ChangeFileAsync(Filename, GetId(), (int)line, (int)col, (int)line2, (int)col2, (int)count));
+                }
                 if (position + count <= 0)
                 {
                     return;
@@ -347,12 +352,6 @@ namespace EditorCore.Buffer
                     position = 0;
                 }
                 editableText.RemoveAt(position, count);
-                if (Client != null) 
-                { 
-                    var (line, col) = GetLineOffsets(position); 
-                    var (line2, col2) = GetLineOffsets(position + count); 
-                    ClientTasks.Add(async () => await (await Client).ChangeFileAsync(Filename, GetId(), (int)line, (int)col, (int)line2, (int)col2, (int)count));
-                }
                 MoveCursorsDelete(position, count);
             }
         }
@@ -449,6 +448,38 @@ namespace EditorCore.Buffer
             }
         }
 
+        internal void UpdateRename(string newFilename)
+        {
+            string? oldLanguage = LanguageId();
+            string? newLanguage = LanguageId(newFilename);
+            if (oldLanguage != newLanguage)
+            {
+                Tokenizer = BaseTokenizer.CreateTokenizer(newLanguage);
+                if (PotentialClient != null)
+                {
+                    string? oldFilename = Filename;
+                    ClientPipeline.Writer.TryWrite(async () => await (await PotentialClient).ChangeFileAsync(oldFilename, GetId(), Text.Substring(0))); 
+                }
+                PotentialClient = Client = Server.GetLspAsync(LanguageId());
+                if (Client != null) 
+                { 
+                    ClientPipeline.Writer.TryWrite(async () => await (await Client).OpenFileAsync(HandleDiagnostics, PositionCallback, newFilename, GetId(), LanguageId(), "")); 
+                }
+                WasIgnored = true;
+            }
+            else
+            {
+                if (Client != null) 
+                {
+                    string? oldFilename = Filename;
+                    ClientTasks.Add(async () => await (await Client).RenameFileAsync(oldFilename, newFilename, GetId(), LanguageId(), Text.Substring(0))); 
+                }
+            }
+            Filename = newFilename;
+        }
+
+        bool disposed = false;
+
         ~EditorBuffer() 
         {
             Dispose();
@@ -457,7 +488,13 @@ namespace EditorCore.Buffer
         public void Dispose()
         {
             GC.SuppressFinalize(this);
+            if (disposed)
+            {
+                return;
+            }
+            disposed = true;
             endWorkerToken.Cancel();
+            if (PotentialClient != null) { ClientPipeline.Writer.TryWrite(async () => await (await PotentialClient).CloseFileAsync(Filename, GetId(), LanguageId())); }
             ClientPipeline.Writer.Complete();
             Text.Dispose();
         }

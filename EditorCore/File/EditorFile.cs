@@ -57,10 +57,7 @@ namespace EditorCore.File
             {
                 filename = newFilename;
                 // update tokenizer
-                string? ext = Path.GetExtension(newFilename)?.TrimStart('.') ?? "";
-                Buffer.Tokenizer = BaseTokenizer.CreateTokenizer(ext);
-                Buffer.Client = Server.GetLspAsync(LanguageId());
-                Buffer.Filename = newFilename;
+                Buffer.UpdateRename(newFilename);
                 Buffer.OnUpdate();
             }
             if (filename != null)

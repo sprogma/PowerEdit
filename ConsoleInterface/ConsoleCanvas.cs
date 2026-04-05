@@ -6,7 +6,7 @@ namespace ConsoleInterface
 {
     using EditorFramework.Layout;
     using Humanizer;
-    using Logging;
+    using Common;
     using System;
     using System.ComponentModel.DataAnnotations;
     using System.Globalization;

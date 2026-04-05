@@ -1,4 +1,4 @@
-﻿namespace Logging
+﻿namespace Common
 {
     public enum LogLevel : int
     {

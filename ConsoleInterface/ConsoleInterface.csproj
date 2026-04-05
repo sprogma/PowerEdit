@@ -16,7 +16,7 @@
     <ProjectReference Include="..\CoreInterface\PowershellCommandProvider.csproj" />
     <ProjectReference Include="..\EditorCore\EditorCore.csproj" />
     <ProjectReference Include="..\EditorWidgets\EditorFramework.csproj" />
-    <ProjectReference Include="..\Logging\Logging.csproj" />
+    <ProjectReference Include="..\Logging\Common.csproj" />
     <ProjectReference Include="..\Lsp\Lsp.csproj" />
     <ProjectReference Include="..\PythonCommandProvider\PythonCommandProvider.csproj" />
     <ProjectReference Include="..\RegexTokenizer\RegexTokenizer.csproj" />

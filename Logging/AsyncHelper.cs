@@ -6,7 +6,7 @@ using System.Globalization;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Logging.AsyncHelper
+namespace Common.AsyncHelper
 {
     public static class AsyncHelper
     {

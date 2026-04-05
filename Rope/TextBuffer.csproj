@@ -3,7 +3,7 @@
     <UpToDateCheckInput Include="**\*.c;**\*.h" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Logging\Logging.csproj" />
+    <ProjectReference Include="..\Logging\Common.csproj" />
   </ItemGroup>
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>

@@ -8,7 +8,7 @@ using EditorFramework.ApplicationApi;
 using EditorFramework.Events;
 using EditorFramework.Layout;
 using EditorFramework.Widgets;
-using Logging;
+using Common;
 using Lsp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using PowershellCommandProvider;
@@ -143,7 +143,7 @@ namespace SDL2Interface
                 EditorServer server = new(provider);
 
                 // add "lsp" module
-                SimpleLinterMod.Init(server);
+                //SimpleLinterMod.Init(server);
 
                 // start widget
 

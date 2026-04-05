@@ -417,7 +417,7 @@ namespace SDL2Interface
             {
                 long dummyValue = 0;
                 textRenderer.Scale(0.8);
-                textRenderer.DrawTextLine(Position.X + 200, Position.Y + Position.Height - 5 - textRenderer.FontLineStep, message, 0, [], ref dummyValue);
+                textRenderer.DrawTextLine(Position.X + textRenderer.FontStep * 25, Position.Y + Position.Height - 5 - textRenderer.FontLineStep, message, 0, [], ref dummyValue);
                 textRenderer.Scale(1.25);
             }
         }

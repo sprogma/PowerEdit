@@ -3,7 +3,7 @@
 #include "structure.h"
 
 
-#define MAX_NODES 1000000
+#define MAX_NODES 3000000
 struct segment glb_nodes[MAX_NODES];
 int64_t glb_next_node = 1;
 

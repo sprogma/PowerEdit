@@ -1,7 +1,7 @@
 ﻿using EditorCore.Buffer;
 using EditorCore.File;
 using EditorCore.Selection;
-using Logging;
+using Common;
 using RegexTokenizer;
 using System;
 using System.Collections.Generic;

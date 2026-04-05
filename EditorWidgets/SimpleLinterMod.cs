@@ -1,7 +1,7 @@
 ﻿using EditorCore.Buffer;
 using EditorCore.File;
 using EditorCore.Server;
-using Logging;
+using Common;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -14,7 +14,7 @@ namespace EditorFramework
     {
         struct SimpleErrorMark : IErrorMark
         {
-            public SimpleErrorMark(string message, long begin, long end, ErrorMarkSeverity severity, string? source)
+            public SimpleErrorMark(string message, long begin, long end, ErrorMarkSeverity severity, string source)
             {
                 Message = message;
                 Begin = begin;
@@ -27,7 +27,7 @@ namespace EditorFramework
             public long Begin { get; set; }
             public long End { get; set; }
             public ErrorMarkSeverity Severity { get; init; }
-            public string? Source { get; init; }
+            public string Source { get; init; }
         }
 
         public static void Init(EditorServer server)
@@ -57,7 +57,7 @@ namespace EditorFramework
                 (string executable, string args, string pattern, string? temporary)[] LinterVariants = language switch
                 {
                     "hive" => [("D:/mipt/lang3/a.exe", "--no-output=true --input-file=%f", @"Error:.near.%f:%l:%c>%m", null)],
-                    "c" => [("clang", "-std=gnu2x -fsyntax-only -ferror-limit=5000 -Wall -Wextra -D_CRT_SECURE_NO_WARNINGS -D_CRT_NONSTDC_NO_DEPRECATE -fms-extensions -Wno-microsoft %f", @"%f:%l:%c:.+: %m", null),
+                    "c" => [("clang", "-std=gnu2x -fsyntax-only -ferror-limit=5000 -Weverything -D_CRT_SECURE_NO_WARNINGS -D_CRT_NONSTDC_NO_DEPRECATE -fms-extensions -Wno-microsoft %f", @"%f:%l:%c:.+: %m", null),
                             ("gcc", "-fsyntax-only -Wall -Wextra %f", @"%f:%l:%c:.+: %m", null)],
                     "cpp" => [("clang", "-std=gnu++2c -fsyntax-only -ferror-limit=5000 -Wall -Wextra -D_CRT_SECURE_NO_WARNINGS -D_CRT_NONSTDC_NO_DEPRECATE -fms-extensions -Wno-microsoft %f", @"%f:%l:%c:.+: %m", null),
                               ("g++", "-fsyntax-only -Wall -Wextra %f", @"%f:%l:%c:.+: %m", null)],
@@ -136,9 +136,9 @@ namespace EditorFramework
                             void UpdateError(string filename, int line, int col, string msg)
                             {
                                 long position = file.Buffer.GetPosition(line, col);
-                                lock (file.Buffer.ErrorMarksLock)
+                                lock (file.Buffer.ErrorMarksLock) 
                                 {
-                                    file.Buffer.ErrorMarks.Add(new SimpleErrorMark(msg, Math.Max(position - 1, 0), Math.Min(position + 2, file.Buffer.Text.Length), ErrorMarkSeverity.Error, null));
+                                    file.Buffer.ErrorMarks.Add(new SimpleErrorMark(msg, Math.Max(position - 1, 0), Math.Min(position + 2, file.Buffer.Text.Length), ErrorMarkSeverity.Error, "::linter-mod"));
                                 }
                             }
 

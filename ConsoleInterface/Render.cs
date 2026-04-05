@@ -373,7 +373,7 @@ namespace SDL2Interface
                         Rect r = new(leftBarSize + position.X + 1 + offset, position.Y + (int)(line - window.viewOffset) * 1, 1, 1);
                         Canvas.ApplyStyle(r, new cColor(0, 0, 0), new cColor(255, 255, 255));
                     }
-                    FillStyleFromTo(window, leftBarSize, minLine, maxLine, minPos, maxPos, selection.Min, selection.Max);
+                    FillStyleFromTo(window, leftBarSize, minLine, maxLine, minPos, maxPos, selection.Min, selection.Max, new cColor(0, 0, 0), new cColor(255, 255, 255));
                 }
             }
 
@@ -387,7 +387,7 @@ namespace SDL2Interface
             }
         }
 
-        private void FillStyleFromTo(SimpleTextWindow window,
+        private (long beginLine, long endLine) FillStyleFromTo(SimpleTextWindow window,
                                      int leftBarSize,
                                      long minLine,
                                      long maxLine,
@@ -442,6 +442,8 @@ namespace SDL2Interface
                 );
                 Canvas.ApplyStyle(r, fore, back);
             }
+
+            return (beginLine, endLine);
         }
 
         public void Draw(BaseWindow window)
@@ -460,12 +462,31 @@ namespace SDL2Interface
                 long maxLine = minLine + (position.H) + 1;
                 long minPos = window.buffer.GetLineOffsets(minLine).begin;
                 long maxPos = window.buffer.GetLineOffsets(maxLine).begin;
+                long totalLength = window.buffer.Text.Length;
                 maxPos = (maxPos == 0 ? window.buffer.Text.Length + 1 : maxPos + position.W + 1);
                 lock (window.buffer.ErrorMarksLock)
                 {
-                    foreach (var err in window.buffer.ErrorMarks)
+                    for (int i = 0; i < window.buffer.ErrorMarks.Count; ++i)
                     {
-                        FillStyleFromTo(window, leftBarSize, minLine, maxLine, minPos, maxPos, err.Begin, err.End, null, new cColor(80, 0, 0));
+                        if (window.buffer.ErrorMarks[i].End >= totalLength)
+                        {
+                            window.buffer.ErrorMarks[i].End = totalLength;
+                            if (window.buffer.ErrorMarks[i].End <= window.buffer.ErrorMarks[i].Begin)
+                            {
+                                window.buffer.ErrorMarks[i].Begin = Math.Max(0, window.buffer.ErrorMarks[i].End - 1);
+                            }
+                        }
+                        var (from, to) = FillStyleFromTo(window,
+                                        leftBarSize,
+                                        minLine,
+                                        maxLine,
+                                        minPos,
+                                        maxPos,
+                                        window.buffer.ErrorMarks[i].Begin,
+                                        window.buffer.ErrorMarks[i].End,
+                                        null,
+                                        new cColor(80, 0, 0));
+                        Canvas.ApplyStyle(new(0, position.Y + from - window.viewOffset, leftBarSize, to - from + 1), new(255, 168, 0), new(128, 0, 0));
                     }
                 }
             }
