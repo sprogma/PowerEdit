@@ -26,13 +26,13 @@ namespace EditorFramework.Widgets
         protected Action<ProjectEditorWindow, EditorFile> OpenFileCallback;
         protected Action<ProjectEditorWindow, EditorFile> RaiseFileCallback;
 
-        public ProjectEditorWindow(IApplication app, ILayoutManager layout, 
+        public ProjectEditorWindow(IApplication app, ILayoutManager layout,
+                                   EditorServer server,
                                    Action<ProjectEditorWindow, EditorFile> openFileCallback,
                                    Action<ProjectEditorWindow, EditorFile> raiseFileCallback,
-                                   BaseWindow child,
-                                   ICommandProvider provider) : base(app, layout)
+                                   BaseWindow child) : base(app, layout)
         {
-            Server = new(provider);
+            Server = server;
             Child = child;
             OpenFileCallback = openFileCallback;
             RaiseFileCallback = raiseFileCallback;

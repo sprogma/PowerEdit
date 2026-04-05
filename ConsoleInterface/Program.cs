@@ -84,19 +84,20 @@ namespace SDL2Interface
             }
 
             FileTabsWindow tabs = new(this, GetLayout<FileTabsWindow>.Value, []);
-
-            ProjectEditorWindow project = new(
-                this,
-                GetLayout<ProjectEditorWindow>.Value,
-                tabs.OpenFile,
-                tabs.RaiseFile,
-                tabs,
-                provider
-            );
             EditorServer server = new(provider);
 
             // add "lsp" module
             SimpleLinterMod.Init(server);
+
+            // start project widget
+            ProjectEditorWindow project = new(
+                this,
+                GetLayout<ProjectEditorWindow>.Value,
+                server,
+                tabs.OpenFile,
+                tabs.RaiseFile,
+                tabs
+            );
 
             windows.Add(project);
 

@@ -35,6 +35,8 @@ namespace EditorCore.Buffer
         public Cursor.EditorCursor? Cursor { get; internal set; }
         public BaseTokenizer Tokenizer { get; internal set; }
         public List<Token> Tokens { get; internal set; } = [];
+
+        public Lock ErrorMarksLock = new();
         public List<ErrorMark> ErrorMarks { get; internal set; } = [];
         public LspClient? Client { get; internal set; }
         public string? FilePath { get; internal set; }
@@ -181,7 +183,7 @@ namespace EditorCore.Buffer
             {
                 Cursor.Selections.MoveInsert(position, length);
             }
-            lock (ErrorMarks)
+            lock (ErrorMarksLock)
             {
                 Span<ErrorMark> span = CollectionsMarshal.AsSpan(ErrorMarks);
                 for (int i = 0; i < span.Length; i++)
@@ -243,7 +245,7 @@ namespace EditorCore.Buffer
             {
                 Cursor.Selections.MoveDelete(position, length);
             }
-            lock (ErrorMarks)
+            lock (ErrorMarksLock)
             {
                 Span<ErrorMark> span = CollectionsMarshal.AsSpan(ErrorMarks);
                 for (int i = 0; i < span.Length; i++)

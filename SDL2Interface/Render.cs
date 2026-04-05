@@ -356,7 +356,7 @@ namespace SDL2Interface
                 (long line, _) = window.buffer.GetPositionOffsets(selection.End);
                 (long begin, long length) = window.buffer.GetLineOffsets(line);
                 long end = begin + length;
-                lock (window.buffer.ErrorMarks)
+                lock (window.buffer.ErrorMarksLock)
                 {
                     long mindiff = long.MaxValue;
                     for (int i = 0; i < window.buffer.ErrorMarks.Count; ++i)
@@ -480,22 +480,25 @@ namespace SDL2Interface
 
             long selectionWidth = (long)(8 * textRenderer.currentScale);
             SDL.SetRenderDrawColor(renderer, 50, 0, 0, 255);
-            foreach (var err in window.buffer.ErrorMarks)
+            lock (window.buffer.ErrorMarksLock)
             {
-                (long line, long col) = window.buffer.GetPositionOffsets(err.position);
-                long y = window.Layout.Position.Y + (line - window.viewOffset) * textRenderer.FontLineStep;
-                long x = window.Layout.Position.X + 5 + leftBarSize + col * textRenderer.FontStep - textRenderer.FontStep / 2;
-                SDL_Sharp.Rect r = new((int)x, (int)y, 2 * textRenderer.FontStep, (int)textRenderer.FontLineStep);
-                SDL.RenderFillRect(renderer, ref r);
-            }
-            SDL.SetRenderDrawColor(renderer, 255, 0, 0, 255);
-            foreach (var err in window.buffer.ErrorMarks)
-            {
-                (long line, long col) = window.buffer.GetPositionOffsets(err.position);
-                long y = window.Layout.Position.Y + (line - window.viewOffset + 1) * textRenderer.FontLineStep - selectionWidth;
-                long x = window.Layout.Position.X + 5 + leftBarSize + col * textRenderer.FontStep - textRenderer.FontStep / 2;
-                SDL_Sharp.Rect r = new((int)x, (int)y, 2 * textRenderer.FontStep, (int)selectionWidth);
-                SDL.RenderFillRect(renderer, ref r);
+                foreach (var err in window.buffer.ErrorMarks)
+                {
+                    (long line, long col) = window.buffer.GetPositionOffsets(err.position);
+                    long y = window.Layout.Position.Y + (line - window.viewOffset) * textRenderer.FontLineStep;
+                    long x = window.Layout.Position.X + 5 + leftBarSize + col * textRenderer.FontStep - textRenderer.FontStep / 2;
+                    SDL_Sharp.Rect r = new((int)x, (int)y, 2 * textRenderer.FontStep, (int)textRenderer.FontLineStep);
+                    SDL.RenderFillRect(renderer, ref r);
+                }
+                SDL.SetRenderDrawColor(renderer, 255, 0, 0, 255);
+                foreach (var err in window.buffer.ErrorMarks)
+                {
+                    (long line, long col) = window.buffer.GetPositionOffsets(err.position);
+                    long y = window.Layout.Position.Y + (line - window.viewOffset + 1) * textRenderer.FontLineStep - selectionWidth;
+                    long x = window.Layout.Position.X + 5 + leftBarSize + col * textRenderer.FontStep - textRenderer.FontStep / 2;
+                    SDL_Sharp.Rect r = new((int)x, (int)y, 2 * textRenderer.FontStep, (int)selectionWidth);
+                    SDL.RenderFillRect(renderer, ref r);
+                }
             }
             long lastToken = 0;
             for (int t = 0; t < window.Layout.Position.H / textRenderer.FontLineStep; ++t)

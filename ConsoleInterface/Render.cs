@@ -113,7 +113,7 @@ namespace SDL2Interface
         }
     }
 
-    internal class Render: IDisposable
+    internal class Render : IDisposable
     {
         static public int W, H;
         internal ConsoleCanvas Canvas;
@@ -310,14 +310,14 @@ namespace SDL2Interface
 
             /* find current error */
             string? message = null;
-            long errorPosition = 0;
+            long errorPosition = 0, errorLine = 0, errorOffset = 0;
             if (window.cursor?.Selections.Count == 1)
             {
                 var selection = window.cursor?.Selections[0]!;
                 (long line, _) = window.buffer.GetPositionOffsets(selection.End);
                 (long begin, long length) = window.buffer.GetLineOffsets(line);
                 long end = begin + length;
-                lock (window.buffer.ErrorMarks)
+                lock (window.buffer.ErrorMarksLock)
                 {
                     long mindiff = long.MaxValue;
                     for (int i = 0; i < window.buffer.ErrorMarks.Count; ++i)
@@ -328,8 +328,10 @@ namespace SDL2Interface
                             if (diff < mindiff)
                             {
                                 mindiff = diff;
+                                errorLine = line;
                                 message = window.buffer.ErrorMarks[i].message;
                                 errorPosition = window.buffer.ErrorMarks[i].position;
+                                errorOffset = errorPosition - begin;
                             }
                         }
                     }
@@ -337,6 +339,12 @@ namespace SDL2Interface
             }
 
             SimpleTextWindowDrawText(window, leftBarSize);
+
+            Rect oldClip = Canvas.ClipRect;
+            if (window.buffer.ErrorMarks.Count > 0)
+            {
+                Canvas.ClipRect = new(position){H = position.H - 1}; // last line have error count
+            }
 
             /* underline error */
             if (message != null)
@@ -413,10 +421,13 @@ namespace SDL2Interface
                 }
             }
 
+            Canvas.ClipRect = oldClip;
+
             /* draw current error */
             if (message != null)
             {
-                Canvas.AddString(position.Bx + 5, position.By - 1, $"  {message}", new cColor(255, 0, 0), cColor.Default);
+                Canvas.FillRect(new(window.Layout.Position) { Y = window.Layout.Position.By - 2, H = 1 }, " ", cColor.Default, cColor.Default);
+                Canvas.AddString(window.Layout.Position.X, window.Layout.Position.By - 2, $"at {errorLine+1}:{errorOffset}> {message}", new cColor(255, 0, 0), cColor.Default);
             }
         }
 
@@ -430,13 +441,16 @@ namespace SDL2Interface
 
         public void SimpleTextWindowDrawText(SimpleTextWindow window, int leftBarSize)
         {
-            foreach (var err in window.buffer.ErrorMarks)
+            lock (window.buffer.ErrorMarksLock)
             {
-                (long line, long col) = window.buffer.GetPositionOffsets(err.position);
-                long y = window.Layout.Position.Y + line - window.viewOffset;
-                long x = window.Layout.Position.X + 1 + leftBarSize + col - 1;
-                Rect r = new(x, y, 3, 1);
-                Canvas.ApplyStyle(r, null, new cColor(80, 0, 0));
+                foreach (var err in window.buffer.ErrorMarks)
+                {
+                    (long line, long col) = window.buffer.GetPositionOffsets(err.position);
+                    long y = window.Layout.Position.Y + line - window.viewOffset;
+                    long x = window.Layout.Position.X + 1 + leftBarSize + col - 1;
+                    Rect r = new(x, y, 3, 1);
+                    Canvas.ApplyStyle(r, null, new cColor(80, 0, 0));
+                }
             }
             long lastToken = 0;
             for (int t = 0; t < window.Layout.Position.H; ++t)
@@ -475,7 +489,11 @@ namespace SDL2Interface
                 }
             }
             // draw errors count
-            Canvas.AddString(window.Layout.Position.X, window.Layout.Position.By - 2, $"  {window.buffer.ErrorMarks.Count} errors in file", new cColor(255, 0, 0), cColor.Default);
+            if (window.buffer.ErrorMarks.Count > 0)
+            {
+                Canvas.FillRect(new(window.Layout.Position) { Y = window.Layout.Position.By - 1, H = 1 }, " ", cColor.Default, cColor.Default);
+                Canvas.AddString(window.Layout.Position.X, window.Layout.Position.By - 1, $"  {window.buffer.ErrorMarks.Count} errors in file", new cColor(255, 0, 0), cColor.Default);
+            }
         }
 
         public void SimpleTextWindowDrawSimpleNumbers(SimpleTextWindow window, ref int leftBarSize)

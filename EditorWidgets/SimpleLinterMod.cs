@@ -24,19 +24,20 @@ namespace EditorFramework
                 Logger.Log("File saved [simple linter]");
                 if (file.Buffer.Text.Length > 1024 * 1024)
                 {
-                    lock (file.Buffer.ErrorMarks)
+                    lock (file.Buffer.ErrorMarksLock)
                     {
                         file.Buffer.ErrorMarks.Clear();
                     }
                     Logger.Log(LogLevel.Warning, "Too big file, disable linter");
                     return;
                 }
-                lock (file.Buffer.ErrorMarks)
+                lock (file.Buffer.ErrorMarksLock)
                 {
                     file.Buffer.ErrorMarks.Clear();
                 }
                 string language = Path.GetExtension(file.filename)?[1..]?.ToLower() switch
                 {
+                    "hive" => "hive",
                     "cpp" or "cxx" or "cc" or "c++" or "hpp" or "hxx" or "hh" => "c++",
                     "c" or "h" => "c",
                     "d" or "di" or "dd" => "d",
@@ -54,48 +55,74 @@ namespace EditorFramework
                     "sh" or "bash" or "zsh" or "ksh" => "shell",
                     "swift" => "swift",
                     "yaml" or "yml" => "yaml",
+                    "cs" => "csharp",
+                    "html" or "htm" => "html",
+                    "css" or "scss" or "sass" or "less" => "css",
+                    "ts" or "tsx" => "typescript",
+                    "json" => "json",
+                    "sql" => "sql",
+                    "md" => "markdown",
+                    "rb" => "ruby",
+                    "php" => "php",
+                    "dockerfile" => "docker",
                     _ => "undefined"
                 };
-                (string executable, string args, string pattern)[] LinterVariants = language switch
+                (string executable, string args, string pattern, string? temporary)[] LinterVariants = language switch
                 {
-                    "c" => [("gcc", "-fsyntax-only -Wall -Wextra %f", @"%f:%l:%c:.+: %m")],
-                    "c++" => [("g++", "-fsyntax-only -Wall -Wextra %f", @"%f:%l:%c:.+: %m")],
-                    "d" => [("dmd", "-color=off -o- -w -wi -c %f", @"%f\(%l\):.+: %m"),
-                                ("ldc2", "--o- --vcolumns -w -c %f", @"%f\(%l,%c\):[^:]+: %m"),
-                                ("gdc", "-fsyntax-only -Wall -Wextra %f", @"%f:%l:%c:.+: %m")],
-                    "go" => [("go", "build -o devnull %d", @"%f:%l:%c:? %m"),
-                                    ("go", "vet", @"%f:%l:%c: %m")],
+                    "hive" => [("D:/mipt/lang3/a.exe", "--no-output=true --input-file=%f", @"Error:.near.%f:%l:%c>%m", null)],
+                    "c" => [("clang", "-std=gnu2x -fsyntax-only -ferror-limit=5000 -Wall -Wextra -D_CRT_SECURE_NO_WARNINGS -D_CRT_NONSTDC_NO_DEPRECATE -fms-extensions -Wno-microsoft %f", @"%f:%l:%c:.+: %m", null),
+                            ("gcc", "-fsyntax-only -Wall -Wextra %f", @"%f:%l:%c:.+: %m", null)],
+                    "c++" => [("clang", "-std=gnu++2c -fsyntax-only -ferror-limit=5000 -Wall -Wextra -D_CRT_SECURE_NO_WARNINGS -D_CRT_NONSTDC_NO_DEPRECATE -fms-extensions -Wno-microsoft %f", @"%f:%l:%c:.+: %m", null),
+                              ("g++", "-fsyntax-only -Wall -Wextra %f", @"%f:%l:%c:.+: %m", null)],
+                    "d" => [("dmd", "-color=off -o- -w -wi -c %f", @"%f\(%l\):.+: %m", null),
+                                ("ldc2", "--o- --vcolumns -w -c %f", @"%f\(%l,%c\):[^:]+: %m", null),
+                                ("gdc", "-fsyntax-only -Wall -Wextra %f", @"%f:%l:%c:.+: %m", null)],
+                    "go" => [("go", "build -o devnull %d", @"%f:%l:%c:? %m", null),
+                                    ("go", "vet", @"%f:%l:%c: %m", null)],
                     // TODO "haskell" => [("hlint", "%f", @"%f:(?%l[,:]%c)?.-: %m")],
-                    "java" => [("javac", "-d %d %f", @"%f:%l: error: %m")],
-                    "javascript" => [("eslint", "-f compact %f", @"%f: line %l, col %c, %m"),
-                                            ("jshint", "%f", @"%f: line %l,.+, %m")],
-                    "literate" => [("lit", "-c %f", @"%f:%l:%m")],
-                    "lua" => [("luacheck", "--no-color %f", @"%f:%l:%c: %m")],
-                    "nim" => [("nim", "check --listFullPaths --stdout --hints:off %f", @"%f.%l, %c. %m")],
-                    "nix" => [("nix-linter", "%f", @"%m at %f:%l:%c")],
-                    "objective-c" => [("xcrun", "clang -fsyntax-only -Wall -Wextra %f", @"%f:%l:%c:.+: %m")],
-                    "python" => [("pyflakes", "%f", @"%f:%l:.-:? %m"),
-                                        ("mypy", "%f", @"%f:%l: %m"),
-                                        ("pylint", "--output-format=parseable --reports=no %f", @"%f:%l: %m"),
-                                        ("ruff", "check --output-format=concise %f", @"%f:%l:%c: %m"),
-                                        ("flake8", "%f", @"%f:%l:%c: %m")],
-                    "rust" => [("cargo", "clippy --message-format short", @"%f:%l:%c: %m")],
-                    "shell" => [("shfmt", "%f", @"%f:%l:%c: %m"),
-                                    ("shellcheck", "-f gcc %f", @"%f:%l:%c:.+: %m")],
-                    "swift" => [("xcrun", "swiftc %f", @"%f:%l:%c:.+: %m"),
-                                    ("swiftc", "%f", @"%f:%l:%c:.+: %m")],
-                    "yaml" => [("yamllint", "--format parsable %f", @"%f:%l:%c:.+ %m")],
+                    "java" => [("javac", "-d %d %f", @"%f:%l: error: %m", null)],
+                    "javascript" => [("eslint", "-f compact %f", @"%f: line %l, col %c, %m", null),
+                                            ("jshint", "%f", @"%f: line %l,.+, %m", null)],
+                    "literate" => [("lit", "-c %f", @"%f:%l:%m", null)],
+                    "lua" => [("luacheck", "--no-color %f", @"%f:%l:%c: %m", null)],
+                    "nim" => [("nim", "check --listFullPaths --stdout --hints:off %f", @"%f.%l, %c. %m", null)],
+                    "nix" => [("nix-linter", "%f", @"%m at %f:%l:%c", null)],
+                    "objective-c" => [("xcrun", "clang -fsyntax-only -Wall -Wextra %f", @"%f:%l:%c:.+: %m", null)],
+                    "python" => [("pyflakes", "%f", @"%f:%l:.-:? %m", null),
+                                        ("mypy", "%f", @"%f:%l: %m", null),
+                                        ("pylint", "--output-format=parseable --reports=no %f", @"%f:%l: %m", null),
+                                        ("ruff", "check --output-format=concise %f", @"%f:%l:%c: %m", null),
+                                        ("flake8", "%f", @"%f:%l:%c: %m", null)],
+                    "rust" => [("cargo", "clippy --message-format short", @"%f:%l:%c: %m", null)],
+                    "shell" => [("shfmt", "%f", @"%f:%l:%c: %m", null),
+                                    ("shellcheck", "-f gcc %f", @"%f:%l:%c:.+: %m", null)],
+                    "swift" => [("xcrun", "swiftc %f", @"%f:%l:%c:.+: %m", null),
+                                    ("swiftc", "%f", @"%f:%l:%c:.+: %m", null)],
+                    "yaml" => [("yamllint", "--format parsable %f", @"%f:%l:%c:.+ %m", null)],
+                    // todo
+                    //"csharp" => [("dotnet", $"""exec "C:\Program Files\dotnet\sdk\10.0.103\Roslyn\bincore\csc.dll" -noconfig -target:library "-out:{Path.GetTempPath()}\rnd.dll" -utf8output -warnaserror- "%f" """, @"%f\(%l,%c\): %m", $"{Path.GetTempPath()}\\rnd.dll")],
+                    "typescript" => [("tsc", "--noEmit --pretty false %f", @"%f\(%l,%c\): error %m", null)],
+                    "html" => [("tidy", "-e -q %f", @"line %l column %c - %m", null)],
+                    "css" => [("stylelint", "--formatter compact %f", @"%f: line %l, col %c, %m", null)],
+                    "json" => [("jsonlint", "-q %f", @"%f: line %l, col %c, %m", null)],
+                    "sql" => [("sqlfluff", "lint --format parsable %f", @"%f:%l:%c: %m", null)],
+                    "docker" => [("hadolint", "--no-color %f", @"%f:%l %m", null)],
+                    "markdown" => [("markdownlint", "--style default %f", @"%f:%l %m", null)],
+                    "ruby" => [("rubocop", "--format emacs %f", @"%f:%l:%c: .+: %m", null)],
+                    "php" => [("php", "-l %f", @"Parse error: %m in %f on line %l", null)],
                     _ => []
                 };
 
                 Logger.Log($"Language id: {language}");
 
+
                 foreach (var Linter in LinterVariants)
                 {
+                    if (file.filename == null) { return; }
                     try
                     {
-                        Logger.Log($"Using {Linter}");
-                        ProcessStartInfo startInfo = new ProcessStartInfo
+                        Logger.Log($"Using {Linter} at file {file.filename}");
+                        ProcessStartInfo startInfo = new()
                         {
                             FileName = Linter.executable,
                             Arguments = Linter.args.Replace("%f", file.filename),
@@ -103,7 +130,13 @@ namespace EditorFramework
                             RedirectStandardError = true,
                             UseShellExecute = false,
                             CreateNoWindow = true,
+                            StandardOutputEncoding = Encoding.UTF8,
+                            StandardErrorEncoding = Encoding.UTF8,
                         };
+                        if (Linter.temporary != null)
+                        {
+                            File.Delete(Linter.temporary);
+                        }
 
                         using (Process process = new Process { StartInfo = startInfo })
                         {
@@ -116,7 +149,7 @@ namespace EditorFramework
                             void UpdateError(string filename, int line, int col, string msg)
                             {
                                 long position = file.Buffer.GetPosition(line, col);
-                                lock (file.Buffer.ErrorMarks)
+                                lock (file.Buffer.ErrorMarksLock)
                                 {
                                     file.Buffer.ErrorMarks.Add(new(msg, position));
                                 }
@@ -135,7 +168,7 @@ namespace EditorFramework
                                         string msg = match.Groups["msg"].Value;
                                         UpdateError(filename, line - 1, col - 1, msg);
                                     }
-                                    Logger.Log($"[OUTPUT]: {e.Data}");
+                                    //Logger.Log($"{e.Data}");
                                 }
                             };
 
@@ -152,9 +185,7 @@ namespace EditorFramework
                                         string msg = match.Groups["msg"].Value;
                                         UpdateError(filename, line - 1, col - 1, msg);
                                     }
-                                    Console.ForegroundColor = ConsoleColor.Red;
-                                    Logger.Log(LogLevel.Error, $"{e.Data}");
-                                    Console.ResetColor();
+                                    //Logger.Log(LogLevel.Error, $"{e.Data}");
                                 }
                             };
 
