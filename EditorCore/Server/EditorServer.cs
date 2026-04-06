@@ -39,7 +39,7 @@ namespace EditorCore.Server
             using (FilesLock.EnterScope())
             {
                 Files.Add(new_file);
-                OpeningFiles--;
+                Interlocked.Decrement(ref OpeningFiles);
             }
             return new_file;
         }
@@ -53,7 +53,7 @@ namespace EditorCore.Server
             using (FilesLock.EnterScope())
             {
                 Files.Add(new_file);
-                OpeningFiles--;
+                Interlocked.Decrement(ref OpeningFiles);
             }
             return new_file;
         }

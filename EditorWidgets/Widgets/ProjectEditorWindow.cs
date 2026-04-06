@@ -57,7 +57,7 @@ namespace EditorFramework.Widgets
                     RaiseFileCallback(this, file);
                     return file;
                 }
-                Server.OpeningFiles++;
+                Interlocked.Increment(ref Server.OpeningFiles);
                 file = Server.OpenFile(filename);
             }
             OpenFileCallback(this, file);

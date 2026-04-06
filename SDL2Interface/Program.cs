@@ -166,7 +166,6 @@ namespace SDL2Interface
 
                 foreach (var file in fileToOpen)
                 {
-                    server.OpeningFiles++;
                     if (file != null)
                     {
                         _ = Task.Run(() => project.OpenFile(file));
