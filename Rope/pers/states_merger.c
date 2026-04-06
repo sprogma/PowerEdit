@@ -168,7 +168,10 @@ int StatesMergeWorker(void *param)
 		lockShared(&project->lock);
 		for (int64_t i = 0; i < project->states_len; ++i)
 		{
-			if (project->states[i]->hash.calculated && project->states[i]->committed && !project->states[i]->merged_to)
+			if (project->states[i]->previous_versions_len != 0 &&  // used to not merge intiial commit
+				project->states[i]->hash.calculated && 
+				project->states[i]->committed && 
+				!project->states[i]->merged_to)
 			{
 				struct state *this = get(&table, Key128(project->states[i]->hash.total_hash));
 				if (this == NULL || this->merged_to)

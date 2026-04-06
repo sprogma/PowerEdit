@@ -111,11 +111,11 @@ namespace SDL2Interface
             {
                 if (file != null)
                 {
-                    _ = Task.Run(() => project.OpenFile(file));
+                    project.OpenFile(file);
                 }
                 else
                 {
-                    _ = Task.Run(() => project.CreateFile(null, "c"));
+                    project.CreateFile(null, "c");
                 }
             }
 

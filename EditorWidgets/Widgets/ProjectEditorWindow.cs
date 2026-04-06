@@ -45,7 +45,8 @@ namespace EditorFramework.Widgets
             return file;
         }
 
-        public EditorFile OpenFile(string filename)
+        
+        public void OpenFile(string filename)
         {
             filename = Path.GetFullPath(filename);
             EditorFile? file;
@@ -55,13 +56,13 @@ namespace EditorFramework.Widgets
                 if (file != null)
                 {
                     RaiseFileCallback(this, file);
-                    return file;
                 }
                 Interlocked.Increment(ref Server.OpeningFiles);
-                file = Server.OpenFile(filename);
             }
-            OpenFileCallback(this, file);
-            return file;
+            _ = Task.Run(() => {
+                file = Server.OpenFile(filename);
+                OpenFileCallback(this, file);
+            });
         }
 
         public override bool HandleEvent(EventBase e)
