@@ -11,6 +11,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Numerics;
+using System.Runtime.InteropServices;
 using System.Runtime.Intrinsics.Arm;
 using System.Text;
 using System.Xml.Linq;
@@ -466,14 +467,22 @@ namespace SDL2Interface
                 maxPos = (maxPos == 0 ? window.buffer.Text.Length + 1 : maxPos + position.W + 1);
                 lock (window.buffer.ErrorMarksLock)
                 {
-                    for (int i = 0; i < window.buffer.ErrorMarks.Count; ++i)
+                    foreach (ref var err in CollectionsMarshal.AsSpan(window.buffer.ErrorMarks))
                     {
-                        if (window.buffer.ErrorMarks[i].End >= totalLength)
+                        if (err.End >= totalLength)
                         {
-                            window.buffer.ErrorMarks[i].End = totalLength;
-                            if (window.buffer.ErrorMarks[i].End <= window.buffer.ErrorMarks[i].Begin)
+                            err.End = totalLength;
+                            if (err.End <= err.Begin)
                             {
-                                window.buffer.ErrorMarks[i].Begin = Math.Max(0, window.buffer.ErrorMarks[i].End - 1);
+                                err.Begin = Math.Max(0, err.End - 1);
+                            }
+                        }
+                        if (err.Begin < 0)
+                        {
+                            err.Begin = 0;
+                            if (err.End <= err.Begin)
+                            {
+                                err.End = Math.Min(err.Begin + 1, totalLength);
                             }
                         }
                         var (from, to) = FillStyleFromTo(window,
@@ -482,8 +491,8 @@ namespace SDL2Interface
                                         maxLine,
                                         minPos,
                                         maxPos,
-                                        window.buffer.ErrorMarks[i].Begin,
-                                        window.buffer.ErrorMarks[i].End,
+                                        err.Begin,
+                                        err.End,
                                         null,
                                         new cColor(80, 0, 0));
                         Canvas.ApplyStyle(new(0, position.Y + from - window.viewOffset, leftBarSize, to - from + 1), new(255, 168, 0), new(128, 0, 0));

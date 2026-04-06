@@ -122,6 +122,9 @@ namespace EditorFramework.Widgets
                 case KeyChordEvent key when key.Is(KeyCode.Equal, KeyMode.Ctrl):
                     Layout.UpdateScale(this, 1.1);
                     return false;
+                case KeyChordEvent key when key.Is(KeyCode.A, KeyMode.Alt):
+                    cursor?.Buffer.LoadCursorState();
+                    break;
                 case KeyChordEvent key when key.Is(KeyCode.D, KeyMode.Ctrl):
                     if (cursor != null)
                     {

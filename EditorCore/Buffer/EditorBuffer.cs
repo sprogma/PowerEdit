@@ -2,6 +2,7 @@
 using EditorCore.File;
 using EditorCore.Selection;
 using Lsp;
+using OmniSharp.Extensions.LanguageServer.Protocol.Models;
 using RegexTokenizer;
 using System;
 using System.Collections.Generic;
@@ -45,7 +46,9 @@ namespace EditorCore.Buffer
         private IntPtr? last_saved_version = null;
         private bool dirty_was_changed = false;
 
-        CancellationTokenSource endWorkerToken = new();
+        private Task? RunningWorker = null;
+
+        public bool TryUseLSP { get; set; } = true;
 
         public bool WasChanged
         {
@@ -69,58 +72,67 @@ namespace EditorCore.Buffer
 
         private bool WasIgnored = false;
 
-        public EditorBuffer(Server.EditorServer server, BaseTokenizer tokenizer, Task<LspClient>? client, string? filepath, string? languageId, ITextBuffer buffer)
+        public EditorBuffer(Server.EditorServer server, BaseTokenizer tokenizer, string? filename, string? languageId, ITextBuffer buffer)
         {
+            if (filename != null) { filename = Path.GetFullPath(filename); }
             GivenLanguageId = languageId;
             Tokenizer = tokenizer;
             Text = buffer;
-            Filename = filepath;
-            PotentialClient = Client = client;
+            Filename = filename;
             Cursor = new(this);
             Cursor.Selections.Add(new EditorSelection(Cursor, 0));
             Server = server;
+            PotentialClient = Client = server.GetLspAsync(LanguageId());
             SaveCursorState();
 
             ActionOnUpdate += server.ActionOnBufferUpdate;
             ActionOnTextInput += server.ActionOnBufferTextInput;
 
-            _ = Task.Run(StartWorkerAsync);
+            if (TryUseLSP)
+            {
+                RunningWorker = Task.Run(StartWorkerAsync);
 
-            if (Client != null) { _ = Task.Run(async () => { await Client; OnUpdate(); }); }
+                if (Client != null) { _ = Task.Run(async () => { await Client; OnUpdate(); }); }
 
-            if (Client != null) 
-            { 
-                if (!ClientPipeline.Writer.TryWrite(async () => await (await Client).OpenFileAsync(HandleDiagnostics, PositionCallback, Filename, GetId(), LanguageId(), "")))
+                if (Client != null) 
                 {
-                    throw new Exception("What2?");
+                    IntPtr state = Text.CurrentState;
+                    if (!ClientPipeline.Writer.TryWrite(async () => await (await Client).OpenFileAsync(HandleDiagnostics, PositionCallback, Filename, GetId(), LanguageId(), Text.SubstringEx(state, 0))))
+                    {
+                        throw new Exception("What2?");
+                    }
                 }
             }
 
             OnUpdate();
         }
 
-        public EditorBuffer(Server.EditorServer server, string content, BaseTokenizer tokenizer, Task<LspClient>? client, string? filepath, string? languageId, ITextBuffer buffer)
+        public EditorBuffer(Server.EditorServer server, string content, BaseTokenizer tokenizer, string? filename, string? languageId, ITextBuffer buffer)
         {
+            if (filename != null) { filename = Path.GetFullPath(filename); }
             GivenLanguageId = languageId;
             Tokenizer = tokenizer;
             Text = buffer;
-            Filename = filepath;
-            PotentialClient = Client = client;
+            Filename = filename;
             Cursor = new(this);
             Cursor.Selections.Add(new EditorSelection(Cursor, 0));
             Server = server;
+            PotentialClient = Client = server.GetLspAsync(LanguageId());
             SaveCursorState();
 
             ActionOnUpdate += server.ActionOnBufferUpdate;
             ActionOnTextInput += server.ActionOnBufferTextInput;
 
-            _ = Task.Run(StartWorkerAsync);
+            if (TryUseLSP)
+            {
+                RunningWorker = Task.Run(StartWorkerAsync);
 
-            if (Client != null) { _ = Task.Run(async () => { await Client; OnUpdate(); }); }
+                if (Client != null) { _ = Task.Run(async () => { await Client; OnUpdate(); }); }
 
-            if (Client != null) { ClientPipeline.Writer.TryWrite(async () => await (await Client).OpenFileAsync(HandleDiagnostics, PositionCallback, Filename, GetId(), LanguageId(), "")); }
+                if (Client != null) { ClientPipeline.Writer.TryWrite(async () => await (await Client).OpenFileAsync(HandleDiagnostics, PositionCallback, Filename, GetId(), LanguageId(), "")); }
 
-            SetText(content);
+                SetText(content);
+            }
 
             OnUpdate();
         }
@@ -141,7 +153,6 @@ namespace EditorCore.Buffer
         {
             await foreach (var taskFunc in ClientPipeline.Reader.ReadAllAsync())
             {
-                if (endWorkerToken.IsCancellationRequested) { break; }
                 try
                 {
                     if (Client != null)
@@ -192,14 +203,15 @@ namespace EditorCore.Buffer
                 return;
             }
             ActionOnUpdate?.Invoke(this);
-            if (PotentialClient?.IsCompleted == true)
+            if (TryUseLSP && PotentialClient?.IsCompleted == true)
             {
                 if (WasIgnored)
                 {
                     /* make full syncronization */
-                    if (Client != null) 
-                    { 
-                        if (!ClientPipeline.Writer.TryWrite(async () => await (await Client).ChangeFileAsync(Filename, GetId(), Text.Substring(0))))
+                    if (Client != null)
+                    {
+                        IntPtr state = Text.CurrentState;
+                        if (!ClientPipeline.Writer.TryWrite(async () => await (await Client).ChangeFileAsync(Filename, GetId(), Text.SubstringEx(state, 0))))
                         {
                             throw new InvalidOperationException("What 3?");
                         }
@@ -233,7 +245,8 @@ namespace EditorCore.Buffer
             ClientTasks.Clear();
             if (Text.Length <= Tokenizer.MaxContentSize)
             {
-                _ = Task.Run(() => Tokens = Tokenizer.ParseContent(Text.Substring(0)));
+                IntPtr state = Text.CurrentState;
+                _ = Task.Run(() => Tokens = Tokenizer.ParseContent(Text.SubstringEx(state, 0)));
             }
             dirty_was_changed = true;
         }
@@ -250,7 +263,8 @@ namespace EditorCore.Buffer
                 undoText.Undo();
                 LoadCursorState();
 
-                if (Client != null) { ClientTasks.Add(async () => await (await Client).ChangeFileAsync(Filename, GetId(), Text.Substring(0))); }
+                IntPtr state = Text.CurrentState;
+                if (Client != null) { ClientTasks.Add(async () => await (await Client).ChangeFileAsync(Filename, GetId(), Text.SubstringEx(state, 0))); }
                 OnUpdate();
             }
         }
@@ -269,7 +283,8 @@ namespace EditorCore.Buffer
                 }
                 LoadCursorState();
 
-                if (Client != null) { ClientTasks.Add(async () => await (await Client).ChangeFileAsync(Filename, GetId(), Text.Substring(0))); }
+                IntPtr state = Text.CurrentState;
+                if (Client != null) { ClientTasks.Add(async () => await (await Client).ChangeFileAsync(Filename, GetId(), Text.SubstringEx(state, 0))); }
                 OnUpdate();
             }
         }
@@ -437,42 +452,47 @@ namespace EditorCore.Buffer
             }
         }
 
-        public void SetVersion(nint id)
+        public void SetVersion(IntPtr id)
         {
             if (Text is IUndoTextBuffer undoText)
             {
                 undoText.SetVersion(id);
                 LoadCursorState();
-                if (Client != null) { ClientTasks.Add(async () => await (await Client).ChangeFileAsync(Filename, GetId(), Text.Substring(0))); }
+                IntPtr state = Text.CurrentState;
+                if (Client != null) { ClientTasks.Add(async () => await (await Client).ChangeFileAsync(Filename, GetId(), Text.SubstringEx(state, 0))); }
                 OnUpdate();
             }
         }
 
-        internal void UpdateRename(string newFilename)
+        internal void UpdateRename(string? newFilename)
         {
+            if (newFilename != null) newFilename = Path.GetFullPath(newFilename);
             string? oldLanguage = LanguageId();
             string? newLanguage = LanguageId(newFilename);
             if (oldLanguage != newLanguage)
             {
                 Tokenizer = BaseTokenizer.CreateTokenizer(newLanguage);
-                if (PotentialClient != null)
+                if (TryUseLSP)
                 {
-                    string? oldFilename = Filename;
-                    ClientPipeline.Writer.TryWrite(async () => await (await PotentialClient).ChangeFileAsync(oldFilename, GetId(), Text.Substring(0))); 
+                    if (PotentialClient != null)
+                    {
+                        string? oldFilename = Filename;
+                        ClientPipeline.Writer.TryWrite(async () => await (await PotentialClient).ChangeFileAsync(oldFilename, GetId(), Text.Substring(0))); 
+                    }
+                    PotentialClient = Client = Server.GetLspAsync(newLanguage);
+                    if (Client != null) 
+                    { 
+                        ClientPipeline.Writer.TryWrite(async () => await (await Client).OpenFileAsync(HandleDiagnostics, PositionCallback, newFilename, GetId(), newLanguage, "")); 
+                    }
+                    WasIgnored = true;
                 }
-                PotentialClient = Client = Server.GetLspAsync(LanguageId());
-                if (Client != null) 
-                { 
-                    ClientPipeline.Writer.TryWrite(async () => await (await Client).OpenFileAsync(HandleDiagnostics, PositionCallback, newFilename, GetId(), LanguageId(), "")); 
-                }
-                WasIgnored = true;
             }
             else
             {
-                if (Client != null) 
+                if (TryUseLSP && Client != null) 
                 {
                     string? oldFilename = Filename;
-                    ClientTasks.Add(async () => await (await Client).RenameFileAsync(oldFilename, newFilename, GetId(), LanguageId(), Text.Substring(0))); 
+                    ClientTasks.Add(async () => await (await Client).RenameFileAsync(oldFilename, newFilename, GetId(), newLanguage, Text.Substring(0))); 
                 }
             }
             Filename = newFilename;
@@ -493,9 +513,11 @@ namespace EditorCore.Buffer
                 return;
             }
             disposed = true;
-            endWorkerToken.Cancel();
-            if (PotentialClient != null) { ClientPipeline.Writer.TryWrite(async () => await (await PotentialClient).CloseFileAsync(Filename, GetId(), LanguageId())); }
-            ClientPipeline.Writer.Complete();
+            if (TryUseLSP)
+            {
+                if (PotentialClient != null) { ClientPipeline.Writer.TryWrite(async () => await (await PotentialClient).CloseFileAsync(Filename, GetId(), LanguageId())); }
+                ClientPipeline.Writer.Complete();
+            }
             Text.Dispose();
         }
 

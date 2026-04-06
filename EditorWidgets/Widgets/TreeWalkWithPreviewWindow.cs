@@ -24,7 +24,7 @@ namespace EditorFramework.Widgets
             moditifed = true;
 
             this.tree = tree;
-            this.preview = new(app, GetLayout<SimpleTextWindow>.Value, new EditorBuffer(tree.buffer.Server, "loading ...", tree.buffer.Tokenizer, null, "", tree.buffer.LanguageId(), new ReadonlyTextBuffer()));
+            this.preview = new(app, GetLayout<SimpleTextWindow>.Value, new EditorBuffer(tree.buffer.Server, "loading ...", tree.buffer.Tokenizer, null, tree.buffer.LanguageId(), new ReadonlyTextBuffer()) { TryUseLSP = false });
             this.lastDrawTime = DateTime.UtcNow;
         }
 

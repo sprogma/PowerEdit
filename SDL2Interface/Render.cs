@@ -8,6 +8,7 @@ using SDL_Sharp.Utility;
 using System;
 using System.Collections.Generic;
 using System.Numerics;
+using System.Runtime.InteropServices;
 using System.Runtime.Intrinsics.Arm;
 using System.Text;
 using System.Xml.Linq;
@@ -415,9 +416,8 @@ namespace SDL2Interface
             /* draw current error */
             if (message != null)
             {
-                long dummyValue = 0;
                 textRenderer.Scale(0.8);
-                textRenderer.DrawTextLine(Position.X + textRenderer.FontStep * 25, Position.Y + Position.Height - 5 - textRenderer.FontLineStep, message, 0, [], ref dummyValue);
+                textRenderer.DrawTextLine(Position.X + textRenderer.FontStep * 25, Position.Y + Position.Height - 5 - textRenderer.FontLineStep, message, 0, new(255, 0, 0, 255));
                 textRenderer.Scale(1.25);
             }
         }
@@ -486,14 +486,31 @@ namespace SDL2Interface
             long maxLine = minLine + (window.Layout.Position.H / textRenderer.FontLineStep) + 1;
             long minPos = window.buffer.GetLineOffsets(minLine).begin;
             long maxPos = window.buffer.GetLineOffsets(maxLine).begin;
+            long totalLength = window.buffer.Text.Length;
             maxPos = (maxPos == 0 ? window.buffer.Text.Length + 1 : maxPos + (window.Layout.Position.W / textRenderer.FontStep) + 1);
 
             long selectionWidth = (long)(8 * textRenderer.currentScale);
             SDL.SetRenderDrawColor(renderer, 50, 0, 0, 255);
             lock (window.buffer.ErrorMarksLock)
             {
-                foreach (var err in window.buffer.ErrorMarks)
+                foreach (ref var err in CollectionsMarshal.AsSpan(window.buffer.ErrorMarks))
                 {
+                    if (err.End >= totalLength)
+                    {
+                        err.End = totalLength;
+                        if (err.End <= err.Begin)
+                        {
+                            err.Begin = Math.Max(0, err.End - 1);
+                        }
+                    }
+                    if (err.Begin < 0)
+                    {
+                        err.Begin = 0;
+                        if (err.End <= err.Begin)
+                        {
+                            err.End = Math.Min(err.Begin + 1, totalLength);
+                        }
+                    }
                     FillLinesFromTo(window, leftBarSize, textRenderer.FontLineStep, minPos, maxPos, minLine, maxLine, err.Begin, err.End);
                 }
                 SDL.SetRenderDrawColor(renderer, 255, 0, 0, 255);
@@ -514,9 +531,8 @@ namespace SDL2Interface
             }
 
             // draw errors count
-            long dummyValue = 0;
             textRenderer.Scale(0.8);
-            textRenderer.DrawTextLine((int)window.Layout.Position.X + 5, (int)window.Layout.Position.Y + (int)window.Layout.Position.H - 5 - textRenderer.FontLineStep, $"{window.buffer.ErrorMarks.Count} errors in file", 0, [], ref dummyValue);
+            textRenderer.DrawTextLine((int)window.Layout.Position.X + 5, (int)window.Layout.Position.Y + (int)window.Layout.Position.H - 5 - textRenderer.FontLineStep, $"{window.buffer.ErrorMarks.Count} errors in file", 0, new(255, 0, 0, 255));
             textRenderer.Scale(1.25);
         }
 

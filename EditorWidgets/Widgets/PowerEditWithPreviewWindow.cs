@@ -26,7 +26,7 @@ namespace EditorFramework.Widgets
             moditifed = true;
             editor.buffer.ActionOnUpdate +=  buf => {moditifed = true; };
             this.editor = editor;
-            this.preview = new(app, GetLayout<SimpleTextWindow>.Value, new EditorBuffer(editor.buffer.Server, "processing ...", editor.usingCursor.Buffer.Tokenizer, null, "", editor.usingCursor.Buffer.LanguageId(), new ReadonlyTextBuffer()));
+            this.preview = new(app, GetLayout<SimpleTextWindow>.Value, new EditorBuffer(editor.buffer.Server, "processing ...", editor.usingCursor.Buffer.Tokenizer, null, editor.usingCursor.Buffer.LanguageId(), new ReadonlyTextBuffer()) { TryUseLSP = false });
             this.lastDrawTime = DateTime.UtcNow;
         }
 

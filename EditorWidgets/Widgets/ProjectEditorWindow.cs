@@ -75,7 +75,7 @@ namespace EditorFramework.Widgets
                     CreateFile(null, null);
                     return false;
                 case KeyChordEvent key when key.Is(KeyCode.O, KeyMode.Ctrl):
-                    PromptTextWindow promptWindow = new(App, GetLayout<PromptTextWindow>.Value, new EditorBuffer(Server, BaseTokenizer.CreateBaseTokenizer(), null, null, null, new PersistentCTextBuffer()));
+                    PromptTextWindow promptWindow = new(App, GetLayout<PromptTextWindow>.Value, new EditorBuffer(Server, BaseTokenizer.CreateBaseTokenizer(), null, null, new PersistentCTextBuffer()));
                     promptWindow.cursor?.Buffer.Text.SetText("enter path to file to open");
                     promptWindow.cursor?.Selections = new(promptWindow.cursor, [new EditorSelection(promptWindow.cursor, 0, promptWindow.buffer.Text.Length)]);
                     OpenPopup(promptWindow);
@@ -84,6 +84,7 @@ namespace EditorFramework.Widgets
                         if (x is PromptTextWindow itw)
                         {
                             string filename = itw.buffer.Text.Substring(0);
+                            filename = Path.GetFullPath(filename);
                             if (!File.Exists(filename))
                             {
                                 ReleasePopup();

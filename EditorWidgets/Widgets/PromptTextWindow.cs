@@ -12,6 +12,7 @@ namespace EditorFramework.Widgets
     {
         public PromptTextWindow(IApplication app, ILayoutManager layout, EditorBuffer buffer) : base(app, layout, buffer)
         {
+            buffer.TryUseLSP = false;
         }
         public override bool HandleEvent(EventBase e)
         {

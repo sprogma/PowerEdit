@@ -52,6 +52,8 @@ namespace TextBuffer
             }
         }
 
+        public IntPtr CurrentState => curr_state;
+
         public long Length => CLibrary.state_get_size(curr_state);
         public long LengthEx(IntPtr state) => CLibrary.state_get_size(state);
 

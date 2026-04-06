@@ -51,6 +51,8 @@ namespace TextBuffer
 
         public long Length { get; }
 
+        IntPtr CurrentState { get; }
+
         public long LengthEx(IntPtr state);
 
         public string SubstringEx(IntPtr state, long pos, long len);

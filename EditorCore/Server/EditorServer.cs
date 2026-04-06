@@ -25,6 +25,8 @@ namespace EditorCore.Server
         public EditorFileOnSave? ActionOnFileSave;
         public int OpeningFiles = 0;
 
+        public bool UseLSP { get; set; }
+
         public EditorServer(ICommandProvider commandProvider)
         {
             CommandProvider = commandProvider;
@@ -44,7 +46,7 @@ namespace EditorCore.Server
 
         public EditorFile CreateFile(string? name, string? languageId)
         {
-            EditorFile new_file = new(this, new EditorBuffer(this, BaseTokenizer.CreateTokenizer(languageId), GetLspAsync(languageId), name, languageId, new PersistentCTextBuffer()))
+            EditorFile new_file = new(this, new EditorBuffer(this, BaseTokenizer.CreateTokenizer(languageId), name, languageId, new PersistentCTextBuffer()))
             {
                 filename = name
             };
@@ -58,6 +60,7 @@ namespace EditorCore.Server
 
         public Task<LspClient>? GetLspAsync(string? languageId)
         {
+            if (!UseLSP) return null;
             if (languageId != null && clients.TryGetValue(languageId, out var value))
             {
                 return value;
@@ -105,10 +108,16 @@ namespace EditorCore.Server
                                                                "--offset-encoding=utf-8 --background-index --clang-tidy",
                                                                new
                                                                {
-                                                                   fallbackFlags = new[] { "-Weverything", "-Wno-empty-translation-unit", "-fsanitize=undefined", "-D_CRT_SECURE_NO_WARNINGS", "-D_CRT_NONSTDC_NO_DEPRECATE", "-fms-extensions", "-Wno-microsoft" },
+                                                                   fallbackFlags = new[] { "-Weverything", "-Wno-empty-translation-unit", "-fsanitize=undefined", "-D_CRT_SECURE_NO_WARNINGS", "-D_CRT_NONSTDC_NO_DEPRECATE", "-fms-extensions", "-Wno-microsoft", "-Wno-extension", "-Wno-c99-extensions", "-Wno-c++11-extensions", "-Wno-c++11-compat", "-Wno-declaration-after-statement" },
                                                                    clangTidy = true,
                                                                    clangTidyChecks = "*"
                                                                });
+                    break;
+                case "powershell":
+                    clients[languageId] = LspClient.StartAsync(Environment.CurrentDirectory,
+                                                               "pwsh",
+                                                               "-NoLogo -NoProfile -ExecutionPolicy Bypass -Command \"C:/path_dir/PowerShellEditorServices/PowerShellEditorServices/Start-EditorServices.ps1 -Stdio -LogPath ./pses.log -SessionDetailsPath ./session.json -FeatureFlags @()\"",
+                                                               new());
                     break;
                 default:
                     return null;

@@ -68,7 +68,7 @@ namespace EditorFramework.Widgets
         }
 
         public PowerEditWindow(IApplication app, ILayoutManager layout, EditorServer server, EditorCursor usingCursor, string editType) : 
-                               base(app, layout, new EditorBuffer(server, server.CommandProvider.Tokenizer, null, "", server.CommandProvider.LanguageId, new PersistentCTextBuffer()))
+                               base(app, layout, new EditorBuffer(server, server.CommandProvider.Tokenizer, null, server.CommandProvider.LanguageId, new PersistentCTextBuffer()))
         {
             (long begin, long end, string text) = server.CommandProvider.ExampleScript(editType);
             buffer.SetText(text);

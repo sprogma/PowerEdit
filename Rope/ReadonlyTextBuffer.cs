@@ -24,6 +24,8 @@ namespace TextBuffer
             get => content[(int)index];
         }
 
+        public IntPtr CurrentState => 0; // TODO: make real states.
+
         public long Length => content.Length;
 
         public long SetText(string text)

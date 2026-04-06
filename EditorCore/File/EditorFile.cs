@@ -29,10 +29,10 @@ namespace EditorCore.File
 
         public EditorFile(Server.EditorServer server, string filename, ITextBuffer buffer)
         {
+            filename = Path.GetFullPath(filename);
             this.filename = filename;
             Buffer = new EditorBuffer(server,
                                       BaseTokenizer.CreateTokenizer(EditorBuffer.LanguageId(filename)),
-                                      server.GetLspAsync(EditorBuffer.LanguageId(filename)),
                                       this.filename, EditorBuffer.LanguageId(filename),
                                       buffer) {
                 WasChanged = false
@@ -51,12 +51,30 @@ namespace EditorCore.File
             ActionOnSave += server.ActionOnFileSave;
         }
 
-        public void Save(string? newFilename = null)
+        public void Save()
         {
-            if (newFilename != null && newFilename != filename)
+            if (filename != null)
+            {
+                try
+                {
+                    Buffer.Text.SaveToFile(filename);
+                    Buffer.WasChanged = false;
+                }
+                catch (Exception e)
+                {
+                    Buffer.WasChanged = true;
+                    Console.Write($"Error: file wasn't saved: error {e.Message}");
+                }
+                ActionOnSave?.Invoke(this);
+            }
+        }
+
+        public void Save(string? newFilename)
+        {
+            if (newFilename != null) newFilename = Path.GetFullPath(newFilename);
+            if (newFilename != filename)
             {
                 filename = newFilename;
-                // update tokenizer
                 Buffer.UpdateRename(newFilename);
                 Buffer.OnUpdate();
             }
