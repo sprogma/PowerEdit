@@ -171,6 +171,10 @@ static int64_t remove_internal(int64_t idx, int64_t pos, int64_t ver) {
 
 int64_t _update_newlines(struct segment *node)
 {
+    if (node->newlines >= 0)
+    {
+        return node->newlines;
+    }
     int64_t count = 0;
     char *pos = node->buffer->buffer + node->offset;
     for (int64_t i = 0; i < node->length; ++i)

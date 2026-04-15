@@ -2,7 +2,7 @@
   "profiles": {
     "ConsoleInterface": {
       "commandName": "Project",
-      "commandLineArgs": "--lsp",
+      "commandLineArgs": "D:\\mipt\\lang3\\examples\\qsort\\test.txt",
       "nativeDebugging": true
     }
   }
