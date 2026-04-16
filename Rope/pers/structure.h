@@ -137,7 +137,7 @@ void _project_add_buffer(struct project* project, struct mapped_buffer* buffer);
 void merge_state(struct state *base, struct state *child);
 int64_t SegmentGetLineNumber(int64_t root_idx, int64_t position);
 
-extern struct segment glb_nodes[];
+extern struct segment *glb_nodes;
 
 int HashEvaluationWorker(void *param);
 int StatesMergeWorker(void *param);

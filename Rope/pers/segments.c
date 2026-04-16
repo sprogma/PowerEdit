@@ -1,11 +1,39 @@
 #include "assert.h"
+#include "inttypes.h"
+#include "stdatomic.h"
 
 #include "structure.h"
 
 
-#define MAX_NODES 3000000
-struct segment glb_nodes[MAX_NODES];
-int64_t glb_next_node = 1;
+#define MAX_NODES 1000000000
+struct segment* glb_nodes = NULL;
+_Atomic int64_t glb_next_node = 1;
+_Atomic int64_t commited_size = 0;
+
+
+void reserve_nodes(int64_t need_node)
+{
+    int64_t need_size = need_node + 1;
+    if (glb_nodes == NULL)
+    {
+        size_t total_size = (size_t)MAX_NODES * sizeof(struct segment);
+        glb_nodes = (struct segment*)VirtualAlloc(NULL, total_size, MEM_RESERVE, PAGE_READWRITE);
+    }
+    int64_t current_committed = atomic_load_explicit(&commited_size, memory_order_acquire);
+    if (need_size > current_committed)
+    {
+        size_t count_to_commit = need_size - current_committed;
+        if (count_to_commit < 1024)
+        {
+            count_to_commit = 1024;
+        }
+        if (VirtualAlloc(&glb_nodes[current_committed], count_to_commit * sizeof(*glb_nodes), MEM_COMMIT, PAGE_READWRITE))
+        {
+            need_size = current_committed + count_to_commit;
+            while (need_size > current_committed && !atomic_compare_exchange_weak(&commited_size, &current_committed, need_size));
+        }
+    }
+}
 
 
 #define _len(n) (n ? glb_nodes[n].total_length : 0)
@@ -61,6 +89,7 @@ static int64_t _copy_to_version(int64_t node, int64_t this_version)
     if (!node || glb_nodes[node].version_id == this_version) return node;
 
     int64_t new_node = glb_next_node++;
+    reserve_nodes(new_node);
     // Log(LogInfo, "A: allocated node %lld [copy from %lld]", new_node, node);
     memcpy(&glb_nodes[new_node], &glb_nodes[node], sizeof(struct segment));
     glb_nodes[new_node].version_id = this_version;
@@ -192,6 +221,7 @@ static int64_t insert_at_pos(int64_t root_idx, int64_t pos, struct segment_info 
     if (root_idx == 0) 
     {
         int64_t new_node = glb_next_node++;
+        reserve_nodes(new_node);
         // Log(LogInfo, "B: allocated node %lld", new_node);
         memset(&glb_nodes[new_node], 0, sizeof(glb_nodes[new_node]));
         memcpy(&glb_nodes[new_node], info, sizeof(*info));
