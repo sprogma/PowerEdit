@@ -132,16 +132,29 @@ namespace SDL2Interface
                     }
                     return true;
                 });
+
+                bool wasKey = true;
+                DateTime lastDrawTime = DateTime.UtcNow;
+
                 while (windows.Count > 0)
                 {
-                    foreach (var win in windows)
+                    if (wasKey || (DateTime.UtcNow - lastDrawTime).TotalMilliseconds > 500)
                     {
-                        render.Draw(win);
+                        lastDrawTime = DateTime.UtcNow;
+                        wasKey = false;
+
+                        foreach (var win in windows)
+                        {
+                            render.Draw(win);
+                        }
+                        render.Canvas.Flush();
                     }
-                    render.Canvas.Flush();
+
+                    //Environment.Exit(0);
 
                     while (Console.KeyAvailable)
                     {
+                        wasKey = true;
                         var key = Console.ReadKey(true);
 
                         if (char.IsHighSurrogate(key.KeyChar))

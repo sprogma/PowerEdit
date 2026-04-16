@@ -109,6 +109,7 @@ namespace ConsoleInterface
             CreateBuffers(Width, Height);
             ClipRect = new(0, 0, Width, Height);
             Console.TreatControlCAsInput = true;
+            Console.CursorVisible = false;
         }
 
         public void EnableFeatures()
@@ -266,7 +267,6 @@ namespace ConsoleInterface
             if (CheckConsoleResize())
                 return;
 
-            Console.CursorVisible = false;
             LastX = -1;
             LastY = -1;
             LastForeground = Color.Default;
@@ -327,8 +327,6 @@ namespace ConsoleInterface
             }
 
             Console.Write(buffer);
-
-            Console.CursorVisible = true;
         }
 
         private const uint INPUT_ENABLE_CONSOLE_INPUT = 0x0004u;
