@@ -70,6 +70,49 @@ namespace SDL2Interface
             windows.Add(window);
         }
 
+        [DllImport("user32.dll")]
+        static extern int GetWindowLong(IntPtr hWnd, int nIndex);
+
+        [DllImport("user32.dll")]
+        static extern int SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);
+
+        [DllImport("user32.dll")]
+        static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, uint uFlags);
+
+        const int GWL_STYLE = -16;
+        const uint WS_CAPTION = 0x00C00000;
+        const uint WS_THICKFRAME = 0x00040000;
+        const uint SWP_NOMOVE = 0x0002;
+        const uint SWP_NOSIZE = 0x0001;
+        const uint SWP_NOZORDER = 0x0004;
+        const uint SWP_FRAMECHANGED = 0x0020;
+        const uint WS_POPUP = 0x80000000;
+
+        [DllImport("dwmapi.dll")]
+        static extern int DwmSetWindowAttribute(IntPtr hwnd, int dwAttribute, ref int pvAttribute, int cbAttribute);
+
+        const int DWMWA_WINDOW_CORNER_PREFERENCE = 33;
+
+        const int DWMWCP_DONOTROUND = 1;
+        const int DWMWCP_ROUND = 2;
+        const int DWMWCP_ROUNDSMALL = 3;
+        [StructLayout(LayoutKind.Sequential)]
+        public struct MARGINS
+        {
+            public int cxLeftWidth;
+            public int cxRightWidth;
+            public int cyTopHeight;
+            public int cyBottomHeight;
+        }
+        
+        [DllImport("dwmapi.dll")]
+        static extern int DwmExtendFrameIntoClientArea(IntPtr hWnd, ref MARGINS pMarInset);
+
+        const int DWMWA_BORDER_COLOR = 34;
+        const int DWMWA_CAPTION_COLOR = 35;
+
+
+
         public void Main(string[] raw_args)
         {
             Logger.Log(LogLevel.AppStart, "Run sdl2 interface");
@@ -105,9 +148,32 @@ namespace SDL2Interface
             int W = (int)(rect.Width * 0.8);
             int H = (int)(rect.Height * 0.8);
 
-            SDL.ShowCursor(0);
+            var window = SDL.CreateWindow("PoweEditor", SDL.WINDOWPOS_CENTERED, SDL.WINDOWPOS_CENTERED, W, H, WindowFlags.Shown | WindowFlags.Resizable);
 
-            var window = SDL.CreateWindow("PoweEditor", SDL.WINDOWPOS_CENTERED, SDL.WINDOWPOS_CENTERED, W, H, WindowFlags.Shown | WindowFlags.Resizable | WindowFlags.Borderless);
+            // make it beautiful
+            SysWMInfo wmInfo = new();
+            SDL.GetVersion(out wmInfo.Version);
+            SDL.GetWindowWMInfo(window, ref wmInfo);
+            IntPtr hwnd = wmInfo.Info.Win.Window;
+            int style = GetWindowLong(hwnd, GWL_STYLE);
+            style &= ~(int)WS_CAPTION;
+            style |= unchecked((int)WS_POPUP);
+            style |= (int)WS_THICKFRAME;
+            SetWindowLong(hwnd, GWL_STYLE, style);
+            SetWindowPos(hwnd, IntPtr.Zero, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
+
+            int preference = DWMWCP_ROUNDSMALL;
+            DwmSetWindowAttribute(hwnd, DWMWA_WINDOW_CORNER_PREFERENCE, ref preference, sizeof(int));
+
+            var margins = new MARGINS { cxLeftWidth = -1, cxRightWidth = -1, cyTopHeight = -30, cyBottomHeight = -1 };
+            DwmExtendFrameIntoClientArea(hwnd, ref margins);
+
+            int color = (255 << 16) | (0 << 8) | 0;
+            DwmSetWindowAttribute(hwnd, DWMWA_BORDER_COLOR, ref color, sizeof(int));
+            color = (128 << 16) | (64 << 8) | 0;
+            DwmSetWindowAttribute(hwnd, DWMWA_CAPTION_COLOR, ref color, sizeof(int));
+
+
             if (window.IsNull)
             {
                 throw new Exception("SDL window initialization failed");
@@ -213,10 +279,12 @@ namespace SDL2Interface
                             WindowFlags flags = SDL.GetWindowFlags(window);
                             if (flags.HasFlag(WindowFlags.Fullscreen))
                             {
+                                SDL.ShowCursor(1);
                                 SDL.SetWindowFullscreen(window, 0);
                             }
                             else
                             {
+                                SDL.ShowCursor(0);
                                 SDL.SetWindowFullscreen(window, WindowFlags.Fullscreen);
                             }
                         }
