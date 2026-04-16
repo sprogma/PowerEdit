@@ -46,6 +46,13 @@ namespace SDL2Interface
 
         public void Main(string[] raw_args)
         {
+            // add hint to load library from
+            _ = Task.Run(() =>
+            {
+                var path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "msrope.dll");
+                NativeLibrary.Load(path);
+            });
+
             Logger.Log(LogLevel.AppStart, "Run console interface");
             List<string> args = [.. raw_args];
 
@@ -149,8 +156,6 @@ namespace SDL2Interface
                         }
                         render.Canvas.Flush();
                     }
-
-                    //Environment.Exit(0);
 
                     while (Console.KeyAvailable)
                     {
