@@ -36,6 +36,10 @@ namespace TextBuffer
 
             project = CLibrary.project_create();
             curr_state = CLibrary.project_open_file(project, filename);
+            if (curr_state == 0)
+            {
+                curr_state = CLibrary.project_new_state(project);
+            }
             CLibrary.state_commit(project, curr_state);
             undos = [];
             InitialVersions = [curr_state];
