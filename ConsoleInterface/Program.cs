@@ -1,5 +1,4 @@
 ﻿using CommandProviderInterface;
-using ConsoleInterface;
 using EditorCore.Buffer;
 using EditorCore.File;
 using EditorCore.Selection;
@@ -22,7 +21,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using TextBuffer;
 
-namespace SDL2Interface
+namespace ConsoleInterface
 {
     internal class App : IApplication
     {

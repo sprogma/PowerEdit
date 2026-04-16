@@ -1,5 +1,4 @@
-﻿using ConsoleInterface;
-using EditorFramework;
+﻿using EditorFramework;
 using EditorFramework.Layout;
 using EditorFramework.Widgets;
 using Humanizer;
@@ -18,7 +17,7 @@ using System.Xml.Linq;
 using static System.Collections.Specialized.BitVector32;
 using cColor = ConsoleInterface.Color;
 
-namespace SDL2Interface
+namespace ConsoleInterface
 {
     internal class BaseLayout(Render render) : ILayoutManager
     {

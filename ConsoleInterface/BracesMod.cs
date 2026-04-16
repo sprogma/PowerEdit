@@ -7,7 +7,7 @@ using System.Diagnostics;
 using System.Text;
 using System.Text.RegularExpressions;
 
-namespace SDL2Interface
+namespace ConsoleInterface
 {
     internal class BracesMod
     {

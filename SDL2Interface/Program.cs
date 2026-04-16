@@ -105,7 +105,9 @@ namespace SDL2Interface
             int W = (int)(rect.Width * 0.8);
             int H = (int)(rect.Height * 0.8);
 
-            var window = SDL.CreateWindow("PoweEditor", SDL.WINDOWPOS_CENTERED, SDL.WINDOWPOS_CENTERED, W, H, WindowFlags.Shown | WindowFlags.Resizable);
+            SDL.ShowCursor(0);
+
+            var window = SDL.CreateWindow("PoweEditor", SDL.WINDOWPOS_CENTERED, SDL.WINDOWPOS_CENTERED, W, H, WindowFlags.Shown | WindowFlags.Resizable | WindowFlags.Borderless);
             if (window.IsNull)
             {
                 throw new Exception("SDL window initialization failed");
