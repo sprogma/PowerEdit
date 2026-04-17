@@ -413,9 +413,9 @@ namespace EditorCore.Buffer
             return res;
         }
 
-        public (long offset, string? value, long length) GetLine(long line)
+        public (long offset, string? value, long length) GetLine(long line, long? maxsize)
         {
-            return Text.GetLine(line);
+            return Text.GetLine(line, maxsize);
         }
 
         public (long line, long offset) GetPositionOffsets(long position)

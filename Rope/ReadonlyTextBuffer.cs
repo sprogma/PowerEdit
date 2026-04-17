@@ -63,10 +63,11 @@ namespace TextBuffer
             return (start, end - start);
         }
 
-        public (long index, string? text, long length) GetLine(long line)
+        public (long index, string? text, long length) GetLine(long line, long? maxsize)
         {
             (long index, long length) = GetLineOffsets(line);
             if (length == 0) return (0, null, 0);
+            if (maxsize != null && length > maxsize) { length = maxsize.Value; }
             string text = content.Substring((int)index, (int)length);
             return (index, text, length);
         }

@@ -328,10 +328,14 @@ namespace TextBuffer
             return (startPos, len);
         }
 
-        public (long index, string? text, long length) GetLine(long line)
+        public (long index, string? text, long length) GetLine(long line, long? maxsize)
         {
             (long index, long length) = GetLineOffsets(line);
             if (length == 0) return (0, null, 0);
+            if (maxsize != null)
+            {
+                length = Math.Min(length, maxsize.Value);
+            }
             return (index, Substring(index, length), length);
         }
 

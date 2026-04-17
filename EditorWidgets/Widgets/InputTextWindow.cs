@@ -134,7 +134,7 @@ namespace EditorFramework.Widgets
                         {
                             if (x.Text.Length == 0)
                             {
-                                var line = x.Cursor.Buffer.GetLine(x.EndLine);
+                                var line = x.Cursor.Buffer.GetLine(x.EndLine, null);
                                 if (line.value != null)
                                 {
                                     x.InsertString(line.offset, line.value + (line.value.EndsWith('\n') ? "" : "\n"));
@@ -284,14 +284,14 @@ namespace EditorFramework.Widgets
                         foreach (var x in cursor.Selections)
                         {
                             long MaxLine = x.MaxLine;
-                            var after = x.Cursor.Buffer.GetLine(MaxLine + 1);
+                            var after = x.Cursor.Buffer.GetLine(MaxLine + 1, null);
                             if (after.value == null)
                             {
                                 id++;
                                 continue;
                             }
                             x.DeleteString(after.offset, after.value.Length);
-                            var before = x.Cursor.Buffer.GetLine(x.MinLine);
+                            var before = x.Cursor.Buffer.GetLine(x.MinLine, null);
                             if (before.value == null)
                             {
                                 id++;
@@ -312,14 +312,14 @@ namespace EditorFramework.Widgets
                         foreach (var x in cursor.Selections)
                         {
                             long MinLine = x.MinLine;
-                            var before = x.Cursor.Buffer.GetLine(MinLine - 1);
+                            var before = x.Cursor.Buffer.GetLine(MinLine - 1, null);
                             if (before.value == null)
                             {
                                 id++;
                                 continue;
                             }
                             x.DeleteString(before.offset, before.value.Length);
-                            var after = x.Cursor.Buffer.GetLine(x.MaxLine + 1);
+                            var after = x.Cursor.Buffer.GetLine(x.MaxLine + 1, null);
                             if (after.value == null)
                             {
                                 id++;
@@ -366,7 +366,7 @@ namespace EditorFramework.Widgets
                             long endLine = x.MaxLine;
                             for (long line = x.MinLine; line <= endLine; ++line)
                             {
-                                (long pos, string? str, _) = x.Cursor.Buffer.GetLine(line);
+                                (long pos, string? str, _) = x.Cursor.Buffer.GetLine(line, 4);
                                 if (str != null)
                                 {
                                     x.DeleteString(pos, Math.Min(4, str.TakeWhile(char.IsWhiteSpace).Count()));
@@ -391,7 +391,7 @@ namespace EditorFramework.Widgets
                                 long endLine = x.MaxLine;
                                 for (long line = x.MinLine; line <= endLine; ++line)
                                 {
-                                    x.InsertString(x.Cursor.Buffer.GetLine(line).offset, "    ");
+                                    x.InsertString(x.Cursor.Buffer.GetLine(line, 1).offset, "    ");
                                     x.UpdateFromLineOffset();
                                 }
                             }
@@ -535,7 +535,7 @@ namespace EditorFramework.Widgets
                             {
                                 long line = x.EndLine;
                                 string? content = null;
-                                while (line >= 0 && string.IsNullOrWhiteSpace(content = x.Cursor.Buffer.GetLine(line).value))
+                                while (line >= 0 && string.IsNullOrWhiteSpace(content = x.Cursor.Buffer.GetLine(line, 8 * 1024).value))
                                 {
                                     line--;
                                 }
@@ -565,7 +565,7 @@ namespace EditorFramework.Widgets
                             x.MoveToLineEnd();
                             long line = x.EndLine;
                             string? content = null;
-                            while (line >= 0 && string.IsNullOrWhiteSpace(content = x.Cursor.Buffer.GetLine(line).Item2))
+                            while (line >= 0 && string.IsNullOrWhiteSpace(content = x.Cursor.Buffer.GetLine(line, 8 * 1024).Item2))
                             {
                                 line--;
                             }

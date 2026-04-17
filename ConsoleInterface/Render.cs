@@ -284,7 +284,7 @@ namespace ConsoleInterface
                     for (int t = 0; t < position.H; ++t)
                     {
                         int i = t + (int)window.viewOffset;
-                        (long index, string? s, _) = window.buffer.GetLine(i);
+                        (long index, string? s, _) = window.buffer.GetLine(i, position.W);
                         if (s != null)
                         {
                             long num = i;
@@ -503,7 +503,7 @@ namespace ConsoleInterface
             {
 
                 int i = t + (int)window.viewOffset;
-                (long index, string? s, _) = window.buffer.GetLine(i);
+                (long index, string? s, _) = window.buffer.GetLine(i, window.Layout.Position.W);
                 if (s != null)
                 {
                     long x = leftBarSize + window.Layout.Position.X + 1;
@@ -549,7 +549,7 @@ namespace ConsoleInterface
             for (int t = 0; t < window.Layout.Position.H; ++t)
             {
                 int i = t + (int)window.viewOffset;
-                (long index, string? s, _) = window.buffer.GetLine(i);
+                (long index, string? s, _) = window.buffer.GetLine(i, 1);
                 if (s != null)
                 {
                     int num = i;

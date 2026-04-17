@@ -678,20 +678,20 @@ namespace EditorCore.Selection
 
         public void MoveToLineBegin(bool withSelect = false)
         {
-            var res = Cursor.Buffer.GetLine(EndLine);
-            if (res.value == null)
+            var (offset, value, length) = Cursor.Buffer.GetLine(EndLine, 8 * 1024);
+            if (value == null)
             {
                 return;
             }
-            string str = res.value;
-            long textBegin = res.offset;
+            string str = value;
+            long textBegin = offset;
             if (!string.IsNullOrWhiteSpace(str))
             {
-                textBegin = res.offset + str.TakeWhile(char.IsWhiteSpace).Count();
+                textBegin = offset + str.TakeWhile(char.IsWhiteSpace).Count();
             }
             if (End == textBegin)
             {
-                End = res.offset;
+                End = offset;
             }
             else
             {
@@ -714,12 +714,12 @@ namespace EditorCore.Selection
 
         public void MoveToLineEnd(bool withSelect = false)
         {
-            var res = Cursor.Buffer.GetLine(EndLine);
-            if (res.value == null)
+            var (offset, value, length) = Cursor.Buffer.GetLine(EndLine, 8 * 1024);
+            if (value == null)
             {
                 return;
             }
-            End = res.offset + res.length - (res.value.EndsWith("\n") ? 1 : 0);
+            End = offset + length - (value.EndsWith("\n") ? 1 : 0);
             if (End < 0)
             {
                 End = 0;
