@@ -305,6 +305,7 @@ namespace SDL2Interface
             SDL.DestroyWindow(render.SDLWindow);
             SDL.Quit();
             TTF.Quit();
+            Environment.Exit(0);
         }
 
         EditorFramework.Events.MouseButton Convert(SDL_Sharp.MouseButton button)

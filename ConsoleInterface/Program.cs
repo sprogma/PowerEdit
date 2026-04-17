@@ -231,6 +231,8 @@ namespace ConsoleInterface
                     Thread.Sleep(10);
                 }
             }
+
+            Environment.Exit(0);
         }
 
         KeyMode Convert(ConsoleModifiers key)
