@@ -405,8 +405,11 @@ namespace SDL2Interface
                     if (minPos <= selection.End && selection.End < maxPos)
                     {
                         (long line, long offset) = window.buffer.GetPositionOffsets(selection.End);
-                        SDL_Sharp.Rect r = new(leftBarSize + Position.X + 5 + (int)offset * textRenderer.FontStep, Position.Y + (int)(line - window.viewOffset) * textRenderer.FontLineStep, 5, textRenderer.FontLineStep);
-                        SDL.RenderFillRect(renderer, ref r);
+                        if (offset < window.Layout.Position.W / textRenderer.FontStep + 10)
+                        {
+                            SDL_Sharp.Rect r = new(leftBarSize + Position.X + 5 + (int)offset * textRenderer.FontStep, Position.Y + (int)(line - window.viewOffset) * textRenderer.FontLineStep, 5, textRenderer.FontLineStep);
+                            SDL.RenderFillRect(renderer, ref r);
+                        }
                     }
 
                     FillLinesFromTo(window, leftBarSize, selectionWidth, minPos, maxPos, minLine, maxLine, selection.Min, selection.Max);
@@ -458,12 +461,13 @@ namespace SDL2Interface
                 long startOffset = (line == begin.line) ? begin.offset : 0;
                 long endOffset = (line == end.line) ? end.offset : window.buffer.Text.GetLineOffsets(line).length;
 
-                int width = (int)(endOffset - startOffset) * textRenderer.FontStep;
+                long width = (endOffset - startOffset) * textRenderer.FontStep;
+                if (width > window.Layout.Position.W) { width = window.Layout.Position.W; }
                 if (width <= 0) continue;
                 SDL_Sharp.Rect r = new(
                     leftBarSize + Position.X + 5 + (int)startOffset * textRenderer.FontStep,
                     Position.Y + (int)(line - window.viewOffset) * textRenderer.FontLineStep + textRenderer.FontLineStep - selectionWidth,
-                    width,
+                    (int)width,
                     selectionWidth
                 );
                 SDL.RenderFillRect(renderer, ref r);

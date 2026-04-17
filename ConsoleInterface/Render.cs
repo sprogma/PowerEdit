@@ -432,7 +432,7 @@ namespace ConsoleInterface
                 long startOffset = (line == begin.line) ? begin.offset : 0;
                 long endOffset = (line == end.line) ? end.offset : window.buffer.Text.GetLineOffsets(line).length;
 
-                int width = (int)(endOffset - startOffset);
+                long width = endOffset - startOffset;
                 if (width <= 0) continue;
                 Rect r = new(
                     leftBarSize + position.X + 1 + startOffset,

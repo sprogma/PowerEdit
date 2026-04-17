@@ -13,6 +13,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 using System.Xml.Linq;
+using System.Xml.Schema;
 using static System.Collections.Specialized.BitVector32;
 using static System.Net.Mime.MediaTypeNames;
 
@@ -714,12 +715,16 @@ namespace EditorCore.Selection
 
         public void MoveToLineEnd(bool withSelect = false)
         {
-            var (offset, value, length) = Cursor.Buffer.GetLine(EndLine, 8 * 1024);
-            if (value == null)
+            var (offset, length) = Cursor.Buffer.GetLineOffsets(EndLine);
+            if (length == 0)
             {
                 return;
             }
-            End = offset + length - (value.EndsWith("\n") ? 1 : 0);
+            End = offset + length;
+            if (Cursor.Buffer.Text.Substring(End - 1, 1) == "\n")
+            {
+                End--;
+            }
             if (End < 0)
             {
                 End = 0;
