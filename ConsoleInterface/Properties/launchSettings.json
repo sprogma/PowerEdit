@@ -2,6 +2,7 @@
   "profiles": {
     "ConsoleInterface": {
       "commandName": "Project",
+      "commandLineArgs": "D:\\mipt\\lang3\\examples\\qsort\\test.txt",
       "nativeDebugging": true
     }
   }

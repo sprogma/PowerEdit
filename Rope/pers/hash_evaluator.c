@@ -6,24 +6,33 @@
 
 static void CalculateHash(struct state *state)
 {
-	int64_t h_hi = 0xCBF29CE484222325, h_lo = 0xCBF29CE484222325, buffer[2], i = 0, len = SegmentLength(state->value);
+	int64_t h_hi = 0xCBF29CE484222325, h_lo = 0xCBF29CE484222325, i = 0, len = SegmentLength(state->value);
+	int64_t buffer[8*1024] = {}; // 64 kb block
+	h_hi += len;
+	h_lo -= len * len;
 	/* calculate hash */
 	for (; i + sizeof(buffer) < len; i += sizeof(buffer))
 	{
 		state_read(state, i, sizeof(buffer), (char *)buffer);
-		h_hi ^= buffer[0];
-		h_lo ^= buffer[1];
-		h_hi *= 0x100000001B3;
-		h_lo *= 0x100000001B3;
+		for (int64_t t = 0; t < sizeof(buffer) / sizeof(*buffer); t += 2)
+		{
+			h_hi ^= buffer[t+0];
+			h_lo ^= buffer[t+1];
+			h_hi *= 0x100000001B3;
+			h_lo *= 0x100000001B3;
+		}
 	}
 	if (i < len) 
 	{
 		memset(buffer, 0, sizeof(buffer));
 		state_read(state, i, len - i, (char *)buffer);
-		h_hi ^= buffer[0];
-		h_lo ^= buffer[1];
-		h_hi *= 0x100000001B3;
-		h_lo *= 0x100000001B3;
+		for (int64_t t = 0; t < sizeof(buffer) / sizeof(*buffer); t += 2)
+		{
+			h_hi ^= buffer[0];
+			h_lo ^= buffer[1];
+			h_hi *= 0x100000001B3;
+			h_lo *= 0x100000001B3;
+		}
 	}
 	h_hi += len;
 	h_lo -= len;
