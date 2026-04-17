@@ -73,9 +73,8 @@ namespace ConsoleInterface
             /* create application instance */
             ICommandProvider? provider;
                 
-            if (args.Contains("--python"))
+            if (args.Remove("--python"))
             {
-                args.Remove("--python");
                 provider = new PythonProvider();
             }
             else

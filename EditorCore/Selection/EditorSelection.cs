@@ -26,7 +26,7 @@ namespace EditorCore.Selection
             public long Priority;
 
             public long LazyAdd = 0;
-            public long? LazySet = null;
+            public long LazySet = -1;
 
             public int Left = -1, Right = -1, Parent = -1;
 
@@ -73,7 +73,7 @@ namespace EditorCore.Selection
             RemoveNode(index);
             target.Value = newValue;
             target.LazyAdd = 0;
-            target.LazySet = null;
+            target.LazySet = -1;
             root = InsertNode(root, index);
         }
 
@@ -146,7 +146,7 @@ namespace EditorCore.Selection
         {
             if (t == -1) return;
             ref var node = ref nodes[t];
-            if (node.LazySet != null) node.LazySet += v;
+            if (node.LazySet != -1) node.LazySet += v;
             else node.LazyAdd += v;
         }
 
@@ -162,12 +162,12 @@ namespace EditorCore.Selection
         {
             if (t == -1) return;
             ref var node = ref nodes[t];
-            if (node.LazySet != null)
+            if (node.LazySet != -1)
             {
-                node.Value = node.LazySet.Value;
-                ApplySet(node.Left, node.LazySet.Value);
-                ApplySet(node.Right, node.LazySet.Value);
-                node.LazySet = null;
+                node.Value = node.LazySet;
+                ApplySet(node.Left, node.LazySet);
+                ApplySet(node.Right, node.LazySet);
+                node.LazySet = -1;
             }
             else if (node.LazyAdd != 0)
             {
