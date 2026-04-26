@@ -78,6 +78,11 @@ namespace EditorCore.Selection
             root = InsertNode(root, index);
         }
 
+        public void RemoveAt(int index)
+        {
+            RemoveNode(index);
+        }
+
         public void Insert(int pos, long val)
         {
             EnsureCapacity(size + 1);
@@ -301,6 +306,15 @@ namespace EditorCore.Selection
             Begin.Insert((int)index, selection.Begin);
             FromLineOffset.Insert((int)index, selection.FromLineOffset);
             Clipboards.Insert((int)index, selection.Clipboard);
+        }
+
+        public void RemoveAt(long index)
+        {
+            size++;
+            End.RemoveAt((int)index);
+            Begin.RemoveAt((int)index);
+            FromLineOffset.RemoveAt((int)index);
+            Clipboards.RemoveAt((int)index);
         }
 
         public long Count => size;

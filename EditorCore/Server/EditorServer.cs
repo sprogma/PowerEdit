@@ -13,6 +13,8 @@ using TextBuffer;
 
 namespace EditorCore.Server
 {
+    public delegate void EditorFileOnOpen(EditorFile file);
+
     public class EditorServer
     {
         public ICommandProvider CommandProvider { get; internal set; }
@@ -23,6 +25,7 @@ namespace EditorCore.Server
         public EditorBufferOnUpdate? ActionOnBufferUpdate;
         public EditorBufferOnTextInput? ActionOnBufferTextInput;
         public EditorFileOnSave? ActionOnFileSave;
+        public EditorFileOnOpen? ActionOnFileOpen;
         public int OpeningFiles = 0;
 
         public bool UseLSP { get; set; }
@@ -41,6 +44,7 @@ namespace EditorCore.Server
                 Files.Add(new_file);
                 Interlocked.Decrement(ref OpeningFiles);
             }
+            ActionOnFileOpen?.Invoke(new_file);
             return new_file;
         }
 
@@ -55,6 +59,7 @@ namespace EditorCore.Server
                 Files.Add(new_file);
                 Interlocked.Decrement(ref OpeningFiles);
             }
+            ActionOnFileOpen?.Invoke(new_file);
             return new_file;
         }
 

@@ -1,10 +1,10 @@
-﻿using EditorCore.Buffer;
+﻿using Common;
+using EditorCore.Buffer;
 using EditorCore.Cursor;
 using EditorCore.Selection;
 using EditorFramework.ApplicationApi;
 using EditorFramework.Events;
 using EditorFramework.Layout;
-using Common;
 using Microsoft.ApplicationInsights.Metrics.Extensibility;
 using Microsoft.CodeAnalysis.Operations;
 using System;
@@ -12,10 +12,12 @@ using System.Collections.Generic;
 using System.Configuration;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Security.Policy;
 using System.Text;
 using System.Threading.Tasks;
 using TextBuffer;
 using static System.Collections.Specialized.BitVector32;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace EditorFramework.Widgets
 {
@@ -221,14 +223,17 @@ namespace EditorFramework.Widgets
                 case KeyChordEvent key when key.Is(KeyCode.N, KeyMode.Alt):
                     if (cursor != null)
                     {
-                        var lastSelection = cursor.Selections.MaxBy(x => x.Max);
-                        if (lastSelection != null && lastSelection.TextLength != 0)
+                        if (cursor.Selections.Count != 0)
                         {
-                            string strToFind = lastSelection.Text;
-                            long next = cursor.Buffer.Text.IndexOf(strToFind, lastSelection.Max);
-                            if (next != -1)
+                            var lastSelection = cursor.Selections[cursor.Selections.Count - 1];
+                            if (lastSelection.TextLength != 0)
                             {
-                                cursor.Selections.Add(new EditorSelection(cursor, next, next + lastSelection.TextLength));
+                                string strToFind = lastSelection.Text;
+                                long next = cursor.Buffer.Text.IndexOf(strToFind, lastSelection.Max);
+                                if (next != -1)
+                                {
+                                    cursor.Selections.Add(new EditorSelection(cursor, next, next + lastSelection.TextLength));
+                                }
                             }
                         }
                         return false;
@@ -237,19 +242,66 @@ namespace EditorFramework.Widgets
                 case KeyChordEvent key when key.Is(KeyCode.X, KeyMode.Alt):
                     if (cursor != null)
                     {
-                        var lastSelection = cursor.Selections.MaxBy(x => x.Max);
-                        if (lastSelection != null && lastSelection.TextLength != 0)
+                        if (cursor.Selections.Count != 0)
                         {
-                            string strToFind = lastSelection.Text;
-                            long next = cursor.Buffer.Text.IndexOf(strToFind, lastSelection.Max);
-                            if (next != -1)
+                            var lastSelection = cursor.Selections[cursor.Selections.Count - 1];
+                            if (cursor.Selections.Count != 0 && lastSelection.TextLength != 0)
                             {
-                                lastSelection.SetPosition(next, next + lastSelection.TextLength);
+                                string strToFind = lastSelection.Text;
+                                long next = cursor.Buffer.Text.IndexOf(strToFind, lastSelection.Max);
+                                if (next != -1)
+                                {
+                                    lastSelection.SetPosition(next, next + lastSelection.TextLength);
+                                }
                             }
                         }
                         return false;
                     }
                     break;
+                case KeyChordEvent key when key.Is(KeyCode.P, KeyMode.Alt):
+                    if (cursor != null)
+                    {
+                        if (cursor.Selections.Count != 0)
+                        {
+                            cursor.Selections.RemoveAt(cursor.Selections.Count - 1);
+                        }
+                        return false;
+                    }
+                    break;
+                case KeyChordEvent key when key.Is(KeyCode.E, KeyMode.Alt):
+                    if (cursor != null)
+                    {
+                        long currentPosition;
+                        long? position = null, end = null;
+                        if (cursor.Selections.Count != 0)
+                        {
+                            currentPosition = cursor.Selections[cursor.Selections.Count - 1].Begin;
+                        }
+                        else
+                        {
+                            currentPosition = buffer.GetLineOffsets(viewOffset).begin;
+                        }
+                        lock (buffer.ErrorMarksLock)
+                        {
+                            if (buffer.ErrorMarks.Count != 0)
+                            {
+                                if (key.LastKey.Mode.HasFlag(KeyMode.Shift))
+                                {
+                                    (position, end) = buffer.ErrorMarks.Select(x => (x.Begin, x.End)).Where(x => x.Begin < currentPosition).Cast<(long, long)?>().Min() ?? buffer.ErrorMarks.Max(x => (x.Begin, x.End));
+                                }
+                                else
+                                {
+                                    (position, end) = buffer.ErrorMarks.Select(x => (x.Begin, x.End)).Where(x => x.Begin > currentPosition).Cast<(long, long)?>().Min() ?? buffer.ErrorMarks.Min(x => (x.Begin, x.End));
+                                }
+                            }
+                        }
+                        if (position != null && end != null)
+                        {
+                            cursor.Selections.Clear();
+                            cursor.Selections.Insert(0, new EditorSelection(cursor, position.Value, end.Value));
+                        }
+                    }
+                    return false;
                 case KeyChordEvent key when key.IsNoShift(KeyCode.Home) || key.IsNoShift(KeyCode.J, KeyMode.Alt):
                     cursor?.Selections.MoveToLineBegin(key.LastKey.Mode.HasFlag(KeyMode.Shift));
                     return false;

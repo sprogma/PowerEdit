@@ -17,6 +17,7 @@ using static System.Runtime.InteropServices.JavaScript.JSType;
 namespace EditorCore.File
 {
     public delegate void EditorFileOnSave(EditorFile file);
+
     public class EditorFile : IDisposable
     {
         public EditorBuffer Buffer { get; internal set; }

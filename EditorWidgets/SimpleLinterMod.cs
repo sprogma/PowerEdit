@@ -33,10 +33,12 @@ namespace EditorFramework
         public static void Init(EditorServer server)
         {
             server.ActionOnFileSave += OnFileSave;
+            server.ActionOnFileOpen += OnFileSave;
         }
 
         public static void OnFileSave(EditorFile file)
         {
+            if (!File.Exists(file.filename)) { return; }
             _ = Task.Run(async () =>
             {
                 Logger.Log("File saved [simple linter]");
