@@ -4,6 +4,7 @@ using EditorFramework.Widgets;
 using Humanizer;
 using Markdig.Helpers;
 using Microsoft.CodeAnalysis.Operations;
+using OmniSharp.Extensions.LanguageServer.Protocol.Models;
 using SDL_Sharp;
 using SDL_Sharp.Utility;
 using System;
@@ -538,7 +539,10 @@ namespace SDL2Interface
             }
 
             // draw errors count
+            SDL.SetRenderDrawColor(renderer, 0, 0, 0, 255);
             textRenderer.Scale(0.8);
+            SDL_Sharp.Rect r = new((int)window.Layout.Position.X, (int)window.Layout.Position.Y + (int)window.Layout.Position.H - textRenderer.FontLineStep - 10, (int)window.Layout.Position.W, textRenderer.FontLineStep + 10);
+            SDL.RenderFillRect(renderer, ref r);
             textRenderer.DrawTextLine((int)window.Layout.Position.X + 5, (int)window.Layout.Position.Y + (int)window.Layout.Position.H - 5 - textRenderer.FontLineStep, $"{window.buffer.ErrorMarks.Count} errors in file", 0, new(255, 0, 0, 255));
             textRenderer.Scale(1.25);
         }
