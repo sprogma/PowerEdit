@@ -7,7 +7,7 @@ namespace Common
     public enum ErrorMarkSeverity
     {
         Note,
-        Waring,
+        Warning,
         Error,
     }
 

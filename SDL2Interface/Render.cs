@@ -1,4 +1,5 @@
-﻿using EditorFramework.Layout;
+﻿using Common;
+using EditorFramework.Layout;
 using EditorFramework.Widgets;
 using Humanizer;
 using Markdig.Helpers;
@@ -357,7 +358,7 @@ namespace SDL2Interface
 
             /* find current error */
             string? message = null;
-            (long Begin, long End) errorPosition = (0, 0);
+            IErrorMark? currentMark = null;
             if (window.cursor?.Selections.Count == 1)
             {
                 var selection = window.cursor?.Selections[0]!;
@@ -376,22 +377,14 @@ namespace SDL2Interface
                             {
                                 mindiff = diff;
                                 message = window.buffer.ErrorMarks[i].Message;
-                                errorPosition = (window.buffer.ErrorMarks[i].Begin, window.buffer.ErrorMarks[i].End);
+                                currentMark = window.buffer.ErrorMarks[i];
                             }
                         }
                     }
                 }
             }
 
-            SimpleTextWindowDrawText(window, leftBarSize);
-
-            /* underline error */
-            if (message != null)
-            {
-                SDL.SetRenderDrawColor(renderer, 255, 0, 0, 255);
-                int selectionWidth = (int)(6 * textRenderer.currentScale);
-                FillLinesFromTo(window, leftBarSize, selectionWidth, minPos, maxPos, minLine, maxLine, errorPosition.Begin, errorPosition.End);
-            }
+            SimpleTextWindowDrawText(window, leftBarSize, currentMark);
 
             /* draw cursor */
             if (window.cursor != null)
@@ -482,7 +475,7 @@ namespace SDL2Interface
         }
 
 
-        public void SimpleTextWindowDrawText(SimpleTextWindow window, int leftBarSize)
+        public void SimpleTextWindowDrawText(SimpleTextWindow window, int leftBarSize, IErrorMark? current = null)
         {
             if (!textRenderer.Ready) return;
 
@@ -523,6 +516,16 @@ namespace SDL2Interface
                     FillLinesFromTo(window, leftBarSize, (int)selectionWidth, minPos, maxPos, minLine, maxLine, err.Begin, err.End);
                 }
             }
+
+            // fill current error if it is given
+            if (current != null)
+            {
+                SDL.SetRenderDrawColor(renderer, 50, 25, 0, 255);
+                FillLinesFromTo(window, leftBarSize, textRenderer.FontLineStep, minPos, maxPos, minLine, maxLine, current.Begin, current.End);
+                SDL.SetRenderDrawColor(renderer, 255, 128, 0, 255);
+                FillLinesFromTo(window, leftBarSize, (int)selectionWidth, minPos, maxPos, minLine, maxLine, current.Begin, current.End);
+            }
+
             long lastToken = 0;
             for (int t = 0; t < window.Layout.Position.H / textRenderer.FontLineStep; ++t)
             {

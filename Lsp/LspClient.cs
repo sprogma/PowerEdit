@@ -132,7 +132,7 @@ namespace Lsp
                                                                 (err.Severity switch
                                                                 {
                                                                     DiagnosticSeverity.Information or DiagnosticSeverity.Hint => ErrorMarkSeverity.Note,
-                                                                    DiagnosticSeverity.Warning => ErrorMarkSeverity.Waring,
+                                                                    DiagnosticSeverity.Warning => ErrorMarkSeverity.Warning,
                                                                     DiagnosticSeverity.Error => ErrorMarkSeverity.Error,
                                                                     _ => ErrorMarkSeverity.Note
                                                                 }),

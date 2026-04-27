@@ -218,6 +218,10 @@ namespace SDL2Interface
                 {
                     SimpleLinterMod.Init(server);
                 }
+                if (args.Contains("--sarif"))
+                {
+                    SarifLinterMod.Init(server);
+                }
 
                 // start widget
 

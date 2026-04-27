@@ -2,7 +2,7 @@
   "profiles": {
     "SDL2Interface": {
       "commandName": "Project",
-      "commandLineArgs": "--lsp",
+      "commandLineArgs": "--sarif",
       "nativeDebugging": true
     }
   }
