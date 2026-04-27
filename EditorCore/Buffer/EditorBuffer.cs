@@ -21,7 +21,7 @@ namespace EditorCore.Buffer
 {
     public delegate void EditorBufferOnUpdate(EditorBuffer buffer);
     public delegate bool EditorBufferOnTextInput(EditorBuffer buffer);
-    public class EditorBuffer : IDisposable
+    public class EditorBuffer : IDisposable, IEditorBuffer
     {
         public EditorBufferOnUpdate? ActionOnUpdate = null;
         public EditorBufferOnTextInput? ActionOnTextInput = null;
@@ -301,23 +301,14 @@ namespace EditorCore.Buffer
             }
             lock (ErrorMarksLock)
             {
-                Span<IErrorMark> span = CollectionsMarshal.AsSpan(ErrorMarks);
-                for (int i = 0; i < span.Length; i++)
+                foreach (var error in ErrorMarks)
                 {
-                    ref var err = ref span[i];
-                    if (err.Begin >= position)
-                    {
-                        err.Begin += length;
-                    }
-                    if (err.End >= position)
-                    {
-                        err.End += length;
-                    }
+                    error.UpdateAfterInsert(position, length);
                 }
             }
         }
 
-        internal long InsertString(long position, string data)
+        public long InsertString(long position, string data)
         {
             if (Text is IEditableTextBuffer editableText)
             {
@@ -333,7 +324,7 @@ namespace EditorCore.Buffer
             return 0;
         }
 
-        internal long InsertBytes(long position, byte[] data)
+        public long InsertBytes(long position, byte[] data)
         {
             if (Text is IEditableTextBuffer editableText)
             {
@@ -349,7 +340,7 @@ namespace EditorCore.Buffer
             return 0;
         }
 
-        internal void DeleteString(long position, long count)
+        public void DeleteString(long position, long count)
         {
             if (Text is IEditableTextBuffer editableText)
             {
@@ -383,26 +374,9 @@ namespace EditorCore.Buffer
             }
             lock (ErrorMarksLock)
             {
-                Span<IErrorMark> span = CollectionsMarshal.AsSpan(ErrorMarks);
-                for (int i = 0; i < span.Length; i++)
+                foreach (var error in ErrorMarks)
                 {
-                    ref var err = ref span[i];
-                    if (err.Begin >= position + length)
-                    {
-                        err.Begin -= length;
-                    }
-                    else if (err.Begin >= position)
-                    {
-                        err.Begin = position;
-                    }
-                    if (err.End >= position + length)
-                    {
-                        err.End -= length;
-                    }
-                    else if (err.End >= position)
-                    {
-                        err.End = position;
-                    }
+                    error.UpdateAfterDelete(position, length);
                 }
             }
         }
@@ -446,7 +420,7 @@ namespace EditorCore.Buffer
             OnUpdate();
         }
 
-        internal void Fork()
+        public void Fork()
         {
             if (Text is IEditableTextBuffer editableText)
             {
@@ -470,7 +444,7 @@ namespace EditorCore.Buffer
         {
             if (newFilename != null) newFilename = Path.GetFullPath(newFilename);
             string? oldLanguage = LanguageId();
-            string? newLanguage = LanguageId(newFilename);
+            string? newLanguage = IEditorBuffer.LanguageId(newFilename);
             if (oldLanguage != newLanguage)
             {
                 Tokenizer = BaseTokenizer.CreateTokenizer(newLanguage);
@@ -526,47 +500,7 @@ namespace EditorCore.Buffer
         public string? LanguageId()
         {
             if (GivenLanguageId != null) return GivenLanguageId;
-            return LanguageId(Filename);
-        }
-
-        internal static string? LanguageId(string? key)
-        {
-            if (key == null)
-            {
-                return null;
-            }
-            return Path.GetExtension(key)?[1..]?.ToLower() switch
-            {
-                "hive" => "hive",
-                "cpp" or "cxx" or "cc" or "c++" or "hpp" or "hxx" or "hh" => "cpp",
-                "c" or "h" => "c",
-                "d" or "di" or "dd" => "d",
-                "go" => "go",
-                "hs" or "lhs" => "haskell",
-                "java" or "class" or "jar" => "java",
-                "js" or "mjs" or "cjs" or "jsx" => "javascript",
-                "lit" or "lp" => "literate",
-                "lua" => "lua",
-                "nim" or "nims" or "nimble" => "nim",
-                "nix" => "nix",
-                "m" or "mm" or "M" => "objective-c",
-                "py" or "pyw" or "pyi" => "python",
-                "rs" => "rust",
-                "sh" or "bash" or "zsh" or "ksh" => "shellscript",
-                "swift" => "swift",
-                "yaml" or "yml" => "yaml",
-                "cs" => "csharp",
-                "html" or "htm" => "html",
-                "css" or "scss" or "sass" or "less" => "css",
-                "ts" or "tsx" => "typescript",
-                "json" => "json",
-                "sql" => "sql",
-                "md" => "markdown",
-                "rb" => "ruby",
-                "php" => "php",
-                "dockerfile" => "dockerfile",
-                _ => "undefined"
-            };
+            return IEditorBuffer.LanguageId(Filename);
         }
     }
 }

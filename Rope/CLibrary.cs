@@ -1,6 +1,9 @@
 ﻿using Common;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
+
+[assembly: DisableRuntimeMarshalling]
 
 namespace TextBuffer
 {
@@ -10,29 +13,12 @@ namespace TextBuffer
         public const UInt64 Delete = 2;
     };
 
-    [StructLayout(LayoutKind.Sequential, Pack = 8)]
-    public struct MarshalingCursor(long begin, long end)
-    {
-        public long Begin = begin, End = end;
-    }
-
-    [StructLayout(LayoutKind.Sequential, Pack = 8)]
-    public struct MarshalingLink(IntPtr parent, IntPtr child)
-    {
-        public IntPtr Parent = parent, Child = child;
-
-        public void Deconstruct(out IntPtr parent, out IntPtr child)
-        {
-            parent = Parent;
-            child = Child;
-        }
-    }
 
     internal static partial class CLibrary
     {
         // Logger
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        public delegate void LogDelegate(LogLevel level, [MarshalAs(UnmanagedType.LPStr)] string message);
+        public delegate void LogDelegate(LogLevel level, nint message);
 
         [LibraryImport("msrope.dll")]
         public static partial void SetLogger(LogDelegate callback);
@@ -116,7 +102,8 @@ namespace TextBuffer
         static public void Init()
         {
             LogCallback = (level, message) => {
-                Logger.Log(level, $"[C] {message}");
+                string? text = Marshal.PtrToStringUTF8(message);
+                Logger.Log(level, $"[C] {text}");
             };
             SetLogger(LogCallback);
 

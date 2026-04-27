@@ -1,4 +1,5 @@
-﻿using EditorFramework;
+﻿using Common;
+using EditorFramework;
 using EditorFramework.Layout;
 using EditorFramework.Widgets;
 using Humanizer;
@@ -10,6 +11,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Numerics;
+using System.Reflection.PortableExecutable;
 using System.Runtime.InteropServices;
 using System.Runtime.Intrinsics.Arm;
 using System.Text;
@@ -316,48 +318,20 @@ namespace ConsoleInterface
             }
 
             /* find current error */
-            string? message = null;
-            long errorLine = 0, errorOffset = 0;
-            (long Begin, long End) errorPosition = (0, 0);
-            if (window.cursor?.Selections.Count == 1)
+
+            IErrorMark? currentMark = window.GetCurrentErrorMark();
+            string? message = currentMark?.Message;
+            if (currentMark?.IsFixItAvailable(window.buffer) == true)
             {
-                var selection = window.cursor?.Selections[0]!;
-                (long line, _) = window.buffer.GetPositionOffsets(selection.End);
-                (long begin, long length) = window.buffer.GetLineOffsets(line);
-                long end = begin + length;
-                lock (window.buffer.ErrorMarksLock)
-                {
-                    long mindiff = long.MaxValue;
-                    for (int i = 0; i < window.buffer.ErrorMarks.Count; ++i)
-                    {
-                        if (begin <= window.buffer.ErrorMarks[i].End && window.buffer.ErrorMarks[i].Begin < end)
-                        {
-                            long diff = Math.Abs(window.buffer.ErrorMarks[i].Middle - selection.End);
-                            if (diff < mindiff)
-                            {
-                                mindiff = diff;
-                                errorLine = line;
-                                message = window.buffer.ErrorMarks[i].Message;
-                                errorPosition = (window.buffer.ErrorMarks[i].Begin, window.buffer.ErrorMarks[i].End);
-                                errorOffset = errorPosition.Begin - begin;
-                            }
-                        }
-                    }
-                }
+                message = $"{message} - fix available [alt+f]";
             }
 
-            SimpleTextWindowDrawText(window, leftBarSize);
+            SimpleTextWindowDrawText(window, leftBarSize, currentMark);
 
             Rect oldClip = Canvas.ClipRect;
             if (window.buffer.ErrorMarks.Count > 0)
             {
                 Canvas.ClipRect = new(position){H = position.H - 1}; // last line have error count
-            }
-
-            /* underline error */
-            if (message != null)
-            {
-                FillStyleFromTo(window, leftBarSize, minLine, maxLine, minPos, maxPos, errorPosition.Begin, errorPosition.End, null, new cColor(255, 166, 0));
             }
 
             /* draw cursor */
@@ -383,7 +357,7 @@ namespace ConsoleInterface
             if (message != null)
             {
                 Canvas.FillRect(new(window.Layout.Position) { Y = window.Layout.Position.By - 2, H = 1 }, " ", cColor.Default, cColor.Default);
-                Canvas.AddString(window.Layout.Position.X, window.Layout.Position.By - 2, $"at {errorLine+1}:{errorOffset}> {message}", new cColor(255, 0, 0), cColor.Default);
+                Canvas.AddString(window.Layout.Position.X, window.Layout.Position.By - 2, message, new cColor(255, 0, 0), cColor.Default);
             }
         }
 
@@ -454,7 +428,7 @@ namespace ConsoleInterface
             DrawRecurse(window);
         }
 
-        public void SimpleTextWindowDrawText(SimpleTextWindow window, int leftBarSize)
+        public void SimpleTextWindowDrawText(SimpleTextWindow window, int leftBarSize, IErrorMark? current = null)
         {
             {
                 Rect position = window.Layout.Position;
@@ -497,7 +471,13 @@ namespace ConsoleInterface
                         Canvas.ApplyStyle(new(0, position.Y + from - window.viewOffset, leftBarSize, to - from + 1), new(255, 168, 0), new(128, 0, 0));
                     }
                 }
+
+                if (current is not null)
+                {
+                    FillStyleFromTo(window, leftBarSize, minLine, maxLine, minPos, maxPos, current.Begin, current.End, new cColor(255, 0, 166), new cColor(40, 0, 40));
+                }
             }
+
             long lastToken = 0;
             for (int t = 0; t < window.Layout.Position.H; ++t)
             {

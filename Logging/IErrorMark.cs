@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
+
 namespace Common
 {
     public enum ErrorMarkSeverity
@@ -19,5 +20,11 @@ namespace Common
         public ErrorMarkSeverity Severity { get; }
         public string Source { get; }
         public long Middle => (Begin + End) / 2;
+
+        public bool UpdateAfterDelete(long position, long count); // bool = is alive
+        public bool UpdateAfterInsert(long position, long count); // bool = is alive
+
+        public bool IsFixItAvailable(IEditorBuffer buffer);
+        public bool FixIt(IEditorBuffer buffer); // returns true on success
     }
 }

@@ -1,4 +1,5 @@
-﻿using EditorCore.Buffer;
+﻿using Common;
+using EditorCore.Buffer;
 using Lsp;
 using OmniSharp.Extensions.LanguageServer.Protocol.Client.Capabilities;
 using RegexTokenizer;
@@ -33,8 +34,8 @@ namespace EditorCore.File
             filename = Path.GetFullPath(filename);
             this.filename = filename;
             Buffer = new EditorBuffer(server,
-                                      BaseTokenizer.CreateTokenizer(EditorBuffer.LanguageId(filename)),
-                                      this.filename, EditorBuffer.LanguageId(filename),
+                                      BaseTokenizer.CreateTokenizer(IEditorBuffer.LanguageId(filename)),
+                                      this.filename, IEditorBuffer.LanguageId(filename),
                                       buffer) {
                 WasChanged = false
             };
@@ -106,7 +107,7 @@ namespace EditorCore.File
             Buffer.Dispose();
         }
 
-        public string? LanguageId(string name) => EditorBuffer.LanguageId(name);
+        public string? LanguageId(string name) => IEditorBuffer.LanguageId(name);
 
         public string? LanguageId() => Buffer.LanguageId();
         /* declarations for simplicity */

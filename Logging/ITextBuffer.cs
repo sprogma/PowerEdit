@@ -1,12 +1,35 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 
+[assembly: DisableRuntimeMarshalling]
+
 namespace TextBuffer
 {
+    [StructLayout(LayoutKind.Sequential, Pack = 8)]
+    public struct MarshalingCursor(long begin, long end)
+    {
+        public long Begin = begin, End = end;
+    }
+
+
+    [StructLayout(LayoutKind.Sequential, Pack = 8)]
+    public struct MarshalingLink(IntPtr parent, IntPtr child)
+    {
+        public IntPtr Parent = parent, Child = child;
+
+        public void Deconstruct(out IntPtr parent, out IntPtr child)
+        {
+            parent = Parent;
+            child = Child;
+        }
+    }
+
+
     public interface IUndoTextBuffer : ITextBuffer
     {
         public void Undo();

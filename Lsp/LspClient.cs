@@ -35,6 +35,50 @@ namespace Lsp
         public ErrorMarkSeverity Severity { get; init; }
 
         public string Source { get; init; }
+
+        public bool UpdateAfterDelete(long position, long count)
+        {
+            if (Begin >= position + count)
+            {
+                Begin -= count;
+            }
+            else if (Begin >= position)
+            {
+                Begin = position;
+            }
+            if (End >= position + count)
+            {
+                End -= count;
+            }
+            else if (End >= position)
+            {
+                End = position;
+            }
+            return Begin < End;
+        }
+
+        public bool UpdateAfterInsert(long position, long count)
+        {
+            if (Begin >= position)
+            {
+                Begin += count;
+            }
+            if (End >= position)
+            {
+                End += count;
+            }
+            return Begin < End;
+        }
+
+        public bool FixIt(IEditorBuffer buffer)
+        {
+            return false;
+        }
+
+        public bool IsFixItAvailable(IEditorBuffer buffer)
+        {
+            return false;
+        }
     }
 
     public class LspClient : IDisposable

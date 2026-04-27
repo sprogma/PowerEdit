@@ -12,7 +12,7 @@ using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace TextBuffer
 {
-    public class PersistentCTextBuffer : IUndoTextBuffer, INavigatableTextBuffer, IEditableTextBuffer
+    public partial class PersistentCTextBuffer : IUndoTextBuffer, INavigatableTextBuffer, IEditableTextBuffer
     {
         IntPtr project;
         IntPtr curr_state;
@@ -211,8 +211,9 @@ namespace TextBuffer
         }
 
 
-        [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
-        private static extern bool ReplaceFile(
+        [LibraryImport("kernel32.dll", EntryPoint = "ReplaceFileW", SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        internal static partial bool ReplaceFile(
                 string lpReplacedFileName,
                 string lpReplacementFileName,
                 string lpBackupFileName,

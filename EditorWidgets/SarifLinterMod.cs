@@ -1,4 +1,5 @@
 ﻿using Common;
+using EditorCore.Buffer;
 using EditorCore.File;
 using EditorCore.Server;
 using System;
@@ -7,20 +8,25 @@ using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using TextBuffer;
 
 namespace EditorFramework
 {
+    record struct FixItDataItem(long Begin, long End, string Value);
+
     public class SarifLinterMod
     {
-        struct SimpleErrorMark : IErrorMark
+        struct SarifErrorMark : IErrorMark
         {
-            public SimpleErrorMark(string message, long begin, long end, ErrorMarkSeverity severity, string source)
+            public SarifErrorMark(nint currentState, string message, long begin, long end, ErrorMarkSeverity severity, string source, FixItDataItem[] fixItData)
             {
                 Message = message;
                 Begin = begin;
                 End = end;
                 Severity = severity;
                 Source = source;
+                FixItData = fixItData;
+                AnalysisState = currentState;
             }
 
             public string Message { get; init; }
@@ -28,6 +34,110 @@ namespace EditorFramework
             public long End { get; set; }
             public ErrorMarkSeverity Severity { get; init; }
             public string Source { get; init; }
+
+
+            private nint AnalysisState;
+
+            private int FixApplyed = 0;
+
+            private readonly FixItDataItem[] FixItData;
+
+            public bool UpdateAfterDelete(long position, long count)
+            {
+                if (Begin >= position + count)
+                {
+                    Begin -= count;
+                }
+                else if (Begin >= position)
+                {
+                    Begin = position;
+                }
+                if (End >= position + count)
+                {
+                    End -= count;
+                }
+                else if (End >= position)
+                {
+                    End = position;
+                }
+                foreach (ref var fix in FixItData.AsSpan())
+                {
+                    if (fix.Begin >= position + count)
+                    {
+                        fix.Begin -= count;
+                    }
+                    else if (fix.Begin >= position)
+                    {
+                        fix.Begin = position;
+                    }
+                    if (fix.End >= position + count)
+                    {
+                        fix.End -= count;
+                    }
+                    else if (fix.End >= position)
+                    {
+                        fix.End = position;
+                    }
+                }
+                return Begin < End;
+            }
+
+            public bool UpdateAfterInsert(long position, long count)
+            {
+                if (Begin >= position)
+                {
+                    Begin += count;
+                }
+                if (End >= position)
+                {
+                    End += count;
+                }
+                foreach (ref var fix in FixItData.AsSpan())
+                {
+                    if (fix.Begin >= position)
+                    {
+                        fix.Begin += count;
+                    }
+                    if (fix.End >= position)
+                    {
+                        fix.End += count;
+                    }
+                }
+                return Begin < End;
+            }
+
+            public bool IsFixItAvailable(IEditorBuffer buffer)
+            {
+                return FixItData.Length != 0 && FixApplyed == 0;
+            }
+
+            public bool FixIt(IEditorBuffer buffer)
+            {
+                if (!IsFixItAvailable(buffer))
+                {
+                    return false;
+                }
+
+                if (Interlocked.Exchange(ref FixApplyed, 1) != 0)
+                {
+                    return false;
+                }
+
+                // apply fixits
+                if (buffer.Text is IEditableTextBuffer etb)
+                {
+                    buffer.Fork();
+                    foreach (var fix in FixItData.OrderByDescending(x => x.Begin))
+                    {
+                        buffer.DeleteString(fix.Begin, fix.End - fix.Begin);
+                        buffer.InsertString(fix.Begin, fix.Value);
+                    }
+                    buffer.Commit();
+                    Logger.Log("Sarif fix applyed");
+                }
+
+                return true;
+            }
         }
 
         public static void Init(EditorServer server)
@@ -55,6 +165,7 @@ namespace EditorFramework
                 {
                     file.Buffer.ErrorMarks.Clear();
                 }
+                var currentState = file.Buffer.Text.CurrentState;
                 string? language = file.LanguageId();
 
                 (string executable, string args)[] LinterVariants = language switch
@@ -63,7 +174,7 @@ namespace EditorFramework
                             ("gcc", "-fsyntax-only -Wall -Wextra -fdiagnostics-format=sarif -D_CRT_SECURE_NO_WARNINGS -D_CRT_NONSTDC_NO_DEPRECATE -fms-extensions -Wno-microsoft %f")],
                     "cpp" => [("clang++", "-std=gnu++2c -fsyntax-only -fdiagnostics-format=sarif -fno-color-diagnostics -D_CRT_SECURE_NO_WARNINGS -D_CRT_NONSTDC_NO_DEPRECATE -fms-extensions -Wno-microsoft %f"),
                               ("g++", "-fsyntax-only -fdiagnostics-format=sarif -D_CRT_SECURE_NO_WARNINGS -D_CRT_NONSTDC_NO_DEPRECATE -fms-extensions -Wno-microsoft %f")],
-                    "python" => [("ruff", "check --format sarif --quiet %f"),
+                    "python" => [("ruff", "check %f --select E,F,UP,B,SIM,I --ignore D,ANN,COM --output-format sarif"),
                                  ("pylint", "--output-format=sarif %f")],
                     "javascript" or "typescript" => [("eslint", "-f sarif %f")],
                     "go" => [("staticcheck", "-f sarif ./...")],
@@ -178,14 +289,61 @@ namespace EditorFramework
                                                 posEnd = Math.Min(posStart + 2, targetFile.Buffer.Text.Length);
                                             }
 
+                                            List<FixItDataItem> fixIts = new();
+                                            if (result.TryGetProperty("fixes", out JsonElement fixesProp))
+                                            {
+                                                foreach (JsonElement fix in fixesProp.EnumerateArray())
+                                                {
+                                                    if (!fix.TryGetProperty("artifactChanges", out JsonElement changes)) continue;
+                                                    foreach (JsonElement change in changes.EnumerateArray())
+                                                    {
+                                                        if (change.TryGetProperty("artifactLocation", out JsonElement chLoc) &&
+                                                            chLoc.TryGetProperty("uri", out JsonElement chUri))
+                                                        {
+                                                            string cPath = new Uri(chUri.GetString()!).LocalPath;
+                                                            if (!string.Equals(Path.GetFullPath(cPath).TrimEnd('\\', '/'), normError, StringComparison.OrdinalIgnoreCase))
+                                                                continue;
+                                                        }
+
+                                                        if (change.TryGetProperty("replacements", out JsonElement replacements))
+                                                        {
+                                                            foreach (JsonElement rep in replacements.EnumerateArray())
+                                                            {
+                                                                if (rep.TryGetProperty("deletedRegion", out JsonElement delRegion))
+                                                                {
+                                                                    int rsL = delRegion.GetProperty("startLine").GetInt32() - 1;
+                                                                    int rsC = (delRegion.TryGetProperty("startColumn", out var cS) ? cS.GetInt32() : 1) - 1;
+
+                                                                    int reL = (delRegion.TryGetProperty("endLine", out var cEL) ? cEL.GetInt32() : rsL + 1) - 1;
+                                                                    int reC = (delRegion.TryGetProperty("endColumn", out var cEC) ? cEC.GetInt32() : rsC + 1) - 1;
+
+                                                                    string text = "";
+                                                                    if (rep.TryGetProperty("insertedContent", out JsonElement content))
+                                                                        text = content.GetProperty("text").GetString() ?? "";
+
+                                                                    fixIts.Add(new FixItDataItem(
+                                                                        targetFile.Buffer.GetPosition(rsL, rsC),
+                                                                        targetFile.Buffer.GetPosition(reL, reC),
+                                                                        text
+                                                                    ));
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+
+
                                             lock (targetFile.Buffer.ErrorMarksLock)
                                             {
-                                                targetFile.Buffer.ErrorMarks.Add(new SimpleErrorMark(
+                                                targetFile.Buffer.ErrorMarks.Add(new SarifErrorMark(
+                                                    currentState,
                                                     msg,
                                                     Math.Max(posStart, 0),
                                                     posEnd,
                                                     severity,
-                                                    $"::sarif-linter-mod::{file.filename}"
+                                                    $"::sarif-linter-mod::{file.filename}",
+                                                    fixIts.ToArray()
                                                 ));
                                             }
                                         }
@@ -194,6 +352,7 @@ namespace EditorFramework
                             }
                         }
                         Logger.Log($"Linter {Linter.executable} finished, found errors.");
+                        break;
                     }
                     catch (OperationCanceledException) { process?.Kill(); Logger.Log(LogLevel.Error, "Linter timeout."); }
                     catch (Exception ex) { process?.Kill(); Logger.Log(LogLevel.Error, $"Linter error: {ex.Message}"); }

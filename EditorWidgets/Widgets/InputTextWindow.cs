@@ -302,6 +302,29 @@ namespace EditorFramework.Widgets
                         }
                     }
                     return false;
+                case KeyChordEvent key when key.Is(KeyCode.F, KeyMode.Alt):
+                    if (cursor != null)
+                    {
+                        lock (buffer.ErrorMarksLock)
+                        {
+                            if (buffer.ErrorMarks.Count != 0 && cursor.Selections.Count == 1)
+                            {
+                                EditorSelection selection = cursor.Selections[0];
+                                IErrorMark? current = GetCurrentErrorMark();
+                                if (current != null)
+                                {
+                                    if (current.IsFixItAvailable(buffer))
+                                    {
+                                        if (current.FixIt(buffer)) // if it was fixed
+                                        {
+                                            buffer.ErrorMarks.Remove(current);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    return false;
                 case KeyChordEvent key when key.IsNoShift(KeyCode.Home) || key.IsNoShift(KeyCode.J, KeyMode.Alt):
                     cursor?.Selections.MoveToLineBegin(key.LastKey.Mode.HasFlag(KeyMode.Shift));
                     return false;
@@ -675,6 +698,34 @@ namespace EditorFramework.Widgets
             return currentOffset == systemSpan.Length;
         }
 
+        public IErrorMark? GetCurrentErrorMark()
+        {
+            IErrorMark? currentMark = null;
+            if (cursor?.Selections.Count == 1)
+            {
+                var selection = cursor?.Selections[0]!;
+                (long line, _) = buffer.GetPositionOffsets(selection.End);
+                (long begin, long length) = buffer.GetLineOffsets(line);
+                long end = begin + length;
+                lock (buffer.ErrorMarksLock)
+                {
+                    long mindiff = long.MaxValue;
+                    for (int i = 0; i < buffer.ErrorMarks.Count; ++i)
+                    {
+                        if (begin <= buffer.ErrorMarks[i].End && buffer.ErrorMarks[i].Begin < end)
+                        {
+                            long diff = Math.Abs(buffer.ErrorMarks[i].Middle - selection.End);
+                            if (diff < mindiff)
+                            {
+                                mindiff = diff;
+                                currentMark = buffer.ErrorMarks[i];
+                            }
+                        }
+                    }
+                }
+            }
+            return currentMark;
+        }
     }
 }
 
