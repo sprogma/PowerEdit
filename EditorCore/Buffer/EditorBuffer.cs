@@ -246,7 +246,9 @@ namespace EditorCore.Buffer
             if (Text.Length <= Tokenizer.MaxContentSize)
             {
                 IntPtr state = Text.CurrentState;
-                _ = Task.Run(() => Tokens = Tokenizer.ParseContent(Text.SubstringEx(state, 0)));
+                var task = Task.Run(() => Tokenizer.ParseContent(Text.SubstringEx(state, 0)));
+                _ = task.ContinueWith(t => Tokens = t.Result, TaskContinuationOptions.OnlyOnRanToCompletion);
+                task.Wait(5);
             }
             dirty_was_changed = true;
         }
