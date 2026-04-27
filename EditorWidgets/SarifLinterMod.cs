@@ -119,56 +119,77 @@ namespace EditorFramework
 
                         string json = raw.Substring(startIdx, endIdx - startIdx + 1);
 
-                        using JsonDocument doc = JsonDocument.Parse(json);
-                        if (!doc.RootElement.TryGetProperty("runs", out JsonElement runs)) continue;
-
-                        foreach (JsonElement run in runs.EnumerateArray())
+                        using (JsonDocument doc = JsonDocument.Parse(json))
                         {
-                            if (!run.TryGetProperty("results", out JsonElement results)) continue;
+                            if (!doc.RootElement.TryGetProperty("runs", out JsonElement runs)) return;
 
-                            foreach (JsonElement result in results.EnumerateArray())
+                            foreach (JsonElement run in runs.EnumerateArray())
                             {
-                                string msg = "Unknown error";
-                                if (result.TryGetProperty("message", out JsonElement msgProp))
-                                    msg = msgProp.GetProperty("text").GetString() ?? msg;
+                                if (!run.TryGetProperty("results", out JsonElement results)) continue;
 
-                                ErrorMarkSeverity severity = ErrorMarkSeverity.Error;
-                                if (result.TryGetProperty("level", out JsonElement levelProp))
+                                foreach (JsonElement result in results.EnumerateArray())
                                 {
-                                    string level = levelProp.GetString()?.ToLower() ?? "";
-                                    if (level == "warning" || level == "note") severity = ErrorMarkSeverity.Warning;
-                                }
+                                    string msg = "Unknown error";
+                                    if (result.TryGetProperty("message", out JsonElement msgProp))
+                                        msg = msgProp.GetProperty("text").GetString() ?? msg;
 
-                                if (!result.TryGetProperty("locations", out JsonElement locations) || locations.GetArrayLength() == 0) continue;
+                                    ErrorMarkSeverity severity = ErrorMarkSeverity.Error;
+                                    if (result.TryGetProperty("level", out JsonElement levelProp))
+                                    {
+                                        string level = levelProp.GetString()?.ToLower() ?? "";
+                                        if (level == "warning" || level == "note") severity = ErrorMarkSeverity.Warning;
+                                    }
 
-                                // SARIF: locations[0].physicalLocation.region
-                                if (!locations[0].TryGetProperty("physicalLocation", out JsonElement physLoc)) continue;
-                                if (!physLoc.TryGetProperty("region", out JsonElement region)) continue;
+                                    if (!result.TryGetProperty("locations", out JsonElement locations) || locations.GetArrayLength() == 0) continue;
 
-                                int sLine = region.GetProperty("startLine").GetInt32() - 1;
-                                int sCol = region.GetProperty("startColumn").GetInt32() - 1;
+                                    JsonElement firstLoc = locations[0];
+                                    if (!firstLoc.TryGetProperty("physicalLocation", out JsonElement physLoc)) continue;
 
-                                // EndLine, EndColumn are optional
-                                int eLine = (region.TryGetProperty("endLine", out JsonElement el) ? el.GetInt32() : sLine + 1) - 1;
-                                int eCol = (region.TryGetProperty("endColumn", out JsonElement ec) ? ec.GetInt32() : sCol + 1) - 1;
+                                    string? errorFilePath = null;
+                                    if (physLoc.TryGetProperty("artifactLocation", out JsonElement artLoc) && artLoc.TryGetProperty("uri", out JsonElement uriProp))
+                                    {
+                                        try { errorFilePath = new Uri(uriProp.GetString()!).LocalPath; } catch { continue; }
+                                    }
+                                    if (string.IsNullOrEmpty(errorFilePath)) continue;
+                                    string normError = Path.GetFullPath(errorFilePath).TrimEnd('\\', '/');
 
-                                long posStart = file.Buffer.GetPosition(sLine, sCol);
-                                long posEnd = file.Buffer.GetPosition(eLine, eCol);
+                                    if (!physLoc.TryGetProperty("region", out JsonElement region)) continue;
 
-                                if (posEnd - posStart <= 1)
-                                {
-                                    posEnd = Math.Min(posStart + 2, file.Buffer.Text.Length);
-                                }
+                                    int sLine = region.GetProperty("startLine").GetInt32() - 1;
+                                    int sCol = region.GetProperty("startColumn").GetInt32() - 1;
 
-                                lock (file.Buffer.ErrorMarksLock)
-                                {
-                                    file.Buffer.ErrorMarks.Add(new SimpleErrorMark(
-                                        msg,
-                                        Math.Max(posStart, 0),
-                                        posEnd,
-                                        severity,
-                                        "::sarif-linter-mod"
-                                    ));
+                                    int eLine = (region.TryGetProperty("endLine", out JsonElement el) ? el.GetInt32() : sLine + 1) - 1;
+                                    int eCol = (region.TryGetProperty("endColumn", out JsonElement ec) ? ec.GetInt32() : sCol + 1) - 1;
+
+                                    lock (file.Buffer.Server.FilesLock)
+                                    {
+                                        var targetFile = file.Buffer.Server.Files.FirstOrDefault(x =>
+                                            x.filename != null &&
+                                            string.Equals(Path.GetFullPath(x.filename).TrimEnd('\\', '/'), normError, StringComparison.OrdinalIgnoreCase)
+                                        );
+
+                                        if (targetFile != null)
+                                        {
+                                            long posStart = targetFile.Buffer.GetPosition(sLine, sCol);
+                                            long posEnd = targetFile.Buffer.GetPosition(eLine, eCol);
+
+                                            if (posEnd - posStart <= 1)
+                                            {
+                                                posEnd = Math.Min(posStart + 2, targetFile.Buffer.Text.Length);
+                                            }
+
+                                            lock (targetFile.Buffer.ErrorMarksLock)
+                                            {
+                                                targetFile.Buffer.ErrorMarks.Add(new SimpleErrorMark(
+                                                    msg,
+                                                    Math.Max(posStart, 0),
+                                                    posEnd,
+                                                    severity,
+                                                    $"::sarif-linter-mod::{file.filename}"
+                                                ));
+                                            }
+                                        }
+                                    }
                                 }
                             }
                         }
