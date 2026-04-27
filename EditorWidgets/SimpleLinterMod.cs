@@ -104,7 +104,7 @@ namespace EditorFramework
                 (string executable, string args, string pattern, string? temporary)[] LinterVariants = language switch
                 {
                     "hive" => [("D:/mipt/lang3/a.exe", "--no-output=true --input-file=%f", @"Error:.near.%f:%l:%c>%m", null)],
-                    "c" => [("clang", "-std=gnu2x -fsyntax-only -ferror-limit=5000 -Weverything -D_CRT_SECURE_NO_WARNINGS -D_CRT_NONSTDC_NO_DEPRECATE -fms-extensions -Wno-microsoft %f", @"%f:%l:%c:.+: %m", null),
+                    "c" => [("clang", "-std=gnu2x -fsyntax-only -ferror-limit=5000 -Wall -Wextra -D_CRT_SECURE_NO_WARNINGS -D_CRT_NONSTDC_NO_DEPRECATE -fms-extensions -Wno-microsoft %f", @"%f:%l:%c:.+: %m", null),
                             ("gcc", "-fsyntax-only -Wall -Wextra %f", @"%f:%l:%c:.+: %m", null)],
                     "cpp" => [("clang", "-std=gnu++2c -fsyntax-only -ferror-limit=5000 -Wall -Wextra -D_CRT_SECURE_NO_WARNINGS -D_CRT_NONSTDC_NO_DEPRECATE -fms-extensions -Wno-microsoft %f", @"%f:%l:%c:.+: %m", null),
                               ("g++", "-fsyntax-only -Wall -Wextra %f", @"%f:%l:%c:.+: %m", null)],

@@ -7,6 +7,11 @@
 
 /* creation and delection */
 
+void msrope_init()
+{
+	size_t total_size = (size_t)MAX_NODES * sizeof(struct segment);
+	glb_nodes = (struct segment*)VirtualAlloc(NULL, total_size, MEM_RESERVE, PAGE_READWRITE);
+}
 
 void _reserve_states(struct project *project, int64_t total_size)
 {

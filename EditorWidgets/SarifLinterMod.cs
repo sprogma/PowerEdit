@@ -170,7 +170,7 @@ namespace EditorFramework
 
                 (string executable, string args)[] LinterVariants = language switch
                 {
-                    "c" => [("clang", "-std=gnu2x -fsyntax-only -Weverything -fdiagnostics-format=sarif -fno-color-diagnostics -D_CRT_SECURE_NO_WARNINGS -D_CRT_NONSTDC_NO_DEPRECATE -fms-extensions -Wno-microsoft %f"),
+                    "c" => [("clang", "-std=gnu2x -fsyntax-only -Wall -Wextra -fdiagnostics-format=sarif -fno-color-diagnostics -D_CRT_SECURE_NO_WARNINGS -D_CRT_NONSTDC_NO_DEPRECATE -fms-extensions -Wno-microsoft %f"),
                             ("gcc", "-fsyntax-only -Wall -Wextra -fdiagnostics-format=sarif -D_CRT_SECURE_NO_WARNINGS -D_CRT_NONSTDC_NO_DEPRECATE -fms-extensions -Wno-microsoft %f")],
                     "cpp" => [("clang++", "-std=gnu++2c -fsyntax-only -fdiagnostics-format=sarif -fno-color-diagnostics -D_CRT_SECURE_NO_WARNINGS -D_CRT_NONSTDC_NO_DEPRECATE -fms-extensions -Wno-microsoft %f"),
                               ("g++", "-fsyntax-only -fdiagnostics-format=sarif -D_CRT_SECURE_NO_WARNINGS -D_CRT_NONSTDC_NO_DEPRECATE -fms-extensions -Wno-microsoft %f")],

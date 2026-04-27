@@ -88,9 +88,12 @@ namespace SDL2Interface
 
             if (window is FileTabsWindow t)
             {
-                foreach (var c in t.childs)
+                lock (t.childsLock)
                 {
-                    c.Layout.Resize(c, rect);
+                    foreach (var c in t.childs)
+                    {
+                        c.Layout.Resize(c, rect);
+                    }
                 }
             }
             else
@@ -217,22 +220,25 @@ namespace SDL2Interface
                             SDL.RenderFillRect(renderer, ref header);
                             SDL_Sharp.Rect tab = new(position.X + 2, position.Y + 2, tabWidth - 4, tabHeight - 4);
                             SDL.RenderGetClipRect(renderer, out SDL_Sharp.Rect clip);
-                            foreach (var (id, child) in tabsWindow.childs.Index())
+                            lock (tabsWindow.childsLock)
                             {
-                                SDL.RenderSetClipRect(renderer, ref tab);
-                                if (tabsWindow.current == id)
+                                foreach (var (id, child) in tabsWindow.childs.Index())
                                 {
-                                    SDL.SetRenderDrawColor(renderer, 0, 50, 80, 255);
-                                    SDL.RenderFillRect(renderer, ref tab);
+                                    SDL.RenderSetClipRect(renderer, ref tab);
+                                    if (tabsWindow.current == id)
+                                    {
+                                        SDL.SetRenderDrawColor(renderer, 0, 50, 80, 255);
+                                        SDL.RenderFillRect(renderer, ref tab);
+                                    }
+                                    long dummyValue = 0;
+                                    textRenderer.DrawTextLine(tab.X, tab.Y, child.file.filename ?? "<Unnamed>", 0, [], ref dummyValue);
+                                    tab.X += tab.Width + 4;
                                 }
-                                long dummyValue = 0;
-                                textRenderer.DrawTextLine(tab.X, tab.Y, child.file.filename ?? "<Unnamed>", 0, [], ref dummyValue);
-                                tab.X += tab.Width + 4;
-                            }
-                            SDL.RenderSetClipRect(renderer, ref clip);
-                            if (tabsWindow.current < tabsWindow.childs.Count)
-                            {
-                                DrawRecurse(tabsWindow.childs[tabsWindow.current]);
+                                SDL.RenderSetClipRect(renderer, ref clip);
+                                if (tabsWindow.current < tabsWindow.childs.Count)
+                                {
+                                    DrawRecurse(tabsWindow.childs[tabsWindow.current]);
+                                }
                             }
                         }
                         break;

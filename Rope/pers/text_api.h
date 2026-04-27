@@ -27,6 +27,8 @@ extern "C"
 typedef void (*LogCallback)(enum LogLevel level, const char* message);
 ROPE_EXPORT void SetLogger(LogCallback callback);
 
+ROPE_EXPORT void msrope_init();
+
 /* creation and delection */
 
 ROPE_EXPORT struct project *project_create();

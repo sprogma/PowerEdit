@@ -5,7 +5,6 @@
 #include "structure.h"
 
 
-#define MAX_NODES 1000000000
 struct segment* glb_nodes = NULL;
 _Atomic int64_t glb_next_node = 1;
 _Atomic int64_t commited_size = 0;
@@ -14,12 +13,8 @@ _Atomic int64_t commited_size = 0;
 void reserve_nodes(int64_t need_node)
 {
     int64_t need_size = need_node + 1;
-    if (glb_nodes == NULL)
-    {
-        size_t total_size = (size_t)MAX_NODES * sizeof(struct segment);
-        glb_nodes = (struct segment*)VirtualAlloc(NULL, total_size, MEM_RESERVE, PAGE_READWRITE);
-    }
     int64_t current_committed = atomic_load_explicit(&commited_size, memory_order_acquire);
+    printf("need %lld/%lld nodes\n", need_size, current_committed);
     if (need_size > current_committed)
     {
         size_t count_to_commit = need_size - current_committed;
@@ -27,10 +22,16 @@ void reserve_nodes(int64_t need_node)
         {
             count_to_commit = 1024;
         }
+        printf("committing %lld nodes\n", count_to_commit);
         if (VirtualAlloc(&glb_nodes[current_committed], count_to_commit * sizeof(*glb_nodes), MEM_COMMIT, PAGE_READWRITE))
         {
             need_size = current_committed + count_to_commit;
             while (need_size > current_committed && !atomic_compare_exchange_weak(&commited_size, &current_committed, need_size));
+        }
+        else
+        {
+            printf("ERROR!\n");
+            exit(1);
         }
     }
 }

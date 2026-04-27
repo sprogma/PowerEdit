@@ -94,6 +94,9 @@ namespace TextBuffer
         [LibraryImport("msrope.dll")]
         internal static partial long state_nth_newline(IntPtr state, long position);
 
+        [LibraryImport("msrope.dll")]
+        internal static partial void msrope_init();
+
 
         private static LogDelegate? LogCallback;
 
@@ -106,6 +109,7 @@ namespace TextBuffer
                 Logger.Log(level, $"[C] {text}");
             };
             SetLogger(LogCallback);
+            msrope_init();
 
             WasInitializated = true;
         }

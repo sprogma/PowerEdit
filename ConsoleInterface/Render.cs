@@ -86,9 +86,12 @@ namespace ConsoleInterface
 
             if (window is FileTabsWindow t)
             {
-                foreach (var c in t.childs)
+                lock (t.childsLock)
                 {
-                    c.Layout.Resize(c, rect);
+                    foreach (var c in t.childs)
+                    {
+                        c.Layout.Resize(c, rect);
+                    }
                 }
             }
             else

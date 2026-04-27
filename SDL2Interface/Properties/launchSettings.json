@@ -2,7 +2,7 @@
   "profiles": {
     "SDL2Interface": {
       "commandName": "Project",
-      "commandLineArgs": "--sarif",
+      "commandLineArgs": "D:\\mipt\\hivelang3\\runtimes\\0.3\\common\\gpu\\await_worker.c D:\\mipt\\hivelang3\\runtimes\\0.3\\common\\gpu\\call_object.c D:\\mipt\\hivelang3\\runtimes\\0.3\\common\\gpu\\execute_worker.c D:\\mipt\\hivelang3\\runtimes\\0.3\\common\\gpu\\new_object.c D:\\mipt\\hivelang3\\runtimes\\0.3\\common\\gpu\\push_object.c D:\\mipt\\hivelang3\\runtimes\\0.3\\common\\gpu\\query_object.c D:\\mipt\\hivelang3\\runtimes\\0.3\\common\\loc\\new_object.c D:\\mipt\\hivelang3\\runtimes\\0.3\\common\\loc\\push_object.c D:\\mipt\\hivelang3\\runtimes\\0.3\\common\\loc\\query_object.c D:\\mipt\\hivelang3\\runtimes\\0.3\\common\\x64\\await_worker.c D:\\mipt\\hivelang3\\runtimes\\0.3\\common\\x64\\call_object.c D:\\mipt\\hivelang3\\runtimes\\0.3\\common\\x64\\execute_worker.c D:\\mipt\\hivelang3\\runtimes\\0.3\\common\\x64\\new_object.c D:\\mipt\\hivelang3\\runtimes\\0.3\\common\\x64\\push_object.c D:\\mipt\\hivelang3\\runtimes\\0.3\\common\\x64\\query_object.c D:\\mipt\\hivelang3\\runtimes\\0.3\\common\\x64\\sleep.c D:\\mipt\\hivelang3\\runtimes\\0.3\\common\\api.c D:\\mipt\\hivelang3\\runtimes\\0.3\\common\\cast_provider.c D:\\mipt\\hivelang3\\runtimes\\0.3\\common\\gpu_subsystem.c D:\\mipt\\hivelang3\\runtimes\\0.3\\common\\hive_entry.c D:\\mipt\\hivelang3\\runtimes\\0.3\\common\\queue.c D:\\mipt\\hivelang3\\runtimes\\0.3\\common\\remote.c D:\\mipt\\hivelang3\\runtimes\\0.3\\common\\runtime.c D:\\mipt\\hivelang3\\runtimes\\0.3\\common\\sheduler.c --sarif",
       "nativeDebugging": true
     }
   }

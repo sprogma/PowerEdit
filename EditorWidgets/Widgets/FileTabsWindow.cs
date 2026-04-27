@@ -15,6 +15,7 @@ namespace EditorFramework.Widgets
 {
     public class FileTabsWindow : BaseWindow
     {
+        public Lock childsLock;
         public List<FileEditorWindow> childs;
         public int current;
 
@@ -22,32 +23,39 @@ namespace EditorFramework.Widgets
 
         public FileTabsWindow(IApplication App, ILayoutManager layout, List<FileEditorWindow> windows) : base(App, layout)
         {
+            this.childsLock = new();
             this.childs = windows;
             this.current = 0;
         }
 
         public void OpenFile(ProjectEditorWindow Project, EditorFile file)
         {
-            for (int i = 0; i < childs.Count; i++)
+            lock (childsLock)
             {
-                if (childs[i].file == file)
+                for (int i = 0; i < childs.Count; i++)
                 {
-                    current = i;
-                    return;
+                    if (childs[i].file == file)
+                    {
+                        current = i;
+                        return;
+                    }
                 }
+                childs.Add(new FileEditorWindow(App, GetLayout<FileEditorWindow>.Value, file));
+                current = childs.Count - 1;
             }
-            childs.Add(new FileEditorWindow(App, GetLayout<FileEditorWindow>.Value, file));
-            current = childs.Count - 1;
         }
 
         public void RaiseFile(ProjectEditorWindow Project, EditorFile file)
         {
-            for (int i = 0; i < childs.Count; i++)
+            lock (childsLock)
             {
-                if (childs[i].file == file)
+                for (int i = 0; i < childs.Count; i++)
                 {
-                    current = i;
-                    return;
+                    if (childs[i].file == file)
+                    {
+                        current = i;
+                        return;
+                    }
                 }
             }
         }
@@ -55,7 +63,10 @@ namespace EditorFramework.Widgets
         public void CloseFileWindow(FileEditorWindow window)
         {
             Debug.Assert(window.IsDeleted);
-            childs.Remove(window);
+            lock (childsLock)
+            {
+                childs.Remove(window);
+            }
         }
 
         public override bool HandleEvent(EventBase e)

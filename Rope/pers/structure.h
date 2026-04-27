@@ -10,6 +10,10 @@
 #include "threading.h"
 #include "clocks.h"
 
+
+#define MAX_NODES 1000000000
+
+
 #define MODIFICATION_INSERT 1
 #define MODIFICATION_DELETE 2
 
