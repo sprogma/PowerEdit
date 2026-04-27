@@ -14,7 +14,6 @@ void reserve_nodes(int64_t need_node)
 {
     int64_t need_size = need_node + 1;
     int64_t current_committed = atomic_load_explicit(&commited_size, memory_order_acquire);
-    printf("need %lld/%lld nodes\n", need_size, current_committed);
     if (need_size > current_committed)
     {
         size_t count_to_commit = need_size - current_committed;
@@ -22,7 +21,6 @@ void reserve_nodes(int64_t need_node)
         {
             count_to_commit = 1024;
         }
-        printf("committing %lld nodes\n", count_to_commit);
         if (VirtualAlloc(&glb_nodes[current_committed], count_to_commit * sizeof(*glb_nodes), MEM_COMMIT, PAGE_READWRITE))
         {
             need_size = current_committed + count_to_commit;
