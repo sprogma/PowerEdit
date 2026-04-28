@@ -18,6 +18,7 @@ namespace EditorFramework.Widgets
     {
         public EditorBuffer buffer;
         public long viewOffset = 0;
+        public double leftViewOffset = 0;
         public bool showNumbers = true;
 
         public SimpleTextWindow(IApplication App, ILayoutManager layout, EditorBuffer buffer) : base(App, layout)
