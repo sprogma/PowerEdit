@@ -22,8 +22,8 @@ namespace Common
         {
             if (Writer == null)
             {
-                var stream = new FileStream(LogPath, FileMode.Append, FileAccess.Write, FileShare.ReadWrite, 4096);
-                Writer = new StreamWriter(stream, Encoding.UTF8);
+                var stream = new FileStream(LogPath, FileMode.Append, FileAccess.Write, FileShare.ReadWrite);
+                Writer = new StreamWriter(stream, Encoding.UTF8) { AutoFlush = true }; 
             }
             return Writer;
         }
