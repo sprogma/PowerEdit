@@ -152,8 +152,8 @@ namespace EditorCore.Cursor
                                 {
                                     var s = new EditorSelection(this, begin);
                                     long endPosition = s.InsertString(item);
-                                    s.SetPosition(begin, endPosition);
-                                    begin = endPosition;
+                                    s.SetPosition(begin, begin + endPosition);
+                                    begin += endPosition;
                                     newSelections.Add(s);
                                 }
                                 Selections = new(this, newSelections);

@@ -116,11 +116,11 @@ namespace ConsoleInterface
             {
                 if (file != null)
                 {
-                    project.OpenFile(file);
+                    project.OpenFile(file, false);
                 }
                 else
                 {
-                    project.CreateFile(null, "c");
+                    project.CreateFile(null, "c", false);
                 }
             }
 

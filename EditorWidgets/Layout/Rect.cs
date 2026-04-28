@@ -27,6 +27,25 @@ namespace EditorFramework.Layout
             H = other.H;
         }
 
+        public static Rect? Intersect(Rect a, Rect b)
+        {
+            long x1 = Math.Max(a.Ax, b.Ax);
+            long y1 = Math.Max(a.Ay, b.Ay);
+            long x2 = Math.Min(a.Bx, b.Bx);
+            long y2 = Math.Min(a.By, b.By);
+
+            long width = x2 - x1;
+            long height = y2 - y1;
+
+            if (width > 0 && height > 0)
+            {
+                return new Rect(x1, y1, width, height);
+            }
+
+            return null;
+        }
+
+
         public readonly long Ax => X;
         public readonly long Ay => Y;
         public readonly long Bx => X + W;

@@ -90,11 +90,7 @@ namespace ConsoleInterface
         public int Width { get; private set; }
         public int Height { get; private set; }
         public Rect ClipRect { get; set {
-                if (value.Ax < 0 || value.Ay < 0 || value.Bx > Width || value.By > Height)
-                {
-                    throw new ArgumentException("Wrong clip rectangle");
-                }
-                field = value;
+                field = Rect.Intersect(value, new(0, 0, Width, Height)) ?? new Rect(0,0,0,0);
             } }
         public void ResetClipRect() => ClipRect = new(0, 0, Width, Height);
 

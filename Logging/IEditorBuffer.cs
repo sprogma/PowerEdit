@@ -57,7 +57,12 @@ namespace Common
             {
                 return null;
             }
-            return Path.GetExtension(key)?[1..]?.ToLower() switch
+            var ext = Path.GetExtension(key);
+            if (string.IsNullOrEmpty(ext))
+            {
+                return null;
+            }
+            return ext?[1..]?.ToLower() switch
             {
                 "hive" => "hive",
                 "cpp" or "cxx" or "cc" or "c++" or "hpp" or "hxx" or "hh" => "cpp",

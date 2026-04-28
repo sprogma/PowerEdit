@@ -21,7 +21,7 @@ namespace TextBuffer
 
         public PersistentCTextBuffer()
         {
-            if (!CLibrary.WasInitializated) CLibrary.Init();
+            CLibrary.Init();
 
             project = CLibrary.project_create();
             curr_state = CLibrary.project_new_state(project);
@@ -32,7 +32,7 @@ namespace TextBuffer
 
         public PersistentCTextBuffer(string filename)
         {
-            if (!CLibrary.WasInitializated) CLibrary.Init();
+            CLibrary.Init();
 
             project = CLibrary.project_create();
             curr_state = CLibrary.project_open_file(project, filename);

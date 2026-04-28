@@ -194,15 +194,18 @@ namespace ConsoleInterface
                             Canvas.ApplyStyle(header, null, new cColor(0, 25, 40));
                             Rect tab = new(position.X, position.Y, tabWidth, 1);
                             Rect clip = Canvas.ClipRect;
-                            foreach (var (id, child) in tabsWindow.childs.Index())
+                            lock (tabsWindow.childsLock)
                             {
-                                Canvas.ClipRect = tab;
-                                if (tabsWindow.current == id)
+                                foreach (var (id, child) in tabsWindow.childs.Index())
                                 {
-                                    Canvas.ApplyStyle(tab, null, new cColor(0, 50, 80));
+                                    Canvas.ClipRect = tab;
+                                    if (tabsWindow.current == id)
+                                    {
+                                        Canvas.ApplyStyle(tab, null, new cColor(0, 50, 80));
+                                    }
+                                    Canvas.AddString(tab.X, tab.Y, Path.GetFileName(child.file.filename) ?? "<Unnamed>");
+                                    tab.X += tabWidth;
                                 }
-                                Canvas.AddString(tab.X, tab.Y, Path.GetFileName(child.file.filename) ?? "<Unnamed>");
-                                tab.X += tabWidth;
                             }
                             Canvas.ClipRect = clip;
                             if (tabsWindow.current < tabsWindow.childs.Count)

@@ -99,19 +99,26 @@ namespace TextBuffer
 
 
         private static LogDelegate? LogCallback;
-
-        public static bool WasInitializated { get; private set; } = false;
+        private static readonly Lock _syncRoot = new();
+        private static bool WasInitialized = false;
 
         static public void Init()
         {
-            LogCallback = (level, message) => {
-                string? text = Marshal.PtrToStringUTF8(message);
-                Logger.Log(level, $"[C] {text}");
-            };
-            SetLogger(LogCallback);
-            msrope_init();
+            if (WasInitialized) return;
 
-            WasInitializated = true;
+            lock (_syncRoot)
+            {
+                if (WasInitialized) return;
+
+                LogCallback = (level, message) => {
+                    string? text = Marshal.PtrToStringUTF8(message);
+                    Logger.Log(level, $"[C] {text}");
+                };
+                SetLogger(LogCallback);
+                msrope_init();
+
+                WasInitialized = true;
+            }
         }
     }
 }

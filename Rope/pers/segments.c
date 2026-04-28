@@ -13,7 +13,7 @@ _Atomic int64_t commited_size = 0;
 void reserve_nodes(int64_t need_node)
 {
     int64_t need_size = need_node + 1;
-    int64_t current_committed = atomic_load_explicit(&commited_size, memory_order_acquire);
+    int64_t current_committed = atomic_load(&commited_size);
     if (need_size > current_committed)
     {
         size_t count_to_commit = need_size - current_committed;

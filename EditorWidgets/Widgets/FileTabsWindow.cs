@@ -28,20 +28,26 @@ namespace EditorFramework.Widgets
             this.current = 0;
         }
 
-        public void OpenFile(ProjectEditorWindow Project, EditorFile file)
+        public void OpenFile(ProjectEditorWindow Project, EditorFile file, bool raiseFocus = true)
         {
             lock (childsLock)
             {
-                for (int i = 0; i < childs.Count; i++)
+                if (raiseFocus)
                 {
-                    if (childs[i].file == file)
+                    for (int i = 0; i < childs.Count; i++)
                     {
-                        current = i;
-                        return;
+                        if (childs[i].file == file)
+                        {
+                            current = i;
+                            return;
+                        }
                     }
                 }
                 childs.Add(new FileEditorWindow(App, GetLayout<FileEditorWindow>.Value, file));
-                current = childs.Count - 1;
+                if (raiseFocus)
+                {
+                    current = childs.Count - 1;
+                }
             }
         }
 

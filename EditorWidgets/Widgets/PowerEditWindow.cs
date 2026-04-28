@@ -20,7 +20,12 @@ namespace EditorFramework.Widgets
     public class PowerEditWindow: InputTextWindow
     {
         public EditorCursor usingCursor;
-        string editType;
+        private readonly string editType;
+
+        internal static Dictionary<EditorCursor, List<string>> RequestsHistory = [];
+        internal string Current;
+        internal long currentHistoryPosition;
+
 
         public (IEnumerable<string>?, string?) CurrentResult()
         {
@@ -71,29 +76,70 @@ namespace EditorFramework.Widgets
                                base(app, layout, new EditorBuffer(server, server.CommandProvider.Tokenizer, null, server.CommandProvider.LanguageId, new PersistentCTextBuffer()))
         {
             (long begin, long end, string text) = server.CommandProvider.ExampleScript(editType);
-            buffer.SetText(text);
+            Current = text;
+            buffer.SetText(Current);
             cursor?.Selections = new(cursor, [new EditorSelection(cursor, begin, end)]);
             this.usingCursor = usingCursor;
             this.editType = editType;
+            this.currentHistoryPosition = GetHistoryDepth();
         }
 
         internal void Apply()
         {
+            string cmd = buffer.Text.Substring(0);
+            PushHistory(cmd);
             usingCursor.Fork();
             if (editType == "powerEdit")
             {
-                usingCursor.ApplyCommand("powerEdit", buffer.Text.Substring(0));
+                usingCursor.ApplyCommand("powerEdit", cmd);
             }
             else if (editType == "replace")
             {
-                usingCursor.ApplyCommand("replace", buffer.Text.Substring(0));
+                usingCursor.ApplyCommand("replace", cmd);
             }
             else
             {
-                usingCursor.ApplyCommand("edit", buffer.Text.Substring(0));
+                usingCursor.ApplyCommand("edit", cmd);
             }
             usingCursor.Commit();
         }
+
+        private void TouchHistory()
+        {
+            if (!RequestsHistory.ContainsKey(usingCursor))
+            {
+                RequestsHistory[usingCursor] = [];
+            }
+        }
+
+        private void PushHistory(string value)
+        {
+            TouchHistory();
+            if (!string.IsNullOrEmpty(value))
+            {
+                if (RequestsHistory[usingCursor].Count == 0 || RequestsHistory[usingCursor][^1] != value)
+                {
+                    RequestsHistory[usingCursor].Add(value);
+                }
+            }
+        }
+
+        private string GetHistory(long id)
+        {
+            TouchHistory();
+            if (id >= RequestsHistory[usingCursor].Count)
+            {
+                return Current;
+            }
+            return RequestsHistory[usingCursor][(int)id];
+        }
+
+        private long GetHistoryDepth()
+        {
+            TouchHistory();
+            return RequestsHistory[usingCursor].Count;
+        }
+
 
         public override bool HandleEvent(EventBase e)
         {
@@ -108,6 +154,18 @@ namespace EditorFramework.Widgets
                 case KeyChordEvent key when key.Is(KeyCode.Enter, KeyMode.Ctrl):
                     Apply();
                     DeleteSelf();
+                    return false;
+                case KeyChordEvent key when key.Is(KeyCode.Up, KeyMode.Ctrl):
+                    if (currentHistoryPosition == GetHistoryDepth())
+                    {
+                        Current = buffer.Text.Substring(0);
+                    }
+                    currentHistoryPosition = Math.Max(0, currentHistoryPosition - 1);
+                    buffer.SetText(GetHistory(currentHistoryPosition));
+                    return false;
+                case KeyChordEvent key when key.Is(KeyCode.Down, KeyMode.Ctrl):
+                    currentHistoryPosition = Math.Min(GetHistoryDepth(), currentHistoryPosition + 1);
+                    buffer.SetText(GetHistory(currentHistoryPosition));
                     return false;
             }
             return base.HandleEvent(e);

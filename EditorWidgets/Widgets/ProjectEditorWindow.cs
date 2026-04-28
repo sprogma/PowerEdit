@@ -23,12 +23,20 @@ namespace EditorFramework.Widgets
         // public readonly ConcurrentDictionary<string, Task<EditorFile>> OpeningFiles = new();
         public EditorServer Server;
         public BaseWindow Child;
-        protected Action<ProjectEditorWindow, EditorFile> OpenFileCallback;
+        protected Action<ProjectEditorWindow, EditorFile, bool> OpenFileCallback;
         protected Action<ProjectEditorWindow, EditorFile> RaiseFileCallback;
+
+        private readonly Thread OpenFileManager;
+
+        public const int MaxParallelOpeningFiles = 128;
+        private readonly ConcurrentQueue<(string Filename, bool RaiseFocus)> FilesToOpen = new();
+        private readonly Semaphore MaxThreads = new(MaxParallelOpeningFiles, MaxParallelOpeningFiles);
+        private readonly AutoResetEvent WorkSignal = new(false);
+
 
         public ProjectEditorWindow(IApplication app, ILayoutManager layout,
                                    EditorServer server,
-                                   Action<ProjectEditorWindow, EditorFile> openFileCallback,
+                                   Action<ProjectEditorWindow, EditorFile, bool> openFileCallback,
                                    Action<ProjectEditorWindow, EditorFile> raiseFileCallback,
                                    BaseWindow child) : base(app, layout)
         {
@@ -36,33 +44,64 @@ namespace EditorFramework.Widgets
             Child = child;
             OpenFileCallback = openFileCallback;
             RaiseFileCallback = raiseFileCallback;
+
+            OpenFileManager = new Thread(ManagerLoop) { IsBackground = true };
+            OpenFileManager.Start();
+
         }
 
-        public EditorFile CreateFile(string? name = null, string? languageId = null)
+        public EditorFile CreateFile(string? name = null, string? languageId = null, bool raiseFocus = true)
         {
             var file = Server.CreateFile(name, languageId);
-            OpenFileCallback(this, file);
+            OpenFileCallback(this, file, raiseFocus);
             return file;
         }
 
         
-        public void OpenFile(string filename)
+        public void OpenFile(string filename, bool raiseFocus = true)
         {
             filename = Path.GetFullPath(filename);
             EditorFile? file;
             using (Server.FilesLock.EnterScope())
             {
                 file = Server.Files.Find(x => x.filename == filename);
-                if (file != null)
+                if (file != null && raiseFocus)
                 {
                     RaiseFileCallback(this, file);
                 }
                 Interlocked.Increment(ref Server.OpeningFiles);
             }
-            _ = Task.Run(() => {
-                file = Server.OpenFile(filename);
-                OpenFileCallback(this, file);
-            });
+
+            FilesToOpen.Enqueue((filename, raiseFocus));
+            WorkSignal.Set();
+        }
+
+        private void ManagerLoop()
+        {
+            while (true)
+            {
+                if (FilesToOpen.IsEmpty) WorkSignal.WaitOne();
+
+                if (FilesToOpen.TryDequeue(out var tuple))
+                {
+                    MaxThreads.WaitOne();
+
+                    var worker = new Thread(() =>
+                    {
+                        try
+                        {
+                            var file = Server.OpenFile(tuple.Filename);
+                            OpenFileCallback(this, file, tuple.RaiseFocus);
+                        }
+                        finally
+                        {
+                            MaxThreads.Release();
+                        }
+                    });
+                    worker.IsBackground = true;
+                    worker.Start();
+                }
+            }
         }
 
         public override bool HandleEvent(EventBase e)
