@@ -19,14 +19,15 @@ namespace EditorFramework.Widgets
         {
             editor.buffer.ActionOnUpdate += buf => { moditifed = true; };
             this.find = editor;
-            this.preview = new(app, 
-                               GetLayout<SimpleTextWindow>.Value, 
-                               new EditorBuffer(editor.buffer.Server, 
-                                                editor.usingCursor.Buffer.Tokenizer, 
-                                                null, 
-                                                editor.usingCursor.Buffer.LanguageId(), 
-                                                editor.usingCursor.Buffer.Text) { TryUseLSP = false }
-                               );
+            this.preview = new(app,
+                               GetLayout<SimpleTextWindow>.Value,
+                               new EditorBuffer(editor.buffer.Server,
+                                                editor.usingCursor.Buffer.Tokenizer,
+                                                null,
+                                                editor.usingCursor.Buffer.LanguageId(),
+                                                editor.usingCursor.Buffer.Text)
+                               { TryUseLSP = false }
+                               ) { relativeNumbers = false };
         }
 
         void UpdatePreview()
