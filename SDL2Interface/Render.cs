@@ -68,6 +68,11 @@ namespace SDL2Interface
                 p.preview.Layout.Resize(p.preview, lrect);
                 p.editor.Layout.Resize(p.editor, rrect);
             }
+            else if (window is FindWithPreviewWindow f)
+            {
+                f.preview.Layout.Resize(f.preview, lrect);
+                f.find.Layout.Resize(f.find, rrect);
+            }
             else
             {
                 throw new InvalidOperationException("Give bad window class for HSplit layout.");
@@ -153,6 +158,10 @@ namespace SDL2Interface
                 return new HSplitLayout(this);
             });
             LayoutRegistry.Register<PowerEditWithPreviewWindow>(() =>
+            {
+                return new HSplitLayout(this);
+            });
+            LayoutRegistry.Register<FindWithPreviewWindow>(() =>
             {
                 return new HSplitLayout(this);
             });
@@ -251,6 +260,10 @@ namespace SDL2Interface
                     case PowerEditWithPreviewWindow edit:
                         DrawRecurse(edit.editor);
                         DrawRecurse(edit.preview);
+                        break;
+                    case FindWithPreviewWindow f:
+                        DrawRecurse(f.find);
+                        DrawRecurse(f.preview);
                         break;
                     case TreeWalkWithPreviewWindow tree:
                         DrawRecurse(tree.tree);

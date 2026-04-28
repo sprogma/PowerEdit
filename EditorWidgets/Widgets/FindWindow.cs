@@ -13,7 +13,7 @@ using TextBuffer;
 
 namespace EditorFramework.Widgets
 {
-    internal class FindWindow : InputTextWindow
+    public class FindWindow : InputTextWindow
     {
         [Flags]
         internal enum FindOptions {
@@ -29,7 +29,7 @@ namespace EditorFramework.Widgets
 
         internal FindOptions Options;
 
-        long? resultBegin, resultEnd;
+        public long? resultBegin, resultEnd;
 
 
         public FindWindow(IApplication app, ILayoutManager layout, EditorServer server, EditorCursor usingCursor) :
@@ -63,12 +63,12 @@ namespace EditorFramework.Widgets
                 StringComparison comp = StringComparison.Ordinal;
                 if (isReverse)
                 {
-                    foundIdx = fullText.LastIndexOf(pattern, startPos, comp);
+                    foundIdx = fullText.LastIndexOf(pattern, startPos - 1, comp);
                     if (foundIdx == -1) foundIdx = fullText.LastIndexOf(pattern, comp);
                 }
                 else
                 {
-                    foundIdx = fullText.IndexOf(pattern, startPos, comp);
+                    foundIdx = fullText.IndexOf(pattern, startPos + 1, comp);
                     if (foundIdx == -1) foundIdx = fullText.IndexOf(pattern, comp);
                 }
                 length = pattern.Length;

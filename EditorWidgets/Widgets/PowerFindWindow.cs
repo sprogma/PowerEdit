@@ -15,7 +15,7 @@ using TextBuffer;
 
 namespace EditorFramework.Widgets
 {
-    internal class PowerFindWindow : InputTextWindow
+    public class PowerFindWindow : InputTextWindow
     {
         public EditorCursor usingCursor;
 

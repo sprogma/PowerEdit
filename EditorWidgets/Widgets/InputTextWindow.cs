@@ -181,7 +181,8 @@ namespace EditorFramework.Widgets
                 case KeyChordEvent key when key.Is(KeyCode.F, KeyMode.Ctrl):
                     if (cursor != null)
                     {
-                        OpenPopup(new FindWindow(App, GetLayout<FindWindow>.Value, cursor.Buffer.Server, cursor));
+                        var find = new FindWindow(App, GetLayout<FindWindow>.Value, cursor.Buffer.Server, cursor);
+                        OpenPopup(new FindWithPreviewWindow(App, GetLayout<FindWithPreviewWindow>.Value, find));
                         return false;
                     }
                     break;
