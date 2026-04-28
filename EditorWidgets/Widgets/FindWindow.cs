@@ -17,8 +17,8 @@ namespace EditorFramework.Widgets
     {
         [Flags]
         internal enum FindOptions {
-            FindReverse=0x1,
-            FindLiteral=0x2,
+            Reverse=0x1,
+            Literal=0x2,
         }
 
         public EditorCursor usingCursor;
@@ -52,8 +52,8 @@ namespace EditorFramework.Widgets
             string fullText = usingCursor.Buffer.Text.Substring(0);
             int startPos = (int)usingCursor.Selections[usingCursor.Selections.Count - 1].Begin;
 
-            bool isReverse = (Options & FindOptions.FindReverse) != 0;
-            bool isLiteral = (Options & FindOptions.FindLiteral) != 0;
+            bool isReverse = (Options & FindOptions.Reverse) != 0;
+            bool isLiteral = (Options & FindOptions.Literal) != 0;
 
             int foundIdx = -1;
             int length = 0;
@@ -177,6 +177,12 @@ namespace EditorFramework.Widgets
                 case KeyChordEvent key when key.Is(KeyCode.Enter, KeyMode.Ctrl):
                     Apply();
                     DeleteSelf();
+                    return false;
+                case KeyChordEvent key when key.Is(KeyCode.R, KeyMode.Ctrl):
+                    Options ^= FindOptions.Reverse;
+                    return false;
+                case KeyChordEvent key when key.Is(KeyCode.L, KeyMode.Ctrl):
+                    Options ^= FindOptions.Literal;
                     return false;
                 case KeyChordEvent key when key.Is(KeyCode.Up, KeyMode.Ctrl):
                     if (currentHistoryPosition == GetHistoryDepth())
