@@ -111,5 +111,7 @@ namespace TextBuffer
         public (long index, long length) GetLineOffsets(long line);
 
         public long GetPosition(long line, long col);
+
+        public long GetLineCount();
     }
 }

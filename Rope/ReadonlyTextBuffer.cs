@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using static System.Net.Mime.MediaTypeNames;
 using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace TextBuffer
@@ -134,6 +135,11 @@ namespace TextBuffer
         public void Dispose()
         {
             GC.SuppressFinalize(this);
+        }
+
+        public long GetLineCount()
+        {
+            return content.AsSpan().Count('\n');
         }
     }
 

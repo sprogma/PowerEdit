@@ -28,6 +28,11 @@ namespace EditorFramework.Widgets
                                                 editor.usingCursor.Buffer.Text)
                                { TryUseLSP = false }
                                ) { relativeNumbers = false };
+            if (this.find.usingCursor.Selections.Count > 0)
+            {
+                this.preview.buffer.Cursor?.Selections.Clear();
+                this.preview.buffer.Cursor?.Selections.Add(this.find.usingCursor.Selections[0]);
+            }
         }
 
         void UpdatePreview()

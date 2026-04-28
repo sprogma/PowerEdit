@@ -9,6 +9,8 @@ namespace EditorFramework.Layout
     {
         public void Resize(BaseWindow window, Rect NewSize);
         public void UpdateScale(BaseWindow window, double scale);
+        void ResizeInternal(BaseWindow window, Rect NewSize);
+
         public Rect Position { get; }
         public long? PageStepSize { get; }
     }

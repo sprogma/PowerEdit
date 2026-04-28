@@ -78,28 +78,34 @@ namespace EditorFramework.Widgets
                 string regexPattern = pattern;
                 RegexOptions opt = isReverse ? RegexOptions.RightToLeft : RegexOptions.None;
 
-                Match m = Regex.Match(fullText, regexPattern, opt);
-
-                m = Regex.Match(fullText, regexPattern, opt);
-
-                var matches = Regex.Matches(fullText, regexPattern, opt);
-                if (matches.Count > 0)
+                try
                 {
-                    Match? bestMatch = null;
-                    if (isReverse)
+                    Match m = Regex.Match(fullText, regexPattern, opt);
+                    m = Regex.Match(fullText, regexPattern, opt);
+
+                    var matches = Regex.Matches(fullText, regexPattern, opt);
+                    if (matches.Count > 0)
                     {
-                        foreach (Match candidate in matches)
-                            if (candidate.Index < startPos) { bestMatch = candidate; break; }
-                        foundIdx = (bestMatch ?? matches[0]).Index;
-                        length = (bestMatch ?? matches[0]).Length;
+                        Match? bestMatch = null;
+                        if (isReverse)
+                        {
+                            foreach (Match candidate in matches)
+                                if (candidate.Index < startPos) { bestMatch = candidate; break; }
+                            foundIdx = (bestMatch ?? matches[0]).Index;
+                            length = (bestMatch ?? matches[0]).Length;
+                        }
+                        else
+                        {
+                            foreach (Match candidate in matches)
+                                if (candidate.Index > startPos) { bestMatch = candidate; break; }
+                            foundIdx = (bestMatch ?? matches[0]).Index;
+                            length = (bestMatch ?? matches[0]).Length;
+                        }
                     }
-                    else
-                    {
-                        foreach (Match candidate in matches)
-                            if (candidate.Index > startPos) { bestMatch = candidate; break; }
-                        foundIdx = (bestMatch ?? matches[0]).Index;
-                        length = (bestMatch ?? matches[0]).Length;
-                    }
+                }
+                catch
+                {
+                    foundIdx = -1;
                 }
             }
 

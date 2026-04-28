@@ -79,6 +79,29 @@ namespace ConsoleInterface
         }
     }
 
+    internal class FindSplitLayout : BaseLayout
+    {
+        public FindSplitLayout(Render render) : base(render) { }
+
+        public override void ResizeInternal(BaseWindow window, Rect NewSize)
+        {
+            base.ResizeInternal(window, NewSize);
+
+
+            if (window is FindWithPreviewWindow f)
+            {
+                Rect lrect = new(NewSize.X, NewSize.Y, NewSize.W, 5 + f.find.buffer.Text.GetLineCount());
+                f.find.Layout.Resize(f.find, lrect);
+                Rect rrect = new(NewSize.X, NewSize.Y + lrect.H, NewSize.W, NewSize.H - lrect.H);
+                f.preview.Layout.Resize(f.preview, rrect);
+            }
+            else
+            {
+                throw new InvalidOperationException("Give bad window class for HSplit layout.");
+            }
+        }
+    }
+
     internal class TabLayout : BaseLayout
     {
         public TabLayout(Render render) : base(render) { }
@@ -154,7 +177,7 @@ namespace ConsoleInterface
             });
             LayoutRegistry.Register<FindWithPreviewWindow>(() =>
             {
-                return new HSplitLayout(this);
+                return new FindSplitLayout(this);
             });
             LayoutRegistry.Register<FileTabsWindow>(() =>
             {

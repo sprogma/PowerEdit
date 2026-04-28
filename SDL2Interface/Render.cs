@@ -68,10 +68,31 @@ namespace SDL2Interface
                 p.preview.Layout.Resize(p.preview, lrect);
                 p.editor.Layout.Resize(p.editor, rrect);
             }
-            else if (window is FindWithPreviewWindow f)
+            else
             {
-                f.preview.Layout.Resize(f.preview, lrect);
-                f.find.Layout.Resize(f.find, rrect);
+                throw new InvalidOperationException("Give bad window class for HSplit layout.");
+            }
+        }
+    }
+
+    internal class FindSplitLayout : BaseLayout
+    {
+        public FindSplitLayout(Render render) : base(render) { }
+
+        public override void ResizeInternal(BaseWindow window, EditorFramework.Layout.Rect NewSize)
+        {
+            base.ResizeInternal(window, NewSize);
+            
+            long line = (Render.textRenderer.Ready ? Render.textRenderer.FontLineStep : 0);
+
+
+            if (window is FindWithPreviewWindow f)
+            {
+                EditorFramework.Layout.Rect lrect = new(NewSize.X, NewSize.Y, NewSize.W, line * (5 + f.find.buffer.Text.GetLineCount()));
+                EditorFramework.Layout.Rect rrect = new(NewSize.X, NewSize.Y + lrect.H, NewSize.W, NewSize.H - lrect.H);
+
+                f.find.Layout.Resize(f.find, lrect);
+                f.preview.Layout.Resize(f.preview, rrect);
             }
             else
             {
@@ -163,7 +184,7 @@ namespace SDL2Interface
             });
             LayoutRegistry.Register<FindWithPreviewWindow>(() =>
             {
-                return new HSplitLayout(this);
+                return new FindSplitLayout(this);
             });
             LayoutRegistry.Register<FileTabsWindow>(() =>
             {

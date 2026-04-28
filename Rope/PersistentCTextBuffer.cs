@@ -388,5 +388,10 @@ namespace TextBuffer
             //Logger.Log(LogLevel.Warning, $"FREE PROJECT AT {project} FROM BUFFER {RuntimeHelpers.GetHashCode(this)}");
             CLibrary.project_destroy(project);
         }
+        public long GetLineCount()
+        {
+            CLibrary.state_get_offsets(curr_state, Length - 1, out long line, out _);
+            return line;
+        }
     }
 }
