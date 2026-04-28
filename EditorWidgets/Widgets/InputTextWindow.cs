@@ -181,6 +181,13 @@ namespace EditorFramework.Widgets
                 case KeyChordEvent key when key.Is(KeyCode.F, KeyMode.Ctrl):
                     if (cursor != null)
                     {
+                        OpenPopup(new FindWindow(App, GetLayout<FindWindow>.Value, cursor.Buffer.Server, cursor));
+                        return false;
+                    }
+                    break;
+                case KeyChordEvent key when key.Is(KeyCode.F, KeyMode.Ctrl | KeyMode.Shift):
+                    if (cursor != null)
+                    {
                         OpenPopup(new PowerFindWindow(App, GetLayout<PowerFindWindow>.Value, cursor.Buffer.Server, cursor));
                         return false;
                     }
