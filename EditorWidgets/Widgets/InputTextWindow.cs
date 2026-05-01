@@ -366,21 +366,31 @@ namespace EditorFramework.Widgets
                         long id = 0;
                         foreach (var x in cursor.Selections)
                         {
-                            long MaxLine = x.MaxLine;
-                            var after = x.Cursor.Buffer.GetLine(MaxLine + 1, null);
+                            var after = x.Cursor.Buffer.GetLine(x.MaxLine + 1, null);
                             if (after.value == null)
                             {
                                 id++;
                                 continue;
                             }
                             x.DeleteString(after.offset, after.value.Length);
-                            var before = x.Cursor.Buffer.GetLine(x.MinLine, null);
-                            if (before.value == null)
+                            var before = x.Cursor.Buffer.GetLineOffsets(x.MinLine);
+                            if (before.length <= 0)
                             {
                                 id++;
                                 continue;
                             }
-                            x.InsertString(before.offset, after.value);
+                            string newValue = after.value;
+                            if (!newValue.EndsWith('\n'))
+                            {
+                                newValue += '\n';
+                                /* check for \n on our line, and remove it if it exists */
+                                var outr = x.Cursor.Buffer.GetLineOffsets(x.MaxLine);
+                                if (x.Cursor.Buffer.Text[outr.begin + outr.length - 1] == '\n') // have '\n'
+                                {
+                                    x.DeleteString(outr.begin + outr.length - 1, 1);
+                                }
+                            }
+                            x.InsertString(before.begin, newValue);
                             cursor.Selections[id] = x;
                             id++;
                         }
@@ -402,13 +412,18 @@ namespace EditorFramework.Widgets
                                 continue;
                             }
                             x.DeleteString(before.offset, before.value.Length);
-                            var after = x.Cursor.Buffer.GetLine(x.MaxLine + 1, null);
-                            if (after.value == null)
+                            var after = x.Cursor.Buffer.GetLineOffsets(x.MaxLine);
+                            if (after.begin == x.Cursor.Buffer.Text.Length || x.Cursor.Buffer.Text[after.begin + after.length - 1] != '\n')
                             {
-                                id++;
-                                continue;
+                                // fix problems with "\n"
+                                var (Begin, End) = (x.Begin, x.End);
+                                x.InsertString(after.begin + after.length, "\n" + before.value.Remove(before.value.Length - 1));
+                                x.SetPosition(Begin, End);
                             }
-                            x.InsertString(after.offset, before.value);
+                            else
+                            {
+                                x.InsertString(after.begin + after.length, before.value);
+                            }
                             cursor.Selections[id] = x;
                             id++;
                         }

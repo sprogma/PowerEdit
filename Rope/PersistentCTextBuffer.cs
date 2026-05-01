@@ -313,14 +313,16 @@ namespace TextBuffer
                 if (prevNewline == -1) return (0, 0);
                 startPos = prevNewline + 1;
             }
-            if (startPos >= Length)
+            long length = Length;
+            if (startPos >= length)
             {
+                if (startPos == length) return (length, 0);
                 return (0, 0);
             }
             long nextNewline = CLibrary.state_nth_newline(curr_state, line), len;
             if (nextNewline == -1)
             {
-                len = Length - startPos;
+                len = length - startPos;
             }
             else
             {
