@@ -467,14 +467,113 @@ namespace SDL2Interface
             return windows;
         }
 
+
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern bool OpenClipboard(IntPtr hWndNewOwner);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern bool EmptyClipboard();
+
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern IntPtr SetClipboardData(uint uFormat, IntPtr hMem);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern IntPtr GetClipboardData(uint uFormat);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern bool CloseClipboard();
+
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern bool IsClipboardFormatAvailable(uint format);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern IntPtr GlobalAlloc(uint uFlags, UIntPtr dwBytes);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern IntPtr GlobalLock(IntPtr hMem);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern bool GlobalUnlock(IntPtr hMem);
+
+        private const uint CF_UNICODETEXT = 13;
+        private const uint GMEM_MOVEABLE = 0x0002;
+
         public void SetClipboard(string text)
         {
-            if (SDL.SetClipboardText(text) != 0)
+            if (string.IsNullOrEmpty(text)) return;
+
+            if (!OpenClipboard(IntPtr.Zero)) return;
+
+            try
             {
-                string error = SDL.GetError();
-                Logger.Log(LogLevel.Error, $"Error when copying to buffer: {error}");
+                EmptyClipboard();
+
+                byte[] bytes = Encoding.Unicode.GetBytes(text + "\0");
+
+                IntPtr hGlobal = GlobalAlloc(GMEM_MOVEABLE, (UIntPtr)bytes.Length);
+                if (hGlobal == IntPtr.Zero) return;
+
+                IntPtr target = GlobalLock(hGlobal);
+                try
+                {
+                    Marshal.Copy(bytes, 0, target, bytes.Length);
+                }
+                finally
+                {
+                    GlobalUnlock(hGlobal);
+                }
+
+                SetClipboardData(CF_UNICODETEXT, hGlobal);
+            }
+            finally
+            {
+                CloseClipboard();
             }
         }
+
+        public string? GetClipboard()
+        {
+            if (!IsClipboardFormatAvailable(CF_UNICODETEXT)) return null;
+            if (!OpenClipboard(IntPtr.Zero)) return null;
+
+            try
+            {
+                IntPtr hGlobal = GetClipboardData(CF_UNICODETEXT);
+                if (hGlobal == IntPtr.Zero) return null;
+
+                IntPtr lpstr = GlobalLock(hGlobal);
+                if (lpstr == IntPtr.Zero) return null;
+
+                try
+                {
+                    return Marshal.PtrToStringUni(lpstr);
+                }
+                finally
+                {
+                    GlobalUnlock(hGlobal);
+                }
+            }
+            finally
+            {
+                CloseClipboard();
+            }
+        }
+
+        // SDL is foolish about \r\n.
+
+        //public void SetClipboard(string text)
+        //{
+        //    if (SDL.SetClipboardText(text) != 0)
+        //    {
+        //        string error = SDL.GetError();
+        //        Logger.Log(LogLevel.Error, $"Error when copying to buffer: {error}");
+        //    }
+        //}
+
+        //public string GetClipboard()
+        //{
+        //    return SDL.GetClipboardText();
+        //}
     }
 
     internal class Program

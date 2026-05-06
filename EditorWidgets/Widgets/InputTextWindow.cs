@@ -103,19 +103,34 @@ namespace EditorFramework.Widgets
                     if (cursor != null)
                     {
                         cursor.Selections.Copy();
-                        App.SetClipboard(string.Join(Environment.NewLine, cursor.Selections.GetPaste()));
+                        App.SetClipboard(string.Join('\n', cursor.Selections.GetPaste()));
                     }
                     return false;
                 case KeyChordEvent key when key.Is(KeyCode.X, KeyMode.Ctrl) || key.Is(KeyCode.X, KeyMode.Ctrl | KeyMode.Shift):
                     cursor?.Fork();
                     cursor?.Selections.Copy();
+                    if (cursor != null)
+                    {
+                        App.SetClipboard(string.Join('\n', cursor.Selections.GetPaste()));
+                    }
                     cursor?.Selections.DeleteString();
                     cursor?.Commit();
                     return false;
                 case KeyChordEvent key when key.Is(KeyCode.V, KeyMode.Ctrl) || key.Is(KeyCode.V, KeyMode.Ctrl | KeyMode.Shift):
                     cursor?.Fork();
                     cursor?.Selections.DeleteString();
-                    cursor?.Selections.Paste();
+                    if (cursor != null)
+                    {
+                        string? clipboard = App.GetClipboard();
+                        if (clipboard == null || clipboard == string.Join('\n', cursor.Selections.GetPaste()))
+                        {
+                            cursor.Selections.Paste();
+                        }
+                        else
+                        {
+                            cursor.Selections.InsertString(clipboard);
+                        }
+                    }
                     cursor?.Commit();
                     return false;
                 case KeyChordEvent key when key.Is(KeyCode.Minus, KeyMode.Ctrl):

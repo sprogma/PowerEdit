@@ -11,6 +11,8 @@ namespace EditorFramework.ApplicationApi
 
         public void SetClipboard(string text);
 
+        public string? GetClipboard();
+
         public IEnumerable<BaseWindow> ListWindows();
     }
 }
