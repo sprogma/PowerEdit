@@ -54,8 +54,8 @@ namespace EditorFramework.Widgets
                         {
                             if (x is PromptTextWindow itw)
                             {
-                                string newFilename = itw.buffer.Text.Substring(0);
-                                newFilename = Path.GetFullPath(newFilename);
+                                string? newFilename = itw.buffer.Text.Substring(0);
+                                newFilename = Path.TryGetFullPath(newFilename);
                                 if (string.IsNullOrWhiteSpace(newFilename)) {
                                     ReleasePopup();
                                     OpenPopup(new AlertWindow(App, GetLayout<AlertWindow>.Value, $"Error - Empty filename", ("Ok", () => { }))); 

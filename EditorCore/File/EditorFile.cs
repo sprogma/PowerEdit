@@ -31,8 +31,7 @@ namespace EditorCore.File
 
         public EditorFile(Server.EditorServer server, string filename, ITextBuffer buffer)
         {
-            filename = Path.GetFullPath(filename);
-            this.filename = filename;
+            this.filename = Path.TryGetFullPath(filename);
             Buffer = new EditorBuffer(server,
                                       BaseTokenizer.CreateTokenizer(IEditorBuffer.LanguageId(filename)),
                                       this.filename, IEditorBuffer.LanguageId(filename),
@@ -73,7 +72,7 @@ namespace EditorCore.File
 
         public void Save(string? newFilename)
         {
-            if (newFilename != null) newFilename = Path.GetFullPath(newFilename);
+            newFilename = Path.TryGetFullPath(newFilename);
             if (newFilename != filename)
             {
                 filename = newFilename;

@@ -60,7 +60,9 @@ namespace EditorFramework.Widgets
         
         public void OpenFile(string filename, bool raiseFocus = true)
         {
-            filename = Path.GetFullPath(filename);
+            string? tmpname = Path.TryGetFullPath(filename);
+            if (tmpname == null) return;
+            filename = tmpname;
             EditorFile? file;
             using (Server.FilesLock.EnterScope())
             {
@@ -123,8 +125,8 @@ namespace EditorFramework.Widgets
                     {
                         if (x is PromptTextWindow itw)
                         {
-                            string filename = itw.buffer.Text.Substring(0);
-                            filename = Path.GetFullPath(filename);
+                            string? filename = itw.buffer.Text.Substring(0);
+                            filename = Path.TryGetFullPath(filename);
                             if (!File.Exists(filename))
                             {
                                 ReleasePopup();

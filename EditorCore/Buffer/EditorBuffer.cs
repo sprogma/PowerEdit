@@ -74,7 +74,7 @@ namespace EditorCore.Buffer
 
         public EditorBuffer(Server.EditorServer server, BaseTokenizer tokenizer, string? filename, string? languageId, ITextBuffer buffer)
         {
-            if (filename != null) { filename = Path.GetFullPath(filename); }
+            filename = Path.TryGetFullPath(filename);
             GivenLanguageId = languageId;
             Tokenizer = tokenizer;
             Text = buffer;
@@ -109,7 +109,7 @@ namespace EditorCore.Buffer
 
         public EditorBuffer(Server.EditorServer server, string content, BaseTokenizer tokenizer, string? filename, string? languageId, ITextBuffer buffer)
         {
-            if (filename != null) { filename = Path.GetFullPath(filename); }
+            filename = Path.TryGetFullPath(filename);
             GivenLanguageId = languageId;
             Tokenizer = tokenizer;
             Text = buffer;
@@ -442,7 +442,7 @@ namespace EditorCore.Buffer
 
         internal void UpdateRename(string? newFilename)
         {
-            if (newFilename != null) newFilename = Path.GetFullPath(newFilename);
+            newFilename = Path.TryGetFullPath(newFilename);
             string? oldLanguage = LanguageId();
             string? newLanguage = IEditorBuffer.LanguageId(newFilename);
             if (oldLanguage != newLanguage)

@@ -31,8 +31,15 @@ namespace EditorFramework.Widgets
         {
             if (editType == "powerEdit")
             {
-                var res = buffer.Server.CommandProvider.Execute(buffer.Text.Substring(0), usingCursor.Selections.ToArray());
-                return (res.Item1?.Select(x => x.ToString()).Where(x => x != null).Cast<string>(), res.Item2);
+                var countToTake = Math.Min(usingCursor.Selections.Count, 128);
+                var selectionsToProcess = usingCursor.Selections.Take((int)countToTake).ToArray();
+                var res = buffer.Server.CommandProvider.Execute(buffer.Text.Substring(0), selectionsToProcess);
+                var results = res.Item1?.Select(x => x.ToString()).Where(x => x != null).Cast<string>() ?? [];
+                if (usingCursor.Selections.Count > 128)
+                {
+                    results = results.Prepend("Preview limited to first 128 nodes");
+                }
+                return (results, res.Item2);
             }
             else if (editType == "replace")
             {
@@ -45,30 +52,33 @@ namespace EditorFramework.Widgets
                 {
                     text = usingCursor.SelectionsText.ToArray();
                 }
-                (IEnumerable<object?>?, string?) res;
-                if (text.Sum(x => x.Length) > 1000)
+                long currentTotal = 0;
+                var limitedText = text.TakeWhile(s => { currentTotal += s.Length; return currentTotal <= 16384; }).ToArray();
+
+                bool isTruncated = limitedText.Length < text.Length;
+                var res = buffer.Server.CommandProvider.Execute(buffer.Text.Substring(0), limitedText);
+                var results = res.Item1?.Select(x => x?.ToString()).Where(x => x != null).Cast<string>() ?? [];
+
+                if (isTruncated)
                 {
-                    res = (["Too big arguments. preview disabled"], "Too big arguments. preview disabled");
+                    results = results.Prepend("Too big count of args. Preview cutted");
                 }
-                else
-                {    
-                    res = buffer.Server.CommandProvider.Execute(buffer.Text.Substring(0), text);
-                }
-                return (res.Item1?.Select(x => x?.ToString()).Where(x => x != null).Cast<string>(), res.Item2);
+                return (results, res.Item2);
             }
             else
             {
                 var text = usingCursor.SelectionsText.ToArray();
-                (IEnumerable<object?>?, string?) res;
-                if (text.Sum(x => x.Length) > 1000)
+                long currentTotal = 0;
+                var limitedText = text.TakeWhile(s => { currentTotal += s.Length; return currentTotal <= 16384; }).ToArray();
+                bool isTruncated = limitedText.Length < text.Length;
+                var res = buffer.Server.CommandProvider.Execute(buffer.Text.Substring(0), limitedText)
+                var results = res.Item1?.Select(x => x?.ToString()).Where(x => x != null).Cast<string>() ?? [];
+                if (isTruncated)
                 {
-                    res = (["Too big arguments. preview disabled"], "Too big arguments. preview disabled");
+                    results = results.Prepend("Too big count of args. Preview cutted");
                 }
-                else
-                {
-                    res = buffer.Server.CommandProvider.Execute(buffer.Text.Substring(0), text);
-                }
-                return (res.Item1?.Select(x => x?.ToString()).Where(x => x != null).Cast<string>(), res.Item2);
+                return (results, res.Item2);
+
             }
         }
 

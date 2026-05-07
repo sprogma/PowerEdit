@@ -262,7 +262,7 @@ namespace EditorFramework
                                         try { errorFilePath = new Uri(uriProp.GetString()!).LocalPath; } catch { continue; }
                                     }
                                     if (string.IsNullOrEmpty(errorFilePath)) continue;
-                                    string normError = Path.GetFullPath(errorFilePath).TrimEnd('\\', '/');
+                                    string? normError = Path.TryGetFullPath(errorFilePath)?.TrimEnd('\\', '/');
 
                                     if (!physLoc.TryGetProperty("region", out JsonElement region)) continue;
 
@@ -276,7 +276,7 @@ namespace EditorFramework
                                     {
                                         var targetFile = file.Buffer.Server.Files.FirstOrDefault(x =>
                                             x.filename != null &&
-                                            string.Equals(Path.GetFullPath(x.filename).TrimEnd('\\', '/'), normError, StringComparison.OrdinalIgnoreCase)
+                                            string.Equals(Path.TryGetFullPath(x.filename)?.TrimEnd('\\', '/'), normError, StringComparison.OrdinalIgnoreCase)
                                         );
 
                                         if (targetFile != null)
@@ -301,7 +301,7 @@ namespace EditorFramework
                                                             chLoc.TryGetProperty("uri", out JsonElement chUri))
                                                         {
                                                             string cPath = new Uri(chUri.GetString()!).LocalPath;
-                                                            if (!string.Equals(Path.GetFullPath(cPath).TrimEnd('\\', '/'), normError, StringComparison.OrdinalIgnoreCase))
+                                                            if (!string.Equals(Path.TryGetFullPath(cPath)?.TrimEnd('\\', '/'), normError, StringComparison.OrdinalIgnoreCase))
                                                                 continue;
                                                         }
 
