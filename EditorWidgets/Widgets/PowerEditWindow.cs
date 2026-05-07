@@ -71,7 +71,7 @@ namespace EditorFramework.Widgets
                 long currentTotal = 0;
                 var limitedText = text.TakeWhile(s => { currentTotal += s.Length; return currentTotal <= 16384; }).ToArray();
                 bool isTruncated = limitedText.Length < text.Length;
-                var res = buffer.Server.CommandProvider.Execute(buffer.Text.Substring(0), limitedText)
+                var res = buffer.Server.CommandProvider.Execute(buffer.Text.Substring(0), limitedText);
                 var results = res.Item1?.Select(x => x?.ToString()).Where(x => x != null).Cast<string>() ?? [];
                 if (isTruncated)
                 {
