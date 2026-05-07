@@ -30,7 +30,7 @@ namespace EditorCore.Buffer
 
         public ITextBuffer Text { get; internal set; }
         public Server.EditorServer Server { get; internal set; }
-        public Cursor.EditorCursor? Cursor { get; internal set; }
+        public Cursor.EditorCursor Cursor { get; internal set; }
         public BaseTokenizer Tokenizer { get; internal set; }
         public List<Token> Tokens { get; internal set; } = [];
 
@@ -494,7 +494,8 @@ namespace EditorCore.Buffer
                 if (PotentialClient != null) { ClientPipeline.Writer.TryWrite(async () => await (await PotentialClient).CloseFileAsync(Filename, GetId(), LanguageId())); }
                 ClientPipeline.Writer.Complete();
             }
-            Text.Dispose();
+            // TODO: restore this after allowing multiple cursors
+            //Text.Dispose();
         }
 
         public string? LanguageId()

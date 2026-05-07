@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 namespace EditorFramework.Widgets
 {
     public delegate void OnQuitAction(BaseWindow window);
+    public delegate void AfterPopupQuitAction();
 
     public abstract class BaseWindow
     {
@@ -21,6 +22,7 @@ namespace EditorFramework.Widgets
         public BaseWindow? Popup = null;
         public BaseWindow? Parent = null;
         public OnQuitAction? OnQuit = null;
+        public AfterPopupQuitAction? AfterPopupQuit = null;
 
         public BaseWindow(IApplication app, ILayoutManager layout)
         {
@@ -59,7 +61,11 @@ namespace EditorFramework.Widgets
         /// <returns> true if event needs to fall down (to next window in queue) </returns>
         public bool Event(EventBase e)
         {
-            if (Popup != null)
+            if (IsDeleted)
+            {
+                return true;
+            }
+            else if (Popup != null)
             {
                 return Popup.Event(e);
             }
@@ -87,6 +93,10 @@ namespace EditorFramework.Widgets
                 Parent?.Popup = null;
             }
             this.IsDeleted = true;
+            if (Parent?.Popup == this)
+            {
+                Parent?.AfterPopupQuit?.Invoke();
+            }
         }
     }
 }

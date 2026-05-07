@@ -25,7 +25,7 @@ namespace EditorFramework.Widgets
 
 
         public PowerFindWindow(IApplication app, ILayoutManager layout, EditorServer server, EditorCursor usingCursor) : 
-                               base(app, layout, new EditorBuffer(server, usingCursor.Buffer.Tokenizer, null, usingCursor.Buffer.LanguageId(), new PersistentCTextBuffer()))
+                               base(app, layout, new EditorBuffer(server, usingCursor.Buffer.Tokenizer, null, usingCursor.Buffer.LanguageId(), new PersistentCTextBuffer()).Cursor)
         {
             this.Current = "";
             buffer.SetText(Current);

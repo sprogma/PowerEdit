@@ -91,9 +91,17 @@ namespace ConsoleInterface
             if (window is FindWithPreviewWindow f)
             {
                 Rect lrect = new(NewSize.X, NewSize.Y, NewSize.W, 5 + f.find.buffer.Text.GetLineCount());
-                f.find.Layout.Resize(f.find, lrect);
                 Rect rrect = new(NewSize.X, NewSize.Y + lrect.H, NewSize.W, NewSize.H - lrect.H);
-                f.preview.Layout.Resize(f.preview, rrect);
+
+                // do it always to remove text jumps
+                //if (f.find.resultBuffer != f.find.usingCursor.Buffer)
+                {
+                    rrect.Y += 1;
+                    rrect.H -= 1;
+                }
+
+                f.find.Layout.Resize(f.find, lrect);
+                f.preview?.Layout.Resize(f.preview, rrect);
             }
             else
             {
@@ -256,9 +264,23 @@ namespace ConsoleInterface
                         DrawRecurse(edit.editor);
                         DrawRecurse(edit.preview);
                         break;
-                    case FindWithPreviewWindow edit:
-                        DrawRecurse(edit.find);
-                        DrawRecurse(edit.preview);
+                    case FindWithPreviewWindow f:
+                        DrawRecurse(f.find);
+                        if (f.preview != null)
+                        {
+                            Rect findClipPos = new(f.find.Layout.Position.Ax, f.find.Layout.Position.By, f.find.Layout.Position.Bx, f.find.Layout.Position.By + 1);
+                            Canvas.ClipRect = findClipPos;
+                            if (f.find.resultBuffer != f.find.usingCursor.Buffer) // if found in another file
+                            {
+                                string message = $"Found in file <{f.find.resultFile?.filename ?? "no name"}>";
+                                Canvas.AddString(findClipPos.X, findClipPos.Y, message, new(30, 30, 0), new(255, 255, 150));
+                            }
+                            else
+                            {
+                                Canvas.FillRect(findClipPos, " ", new(10, 10, 0), null);
+                            }
+                            DrawRecurse(f.preview);
+                        }
                         break;
                     case TreeWalkWithPreviewWindow tree:
                         DrawRecurse(tree.tree);
@@ -585,12 +607,24 @@ namespace ConsoleInterface
         {
             Canvas.FillRect(window.Layout.Position, " ", cColor.Default, cColor.Default);
 
+            /* draw borders */
+            Canvas.FillRect(new(window.Layout.Position.Ax, window.Layout.Position.Ay, 1, window.Layout.Position.H), "|", cColor.Default, cColor.Default);
+            Canvas.FillRect(new(window.Layout.Position.Bx - 1, window.Layout.Position.Ay, 1, window.Layout.Position.H), "|", cColor.Default, cColor.Default);
+            Canvas.FillRect(new(window.Layout.Position.Ax, window.Layout.Position.Ay, window.Layout.Position.W, 1), "-", cColor.Default, cColor.Default);
+            Canvas.FillRect(new(window.Layout.Position.Ax, window.Layout.Position.By - 1, window.Layout.Position.W, 1), "-", cColor.Default, cColor.Default);
+
             /* draw all lines */
             long w = 5, h = 1;
 
+            window.Scale = window.DestinationScale;
+            Vector2 positionScale = new(Math.Max(w + 1, w + (long)(window.Scale / 3.0) - 3), h + (window.Scale > 18.0 ? 1 : 0));
+
+            Vector2 Dest = window.current.position * positionScale;
+            window.Camera.X = (float)Math.Round(Dest.X);
+            window.Camera.Y = (float)Math.Round(Dest.Y);
+
             Rect position = window.Layout.Position;
             Vector2 screenOffset = new(position.W * 0.5f, position.H * 0.5f);
-            Vector2 positionScale = new(Math.Max(w+1, w + (long)(window.Scale / 3.0) - 3), h+(window.Scale > 18.0 ? 1 : 0));
 
             foreach (var node in window.tree.Values.Where(x => !x.hidden))
             {
@@ -634,28 +668,6 @@ namespace ConsoleInterface
                 {
                     Canvas.AddString(ix, iy, $"#{node.id&0xFFFF:X4}", cColor.Default, cColor.Default);
                 }
-            }
-            {
-                Vector2 Dest = window.current.position * positionScale;
-                window.Camera.X = (float)Math.Round(Dest.X);
-                window.Camera.Y = (float)Math.Round(Dest.Y);
-                //if (window.Camera.X < Dest.X && Math.Abs(window.Camera.X - Dest.X) > 0.6)
-                //{
-                //    window.Camera.X++;
-                //}
-                //if (window.Camera.X > Dest.X && Math.Abs(window.Camera.X - Dest.X) > 0.6)
-                //{
-                //    window.Camera.X--;
-                //}
-                //if (window.Camera.Y < Dest.Y && Math.Abs(window.Camera.Y - Dest.Y) > 0.6)
-                //{
-                //    window.Camera.Y++;
-                //}
-                //if (window.Camera.Y > Dest.Y && Math.Abs(window.Camera.Y - Dest.Y) > 0.6)
-                //{
-                //    window.Camera.Y--;
-                //}
-                window.Scale = window.Scale * 0.9f + window.DestinationScale * 0.1f;
             }
 
             Canvas.FillRect(new(window.Layout.Position) { Y = window.Layout.Position.By, H = 1 }, " ", cColor.Default, cColor.Default);

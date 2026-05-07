@@ -28,9 +28,9 @@ namespace EditorFramework.Widgets
         public long enteredLineNumber = 0;
         public bool jumpInput = false;
 
-        public InputTextWindow(IApplication app, ILayoutManager layout, EditorBuffer buffer) : base(app, layout, buffer)
+        public InputTextWindow(IApplication app, ILayoutManager layout, EditorCursor cursor) : base(app, layout, cursor.Buffer)
         {
-            this.cursor = buffer.Cursor;
+            this.cursor = cursor;
         }
 
 

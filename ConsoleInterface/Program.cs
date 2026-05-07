@@ -43,6 +43,11 @@ namespace ConsoleInterface
             ConsoleCanvas.SetClipboard(text);
         }
 
+        public string? GetClipboard()
+        {
+            return ConsoleCanvas.GetClipboard();
+        }
+
         public void Main(string[] raw_args)
         {
             // add hint to load library from

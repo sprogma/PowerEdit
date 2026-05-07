@@ -2,6 +2,7 @@
 using System;
 using System.Collections;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.Reflection;
 using System.Resources;
 using System.Runtime.CompilerServices;
@@ -81,7 +82,6 @@ namespace TextBuffer
 
         public string Substring(long pos, long len)
         {
-            // Logger.Log($"Req SUBSTR of len {len}");
             IntPtr destPtr = Marshal.AllocHGlobal((int)(len + 10));
 
             CLibrary.state_read(curr_state, pos, len, destPtr);

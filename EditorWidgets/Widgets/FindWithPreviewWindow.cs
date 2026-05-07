@@ -2,6 +2,7 @@
 using EditorFramework.ApplicationApi;
 using EditorFramework.Events;
 using EditorFramework.Layout;
+using MediatR;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -12,33 +13,37 @@ namespace EditorFramework.Widgets
     public class FindWithPreviewWindow : BaseWindow
     {
         public FindWindow find;
-        public InputTextWindow preview;
+        public InputTextWindow? preview;
         public bool moditifed;
 
         public FindWithPreviewWindow(IApplication app, ILayoutManager layout, FindWindow editor) : base(app, layout)
         {
             editor.buffer.ActionOnUpdate += buf => { moditifed = true; };
             this.find = editor;
-            this.preview = new(app,
-                               GetLayout<SimpleTextWindow>.Value,
-                               new EditorBuffer(editor.buffer.Server,
-                                                editor.usingCursor.Buffer.Tokenizer,
-                                                null,
-                                                editor.usingCursor.Buffer.LanguageId(),
-                                                editor.usingCursor.Buffer.Text)
-                               { TryUseLSP = false }
-                               ) { relativeNumbers = false };
-            if (this.find.usingCursor.Selections.Count > 0)
-            {
-                this.preview.buffer.Cursor?.Selections.Clear();
-                this.preview.buffer.Cursor?.Selections.Add(this.find.usingCursor.Selections[0]);
-            }
         }
 
         void UpdatePreview()
         {
             find.UpdateResult();
 
+            if (preview == null || preview.buffer != find.resultBuffer)
+            {
+                preview = new(App,
+                                   GetLayout<SimpleTextWindow>.Value,
+                                   (new EditorBuffer(find.resultBuffer.Server,
+                                                    find.resultBuffer.Tokenizer,
+                                                    null,
+                                                    find.resultBuffer.LanguageId(),
+                                                    find.resultBuffer.Text)
+                                   { TryUseLSP = false }).Cursor
+                                   )
+                { relativeNumbers = false };
+                if (find.usingCursor.Selections.Count > 0)
+                {
+                    preview.buffer.Cursor?.Selections.Clear();
+                    preview.buffer.Cursor?.Selections.Add(find.usingCursor.Selections[0]);
+                }
+            }
             if (find.resultBegin != null && find.resultEnd != null)
             {
                 preview.cursor?.Selections.Clear();

@@ -21,7 +21,7 @@ namespace EditorFramework.Widgets
     {
         public EditorFile file;
 
-        public FileEditorWindow(IApplication App, ILayoutManager layout, EditorFile file) : base(App, layout, file.Buffer)
+        public FileEditorWindow(IApplication App, ILayoutManager layout, EditorFile file) : base(App, layout, file.Buffer.Cursor!)
         {
             this.file = file;
             this.OnQuit += (window) => {

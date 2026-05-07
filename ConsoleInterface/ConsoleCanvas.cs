@@ -228,7 +228,7 @@ namespace ConsoleInterface
         {
             long intersectLeft = Math.Max(rect.Ax, ClipRect.Ax);
             long intersectTop = Math.Max(rect.Ay, ClipRect.Ay);
-            long intersectRight = Math.Min(rect.Bx - 1, ClipRect.Bx - 1);
+            long intersectRight = Math.Min(rect.Bx, ClipRect.Bx);
             long intersectBottom = Math.Min(rect.By - 1, ClipRect.By - 1);
 
             if (intersectLeft > intersectRight || intersectTop > intersectBottom)
@@ -237,7 +237,7 @@ namespace ConsoleInterface
             int charWidth = UnicodeCalculator.GetWidth(value);
             for (long row = intersectTop; row <= intersectBottom; row++)
             {
-                for (long col = intersectLeft; col + charWidth <= intersectRight; col++)
+                for (long col = intersectLeft; col + charWidth <= intersectRight;)
                 {
                     col += SetCell((int)col, (int)row, value, foreground, background);
                 }
@@ -411,6 +411,11 @@ namespace ConsoleInterface
             string base64 = Convert.ToBase64String(bytes);
             string osc52 = $"\x1b]52;c;{base64}\x07";
             Console.Write(osc52);
+        }
+
+        internal static string? GetClipboard()
+        {
+            return null; // unsupported
         }
 
         private const int STD_OUTPUT_HANDLE = -11;

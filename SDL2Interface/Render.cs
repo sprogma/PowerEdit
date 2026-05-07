@@ -92,7 +92,15 @@ namespace SDL2Interface
                 EditorFramework.Layout.Rect rrect = new(NewSize.X, NewSize.Y + lrect.H, NewSize.W, NewSize.H - lrect.H);
 
                 f.find.Layout.Resize(f.find, lrect);
-                f.preview.Layout.Resize(f.preview, rrect);
+
+                // do it always to remove text jumps
+                //if (f.find.resultBuffer != f.find.usingCursor.Buffer)
+                {
+                    rrect.Y += line;
+                    rrect.H -= line;
+                }
+
+                f.preview?.Layout.Resize(f.preview, rrect);
             }
             else
             {
@@ -284,7 +292,29 @@ namespace SDL2Interface
                         break;
                     case FindWithPreviewWindow f:
                         DrawRecurse(f.find);
-                        DrawRecurse(f.preview);
+                        if (f.preview != null)
+                        {
+                            SDL_Sharp.Rect findClipPos = new((int)f.find.Layout.Position.Ax, (int)f.find.Layout.Position.By, (int)f.find.Layout.Position.Bx, (int)f.find.Layout.Position.By + textRenderer.FontLineStep);
+                            unsafe
+                            {
+                                SDL.RenderSetClipRect(renderer, ref findClipPos);
+                            }
+                            if (f.find.resultBuffer != f.find.usingCursor.Buffer) // if found in another file
+                            {
+                                string message = $"Found in file <{f.find.resultFile?.filename ?? "no name"}>";
+                                textRenderer.DrawTextLine((int)(f.find.Layout.Position.Ax + textRenderer.FontStep * Math.Min(25, 25 - (message.Length - f.find.Layout.Position.W / textRenderer.FontStep))), 
+                                                          (int)(f.find.Layout.Position.By + 4), 
+                                                          message, 
+                                                          0, 
+                                                          new(255, 255, 150, 255));
+                            }
+                            else
+                            {
+                                SDL.SetRenderDrawColor(renderer, 0, 0, 0, 0);
+                                SDL.RenderFillRect(renderer, ref findClipPos);
+                            }
+                            DrawRecurse(f.preview);
+                        }
                         break;
                     case TreeWalkWithPreviewWindow tree:
                         DrawRecurse(tree.tree);

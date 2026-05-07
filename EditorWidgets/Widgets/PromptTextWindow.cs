@@ -10,7 +10,7 @@ namespace EditorFramework.Widgets
 {
     internal class PromptTextWindow : InputTextWindow
     {
-        public PromptTextWindow(IApplication app, ILayoutManager layout, EditorBuffer buffer) : base(app, layout, buffer)
+        public PromptTextWindow(IApplication app, ILayoutManager layout, EditorBuffer buffer) : base(app, layout, buffer.Cursor)
         {
             buffer.TryUseLSP = false;
         }
