@@ -69,7 +69,7 @@ namespace ConsoleInterface
             }
             else if (window is FindWithPreviewWindow f)
             {
-                f.preview.Layout.Resize(f.preview, lrect);
+                f.preview?.Layout.Resize(f.preview, lrect);
                 f.find.Layout.Resize(f.find, rrect);
             }
             else

@@ -1,7 +1,9 @@
 ﻿using Common;
+using EditorFramework;
 using EditorFramework.Layout;
 using EditorFramework.Widgets;
 using Humanizer;
+using Json.More;
 using Markdig.Helpers;
 using Microsoft.CodeAnalysis.Operations;
 using OmniSharp.Extensions.LanguageServer.Protocol.Models;
@@ -151,7 +153,31 @@ namespace SDL2Interface
             }
             else
             {
-                throw new InvalidOperationException("Give bad window class for TabLayout layout.");
+                throw new InvalidOperationException("Give bad window class for FullLayout layout.");
+            }
+        }
+    }
+
+    internal class SimpleGameLayout : BaseLayout
+    {
+        public Vector2 CameraPosition = new(0, 0);
+        public float CellSize = 1.0f;
+
+        public SimpleGameLayout(Render render) : base(render) { }
+
+        public override void ResizeInternal(BaseWindow window, EditorFramework.Layout.Rect NewSize)
+        {
+            base.ResizeInternal(window, NewSize);
+
+            CellSize = (float)Math.Sqrt(Position.W * Position.H) / 30.0f; // ~ 30 cells in screen 
+
+            if (window is SimpleGameWindow t)
+            {
+                CameraPosition = CameraPosition * 0.9f + new Vector2(t.Position.X, t.Position.Y) * 0.1f;
+            }
+            else
+            {
+                throw new InvalidOperationException("Give bad window class for SimpleGameLayout layout.");
             }
         }
     }
@@ -197,6 +223,10 @@ namespace SDL2Interface
             LayoutRegistry.Register<FileTabsWindow>(() =>
             {
                 return new TabLayout(this);
+            });
+            LayoutRegistry.Register<SimpleGameWindow>(() =>
+            {
+                return new SimpleGameLayout(this);
             });
         }
 
@@ -332,6 +362,9 @@ namespace SDL2Interface
                     case ProjectEditorWindow win:
                         DrawRecurse(win.Child);
                         break;
+                    case SimpleGameWindow win:
+                        DrawSimpleGameWindow(win);
+                        break;
                     default:
                         throw new NotImplementedException();
                 }
@@ -343,6 +376,190 @@ namespace SDL2Interface
             unsafe
             {
                 SDL.RenderSetClipRect(renderer, null);
+            }
+        }
+
+       
+        private void DrawSimpleGameWindow(SimpleGameWindow win)
+        {
+            if (win.Layout is not SimpleGameLayout lay)
+            {
+                return;
+            }
+            Vector2 cam = lay.CameraPosition; // position of center
+
+            float cellSize = lay.CellSize;
+
+            long halfWidth = (long)(lay.Position.W / cellSize / 2) + 1;
+            long halfHeight = (long)(lay.Position.H / cellSize / 2) + 1;
+
+            for (long x = (long)cam.X - halfWidth; x <= (long)cam.X + halfWidth; x++)
+            {
+                for (long y = (long)cam.Y - halfHeight; y <= (long)cam.Y + halfHeight; y++)
+                {
+                    Vector2 cellCenter = (new Vector2(x, y) - cam) * cellSize + new Vector2(lay.Position.W, lay.Position.H) * 0.5f;
+                    SDL_Sharp.Rect cellPosition = new((int)(cellCenter.X - cellSize), (int)(cellCenter.Y - cellSize), (int)(cellSize+1.0f), (int)(cellSize+1.0f));
+
+                    bool? cell = win.Grid[x, y];
+
+                    bool danger = false;
+
+                    if (win.ShowPredictions)
+                    {
+                        int alive = 0, unknown = 0;
+                        for (long dx = -1; dx <= 1; ++dx)
+                        {
+                            for (long dy = -1; dy <= 1; ++dy)
+                            {
+                                if (dx == 0 && dy == 0) continue;
+                                bool? value = win.Grid[x + dx, y + dy];
+                                if (value == null)
+                                {
+                                    unknown++;
+                                }
+                                if (value == true)
+                                {
+                                    alive++;
+                                }
+                            }
+                        }
+
+                        if (cell == false)
+                        {
+                            if (alive <= 3 && alive + unknown >= 3)
+                            {
+                                danger = true;
+                            }
+                        }
+                    }
+
+                    bool canMoveHere = win.CanMoveTo(x, y);
+
+                    SDL_Sharp.Color cellColor = new();
+
+                    if (cell == true)
+                    {
+                        cellColor = new(255, 0, 0, 255);
+                    }
+                    else if (cell == false)
+                    {
+                        if (danger)
+                        {
+                            cellColor = new(120, 40, 40, 255);
+                        }
+                        else
+                        {
+                            cellColor = new(80, 80, 80, 255);
+                        }
+                    }
+                    else
+                    {
+                        cellColor = new(20, 0, 30, 255);
+                    }
+
+                    // if we can go to this cell, draw it with green border
+                    if (canMoveHere)
+                    {
+                        int frameWidth = (int)Math.Max(1, cellSize * 0.08);
+                        SDL.SetRenderDrawColor(renderer, cellColor.R, cellColor.G, cellColor.B, cellColor.A);
+                        SDL.RenderFillRect(renderer, ref cellPosition);
+                        cellPosition.X += frameWidth; cellPosition.Y += frameWidth; cellPosition.Width -= 2 * frameWidth; cellPosition.Height -= 2 * frameWidth;
+                        SDL.SetRenderDrawColor(renderer, 40, 120, 40, 255);
+                        SDL.RenderFillRect(renderer, ref cellPosition);
+                        cellPosition.X += frameWidth; cellPosition.Y += frameWidth; cellPosition.Width -= 2 * frameWidth; cellPosition.Height -= 2 * frameWidth;
+                        SDL.SetRenderDrawColor(renderer, cellColor.R, cellColor.G, cellColor.B, cellColor.A);
+                        SDL.RenderFillRect(renderer, ref cellPosition);
+                    }
+                    else
+                    {
+                        SDL.SetRenderDrawColor(renderer, cellColor.R, cellColor.G, cellColor.B, cellColor.A);
+                        SDL.RenderFillRect(renderer, ref cellPosition);
+                    }
+                }
+            }
+
+            // draw current cell
+            {
+
+                Vector2 cellCenter = (new Vector2(win.Position.X, win.Position.Y) - cam) * cellSize + new Vector2(lay.Position.W, lay.Position.H) * 0.5f;
+                SDL_Sharp.Rect cellPosition = new((int)(cellCenter.X - cellSize), (int)(cellCenter.Y - cellSize), (int)(cellSize + 1.0f), (int)(cellSize + 1.0f));
+
+                bool? cell = win.Grid[win.Position.X, win.Position.Y];
+                int frameWidth = (int)Math.Max(1, cellSize * 0.1);
+                cellPosition.X += frameWidth; cellPosition.Y += frameWidth; cellPosition.Width -= 2 * frameWidth; cellPosition.Height -= 2 * frameWidth;
+                if (cell == false)
+                {
+                    SDL.SetRenderDrawColor(renderer, 0, 255, 0, 255);
+                }
+                else
+                {
+                    SDL.SetRenderDrawColor(renderer, 255, 0, 255, 255);
+                }
+                SDL.RenderFillRect(renderer, ref cellPosition);
+            }
+
+            // if loose/win: render line and print score
+            if (win.GameResult == SimpleGameWindow.GameResultType.Win)
+            {
+                SDL_Sharp.Rect line = Convert(win.Layout.Position);
+                line.Y += line.Height * 5 / 6;
+                line.Height /= 7;
+
+                SDL.SetRenderDrawColor(renderer, 0, 255, 0, 255);
+                SDL.RenderFillRect(renderer, ref line);
+
+                textRenderer.Scale(2.0);
+                string message = $"Win! Score: {win.Score}";
+                textRenderer.DrawTextLine((int)(line.X - textRenderer.FontStep * message.Length * 0.5), (int)(line.Y + line.Height / 2 - textRenderer.FontLineStep * 0.5), message, 0, new(0, 0, 0, 255));
+                textRenderer.Scale(0.5);
+            }
+            else if (win.GameResult == SimpleGameWindow.GameResultType.Loose)
+            {
+                SDL_Sharp.Rect line = Convert(win.Layout.Position);
+                line.Y += line.Height * 5 / 6;
+                line.Height /= 7;
+
+                SDL.SetRenderDrawColor(renderer, 255, 110, 0, 255);
+                SDL.RenderFillRect(renderer, ref line);
+
+                textRenderer.Scale(2.0);
+                string message = $"Game Over. Score: {win.Score}";
+                textRenderer.DrawTextLine((int)(line.X - textRenderer.FontStep * message.Length * 0.5), (int)(line.Y + line.Height / 2 - textRenderer.FontLineStep * 0.5), message, 0, new(0, 0, 0, 255));
+                textRenderer.Scale(0.5);
+            }
+            else if (win.GameResult == SimpleGameWindow.GameResultType.Playing)
+            {
+                string message = $"Score: {win.Score}";
+                string message2 = $"Moving: {win.Moving} [{win.MovingTimeout} turns]";
+
+                SDL_Sharp.Rect line = Convert(win.Layout.Position);
+                textRenderer.Scale(2.0);
+                line.Height = textRenderer.FontLineStep + 20;
+
+                if (win.MovingTimeout != null)
+                {
+                    line.Width = textRenderer.FontStep * (Math.Max(message.Length, message2.Length) + 2);
+                }
+                else
+                {
+                    line.Width = textRenderer.FontStep * (message.Length + 2);
+                }
+
+                SDL.SetRenderDrawColor(renderer, 40, 40, 40, 255);
+                SDL.RenderFillRect(renderer, ref line);
+                textRenderer.DrawTextLine((int)(line.X + line.Width * 0.5 - textRenderer.FontStep * message.Length * 0.5), (int)(line.Y + line.Height / 2 - textRenderer.FontLineStep * 0.5), message, 0, new(255, 255, 255, 255));
+                textRenderer.Scale(0.5);
+
+                if (win.MovingTimeout != null)
+                {
+                    line.Y += line.Height;
+
+                    textRenderer.Scale(2.0);
+                    SDL.SetRenderDrawColor(renderer, 40, 40, 40, 255);
+                    SDL.RenderFillRect(renderer, ref line);
+                    textRenderer.DrawTextLine((int)(line.X + line.Width * 0.5 - textRenderer.FontStep * message2.Length * 0.5), (int)(line.Y + line.Height / 2 - textRenderer.FontLineStep * 0.5), message2, 0, new(255, 255, 255, 255));
+                    textRenderer.Scale(0.5);
+                }
             }
         }
 

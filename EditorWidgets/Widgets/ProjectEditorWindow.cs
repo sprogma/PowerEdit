@@ -116,6 +116,12 @@ namespace EditorFramework.Widgets
                 case KeyChordEvent key when key.Is(KeyCode.T, KeyMode.Ctrl):
                     CreateFile(null, null);
                     return false;
+                case KeyChordEvent key when key.Is([new KeyBindingItem(KeyCode.G, KeyMode.Alt),
+                                                    new KeyBindingItem(KeyCode.A, KeyMode.Alt),
+                                                    new KeyBindingItem(KeyCode.M, KeyMode.Alt),
+                                                    new KeyBindingItem(KeyCode.E, KeyMode.Alt)]):
+                    OpenPopup(new SimpleGameWindow(App, GetLayout<SimpleGameWindow>.Value));
+                    return false;
                 case KeyChordEvent key when key.Is(KeyCode.O, KeyMode.Ctrl):
                     PromptTextWindow promptWindow = new(App, GetLayout<PromptTextWindow>.Value, new EditorBuffer(Server, BaseTokenizer.CreateBaseTokenizer(), null, null, new PersistentCTextBuffer()));
                     promptWindow.cursor?.Buffer.Text.SetText("enter path to file to open");
