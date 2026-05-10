@@ -155,6 +155,26 @@ namespace ConsoleInterface
             }
         }
     }
+    internal class SimpleGameLayout : BaseLayout
+    {
+        public (long, long) CameraPosition = new(0, 0);
+
+        public SimpleGameLayout(Render render) : base(render) { }
+
+        public override void ResizeInternal(BaseWindow window, EditorFramework.Layout.Rect NewSize)
+        {
+            base.ResizeInternal(window, NewSize);
+
+            if (window is SimpleGameWindow t)
+            {
+                CameraPosition = (t.Position.X, t.Position.Y);
+            }
+            else
+            {
+                throw new InvalidOperationException("Give bad window class for SimpleGameLayout layout.");
+            }
+        }
+    }
 
     internal class Render : IDisposable
     {
@@ -190,6 +210,10 @@ namespace ConsoleInterface
             LayoutRegistry.Register<FileTabsWindow>(() =>
             {
                 return new TabLayout(this);
+            });
+            LayoutRegistry.Register<SimpleGameWindow>(() =>
+            {
+                return new SimpleGameLayout(this);
             });
         }
 
@@ -298,6 +322,9 @@ namespace ConsoleInterface
                     case ProjectEditorWindow win:
                         DrawRecurse(win.Child);
                         break;
+                    case SimpleGameWindow win:
+                        DrawSimpleGameWindow(win);
+                        break;
                     default:
                         throw new NotImplementedException();
                 }
@@ -307,6 +334,225 @@ namespace ConsoleInterface
 
             // after
             Canvas.ResetClipRect();
+        }
+
+        private void DrawSimpleGameWindow(SimpleGameWindow win)
+        {
+            if (win.Layout is not SimpleGameLayout lay)
+                return;
+
+            Rect winRect = win.Layout.Position;
+
+            if (win.GameResult == SimpleGameWindow.GameResultType.HelpScreen)
+            {
+                Canvas.FillRect(winRect, " ", cColor.Default, new cColor(0, 0, 0));
+
+                string[] messages = new string[]
+                {
+            "To move, use arrows.",
+            "Press space to convert all green cells to negative (1 -> 0, 0 -> 1).",
+            "Then you are near to edge, cells will uncover",
+            "Uncover more place to get score.",
+            "Your moving type will change sometimes [see top left corner], or,",
+            "on easiead hard you can select moving types using 1..4 digits",
+            "",
+            "Select hard:"
+                };
+
+                long ypos = winRect.Y + 1;
+                foreach (string msg in messages)
+                {
+                    long xpos = winRect.X + winRect.W / 2 - msg.Length / 2;
+                    Canvas.AddString(xpos, ypos, msg, new cColor(255, 255, 255), cColor.Default);
+                    ypos++;
+                }
+
+                for (int i = 0; i <= (int)SimpleGameWindow.GameHardnessType.LifeMaster; i++)
+                {
+                    if (i == (int)win.GameHardness)
+                    {
+                        string msg = $"<<{(SimpleGameWindow.GameHardnessType)i}>>";
+                        long xpos = winRect.X + winRect.W / 2 - msg.Length / 2;
+                        Canvas.AddString(xpos, ypos, msg, new cColor(255, 255, 0), cColor.Default);
+                        Canvas.AddString(xpos + msg.Length + 1, ypos, $" - max score: {win.MaxScore}", new cColor(255, 255, 0), cColor.Default);
+                    }
+                    else
+                    {
+                        string msg = $"{(SimpleGameWindow.GameHardnessType)i}";
+                        long xpos = winRect.X + winRect.W / 2 - msg.Length / 2;
+                        Canvas.AddString(xpos, ypos, msg, new cColor(255, 255, 255), cColor.Default);
+                    }
+                    ypos++;
+                }
+                return;
+            }
+
+            // ---------- Game grid (Playing / Win / Loose) ----------
+            (long X, long Y) cam = lay.CameraPosition;
+            const int cellW = 4;
+            const int cellH = 2;
+            long offsetX = winRect.W / 2 - cellW / 2;
+            long offsetY = winRect.H / 2 - cellH / 2;
+
+            // Visible range
+            long cellsXHalf = (winRect.W / (2 * cellW)) + 2;
+            long cellsYHalf = (winRect.H / (2 * cellH)) + 2;
+            long minX = cam.X - cellsXHalf;
+            long maxX = cam.X + cellsXHalf;
+            long minY = cam.Y - cellsYHalf;
+            long maxY = cam.Y + cellsYHalf;
+
+            Canvas.FillRect(winRect, " ", cColor.Default, new cColor(0, 0, 0));
+
+            Rect oldClip = Canvas.ClipRect;
+            Canvas.ClipRect = winRect;
+
+            for (long x = minX; x <= maxX; x++)
+            {
+                for (long y = minY; y <= maxY; y++)
+                {
+                    long lx = winRect.X + (x - cam.X) * cellW + offsetX;
+                    long ly = winRect.Y + (y - cam.Y) * cellH + offsetY;
+                    Rect cellRect = new Rect(lx, ly, cellW, cellH);
+
+                    bool? cellValue = win.Grid[x, y];
+                    bool isPlayerPos = (x == win.Position.X && y == win.Position.Y);
+                    bool canMove = win.CanMoveTo(x, y);
+
+                    // Determine base cell color
+                    cColor? cellBg;
+                    bool fog = false;
+                    if (win.ViewRadius != null)
+                    {
+                        long dx = x - win.Position.X;
+                        long dy = y - win.Position.Y;
+                        if (dx * dx + dy * dy > win.ViewRadius.Value * win.ViewRadius.Value)
+                            fog = true;
+                    }
+
+                    if (fog)
+                    {
+                        cellBg = new cColor(50, 80, 30);
+                    }
+                    else if (cellValue == true)
+                    {
+                        cellBg = new cColor(255, 0, 0);
+                    }
+                    else if (cellValue == false)
+                    {
+                        bool danger = false;
+                        if (win.ShowPredictions)
+                        {
+                            int alive = 0, unknown = 0;
+                            for (long dx = -1; dx <= 1; dx++)
+                                for (long dy = -1; dy <= 1; dy++)
+                                {
+                                    if (dx == 0 && dy == 0) continue;
+                                    bool? val = win.Grid[x + dx, y + dy];
+                                    if (val == null) unknown++;
+                                    if (val == true) alive++;
+                                }
+                            if (alive <= 3 && alive + unknown >= 3)
+                                danger = true;
+                        }
+                        cellBg = danger ? new cColor(120, 40, 40) : new cColor(80, 80, 80);
+                    }
+                    else // null -> unknown
+                    {
+                        cellBg = new cColor(10, 10, 30);
+                    }
+
+                    cColor? borderColor = null;
+                    if (isPlayerPos)
+                        borderColor = new cColor(170, 120, 200);
+                    else if (canMove)
+                        borderColor = new cColor(40, 120, 40);
+
+                    if (borderColor != null)
+                    {
+                        if (x == win.Position.X && y == win.Position.Y)
+                        {
+                            Canvas.SetCell(lx, ly, "█", borderColor, cellBg);
+                            Canvas.SetCell(lx + 3, ly, "█", borderColor, cellBg);
+                            Canvas.SetCell(lx, ly + 1, "█", borderColor, cellBg);
+                            Canvas.SetCell(lx + 3, ly + 1, "█", borderColor, cellBg);
+                            Canvas.SetCell(lx + 1, ly, "▀", borderColor, cellBg);
+                            Canvas.SetCell(lx + 1, ly + 1, "▄", borderColor, cellBg);
+                            Canvas.SetCell(lx + 2, ly, "▀", borderColor, cellBg);
+                            Canvas.SetCell(lx + 2, ly + 1, "▄", borderColor, cellBg);
+                        }
+                        else
+                        {
+                            Canvas.SetCell(lx, ly, "⡏", borderColor, cellBg);
+                            Canvas.SetCell(lx + 3, ly, "⢹", borderColor, cellBg);
+                            Canvas.SetCell(lx, ly + 1, "⣇", borderColor, cellBg);
+                            Canvas.SetCell(lx + 3, ly + 1, "⣸", borderColor, cellBg);
+                            Canvas.SetCell(lx + 1, ly, "⠉", borderColor, cellBg);
+                            Canvas.SetCell(lx + 1, ly + 1, "⣀", borderColor, cellBg);
+                            Canvas.SetCell(lx + 2, ly, "⠉", borderColor, cellBg);
+                            Canvas.SetCell(lx + 2, ly + 1, "⣀", borderColor, cellBg);
+                        }
+                    }
+                    else
+                    {
+                        Canvas.FillRect(cellRect, " ", cColor.Default, cellBg);
+                    }
+                }
+            }
+
+            Canvas.ClipRect = oldClip;
+
+            if (win.GameResult == SimpleGameWindow.GameResultType.Playing)
+            {
+                string scoreMsg = $"Score: {win.Score} / {Math.Max(win.MaxScore, win.Score)}";
+                string? moveMsg = win.MovingTimeout != null
+                    ? $"Moving: {win.Moving} [{win.MovingTimeout} turns]"
+                    : null;
+
+                int lineW = scoreMsg.Length;
+                if (moveMsg != null) lineW = Math.Max(lineW, moveMsg.Length);
+                lineW += 2;
+
+                long px = winRect.X;
+                long py = winRect.Y;
+
+                Rect scoreRect = new Rect(px, py, lineW, 1);
+                Canvas.FillRect(scoreRect, " ", cColor.Default, new cColor(40, 40, 40));
+                Canvas.AddString(px + (lineW - scoreMsg.Length) / 2, py,
+                                 scoreMsg, new cColor(255, 255, 255), null);
+
+                if (moveMsg != null)
+                {
+                    Rect moveRect = new Rect(px, py + 1, lineW, 1);
+                    Canvas.FillRect(moveRect, " ", cColor.Default, new cColor(40, 40, 40));
+                    Canvas.AddString(px + (lineW - moveMsg.Length) / 2, py + 1,
+                                     moveMsg, new cColor(255, 255, 255), null);
+                }
+            }
+            else if (win.GameResult == SimpleGameWindow.GameResultType.Win)
+            {
+                long bannerY = winRect.Y + winRect.H * 5 / 6;
+                long bannerH = Math.Max(1, winRect.H / 7);
+                Rect bannerRect = new Rect(winRect.X, bannerY, winRect.W, bannerH);
+                Canvas.FillRect(bannerRect, " ", cColor.Default, new cColor(0, 255, 0));
+
+                string msg = $"Win! Score: {win.Score}";
+                Canvas.AddString(winRect.X + winRect.W / 2 - msg.Length / 2,
+                                 bannerY + bannerH / 2,
+                                 msg, new cColor(0, 0, 0), null);
+            }
+            else if (win.GameResult == SimpleGameWindow.GameResultType.Loose)
+            {
+                long bannerY = winRect.Y + winRect.H * 5 / 6;
+                long bannerH = Math.Max(1, winRect.H / 7);
+                Rect bannerRect = new Rect(winRect.X, bannerY, winRect.W, bannerH);
+                Canvas.FillRect(bannerRect, " ", cColor.Default, new cColor(255, 110, 0));
+
+                string msg = $"Game Over. Score: {win.Score}";
+                Canvas.AddString(winRect.X + winRect.W / 2 - msg.Length / 2,
+                                 bannerY + bannerH / 2,
+                                 msg, new cColor(0, 0, 0), null);
+            }
         }
 
         private void DrawInputTextFunction(InputTextWindow window)
