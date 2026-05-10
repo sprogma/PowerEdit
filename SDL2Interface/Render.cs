@@ -401,79 +401,89 @@ namespace SDL2Interface
                     SDL_Sharp.Rect cellPosition = new((int)(cellCenter.X - cellSize), (int)(cellCenter.Y - cellSize), (int)(cellSize+1.0f), (int)(cellSize+1.0f));
 
                     bool? cell = win.Grid[x, y];
-
-                    bool danger = false;
-
-                    if (win.ShowPredictions)
+                    
+                    if (win.ViewRadius != null && (x - win.Position.X) * (x - win.Position.X) + (y - win.Position.Y) * (y - win.Position.Y) > win.ViewRadius * win.ViewRadius)
                     {
-                        int alive = 0, unknown = 0;
-                        for (long dx = -1; dx <= 1; ++dx)
+                        SDL_Sharp.Color cellColor = new();
+                        cellColor = new(50, 80, 30, 255);
+                        SDL.SetRenderDrawColor(renderer, cellColor.R, cellColor.G, cellColor.B, cellColor.A);
+                        SDL.RenderFillRect(renderer, ref cellPosition);
+                    }
+                    else
+                    {
+                        bool danger = false;
+
+                        if (win.ShowPredictions)
                         {
-                            for (long dy = -1; dy <= 1; ++dy)
+                            int alive = 0, unknown = 0;
+                            for (long dx = -1; dx <= 1; ++dx)
                             {
-                                if (dx == 0 && dy == 0) continue;
-                                bool? value = win.Grid[x + dx, y + dy];
-                                if (value == null)
+                                for (long dy = -1; dy <= 1; ++dy)
                                 {
-                                    unknown++;
+                                    if (dx == 0 && dy == 0) continue;
+                                    bool? value = win.Grid[x + dx, y + dy];
+                                    if (value == null)
+                                    {
+                                        unknown++;
+                                    }
+                                    if (value == true)
+                                    {
+                                        alive++;
+                                    }
                                 }
-                                if (value == true)
+                            }
+
+                            if (cell == false)
+                            {
+                                if (alive <= 3 && alive + unknown >= 3)
                                 {
-                                    alive++;
+                                    danger = true;
                                 }
                             }
                         }
 
-                        if (cell == false)
+                        bool canMoveHere = win.CanMoveTo(x, y);
+
+                        SDL_Sharp.Color cellColor = new();
+
+                        if (cell == true)
                         {
-                            if (alive <= 3 && alive + unknown >= 3)
-                            {
-                                danger = true;
-                            }
+                            cellColor = new(255, 0, 0, 255);
                         }
-                    }
-
-                    bool canMoveHere = win.CanMoveTo(x, y);
-
-                    SDL_Sharp.Color cellColor = new();
-
-                    if (cell == true)
-                    {
-                        cellColor = new(255, 0, 0, 255);
-                    }
-                    else if (cell == false)
-                    {
-                        if (danger)
+                        else if (cell == false)
                         {
-                            cellColor = new(120, 40, 40, 255);
+                            if (danger)
+                            {
+                                cellColor = new(120, 40, 40, 255);
+                            }
+                            else
+                            {
+                                cellColor = new(80, 80, 80, 255);
+                            }
                         }
                         else
                         {
-                            cellColor = new(80, 80, 80, 255);
+                            cellColor = new(10, 10, 30, 255);
                         }
-                    }
-                    else
-                    {
-                        cellColor = new(20, 0, 30, 255);
-                    }
 
-                    // if we can go to this cell, draw it with green border
-                    if (canMoveHere)
-                    {
-                        int frameWidth = (int)Math.Max(1, cellSize * 0.08);
-                        SDL.SetRenderDrawColor(renderer, cellColor.R, cellColor.G, cellColor.B, cellColor.A);
-                        SDL.RenderFillRect(renderer, ref cellPosition);
-                        cellPosition.X += frameWidth; cellPosition.Y += frameWidth; cellPosition.Width -= 2 * frameWidth; cellPosition.Height -= 2 * frameWidth;
-                        SDL.SetRenderDrawColor(renderer, 40, 120, 40, 255);
-                        SDL.RenderFillRect(renderer, ref cellPosition);
-                        cellPosition.X += frameWidth; cellPosition.Y += frameWidth; cellPosition.Width -= 2 * frameWidth; cellPosition.Height -= 2 * frameWidth;
-                        SDL.SetRenderDrawColor(renderer, cellColor.R, cellColor.G, cellColor.B, cellColor.A);
-                        SDL.RenderFillRect(renderer, ref cellPosition);
-                    }
-                    else
-                    {
-                        SDL.SetRenderDrawColor(renderer, cellColor.R, cellColor.G, cellColor.B, cellColor.A);
-                        SDL.RenderFillRect(renderer, ref cellPosition);
+                        // if we can go to this cell, draw it with green border
+                        if (canMoveHere)
+                        {
+                            int frameWidth = (int)Math.Max(1, cellSize * 0.08);
+                            SDL.SetRenderDrawColor(renderer, cellColor.R, cellColor.G, cellColor.B, cellColor.A);
+                            SDL.RenderFillRect(renderer, ref cellPosition);
+                            cellPosition.X += frameWidth; cellPosition.Y += frameWidth; cellPosition.Width -= 2 * frameWidth; cellPosition.Height -= 2 * frameWidth;
+                            SDL.SetRenderDrawColor(renderer, 40, 120, 40, 255);
+                            SDL.RenderFillRect(renderer, ref cellPosition);
+                            cellPosition.X += frameWidth; cellPosition.Y += frameWidth; cellPosition.Width -= 2 * frameWidth; cellPosition.Height -= 2 * frameWidth;
+                            SDL.SetRenderDrawColor(renderer, cellColor.R, cellColor.G, cellColor.B, cellColor.A);
+                            SDL.RenderFillRect(renderer, ref cellPosition);
+                        }
+                        else
+                        {
+                            SDL.SetRenderDrawColor(renderer, cellColor.R, cellColor.G, cellColor.B, cellColor.A);
+                            SDL.RenderFillRect(renderer, ref cellPosition);
+                        }
                     }
                 }
             }

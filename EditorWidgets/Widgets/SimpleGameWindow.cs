@@ -201,6 +201,7 @@ namespace EditorFramework.Widgets
             Medium,
             Challenging,
             Hard,
+            Nightmare,
             LifeMaster,
         }
 
@@ -218,15 +219,16 @@ namespace EditorFramework.Widgets
 
         public Dictionary<(long, long), long> Towers = [];
 
-        public GameHardnessType GameHardness = GameHardnessType.Hard;
+        public GameHardnessType GameHardness = GameHardnessType.Nightmare;
 
         public long? MaxMovingTimeout => GameHardness switch
         {
             GameHardnessType.Effortless => null,
-            GameHardnessType.Beginner => null,
-            GameHardnessType.Medium => null,
-            GameHardnessType.Challenging => 10,
+            GameHardnessType.Beginner => 10,
+            GameHardnessType.Medium => 5,
+            GameHardnessType.Challenging => 5,
             GameHardnessType.Hard => 5,
+            GameHardnessType.Nightmare => 3,
             GameHardnessType.LifeMaster => 3,
             _ => 0,
         };
@@ -238,24 +240,26 @@ namespace EditorFramework.Widgets
             GameHardnessType.Effortless => null,
             GameHardnessType.Beginner => null,
             GameHardnessType.Medium => null,
-            GameHardnessType.Challenging => 25,
-            GameHardnessType.Hard => 20,
-            GameHardnessType.LifeMaster => 15,
+            GameHardnessType.Challenging => 10,
+            GameHardnessType.Hard => 7,
+            GameHardnessType.Nightmare => 5,
+            GameHardnessType.LifeMaster => 5,
             _ => null,
         };
         
         public int ShadowClearRadius => GameHardness switch
         {
-            GameHardnessType.Effortless => 10,
-            GameHardnessType.Beginner => 8,
-            GameHardnessType.Medium => 6,
-            GameHardnessType.Challenging => 5,
-            GameHardnessType.Hard => 3,
-            GameHardnessType.LifeMaster => 2,
+            GameHardnessType.Effortless => 5,
+            GameHardnessType.Beginner => 4,
+            GameHardnessType.Medium => 3,
+            GameHardnessType.Challenging => 3,
+            GameHardnessType.Hard => 2,
+            GameHardnessType.Nightmare => 0,
+            GameHardnessType.LifeMaster => 0,
             _ => 0,
         };
 
-        public bool ShowPredictions => GameHardness <= GameHardnessType.Hard;
+        public bool ShowPredictions => GameHardness <= GameHardnessType.Nightmare;
 
         public SimpleGameWindow(IApplication app, ILayoutManager layout) : base(app, layout)
         {
@@ -263,10 +267,10 @@ namespace EditorFramework.Widgets
             nextPosition = Position;
 
             // clear starting circle
-            ClearShadow(Position, 5, true);
-            ClearShadow(Position, ShadowClearRadius + 5);
+            ClearShadow(Position, ShadowClearRadius + 5, true);
             MovingTimeout = MaxMovingTimeout;
         }
+
 
         async Task KeyMovePressAsync()
         {
@@ -305,6 +309,42 @@ namespace EditorFramework.Widgets
                         lock (GameLock)
                         {
                             GameShoot();
+                        }
+                        return false;
+                    case KeyChordEvent key when key.Is(KeyCode.D1):
+                        lock (GameLock)
+                        {
+                            if (MaxMovingTimeout == null)
+                            {
+                                Moving = (MovingType)0;
+                            }
+                        }
+                        return false;
+                    case KeyChordEvent key when key.Is(KeyCode.D2):
+                        lock (GameLock)
+                        {
+                            if (MaxMovingTimeout == null)
+                            {
+                                Moving = (MovingType)1;
+                            }
+                        }
+                        return false;
+                    case KeyChordEvent key when key.Is(KeyCode.D3):
+                        lock (GameLock)
+                        {
+                            if (MaxMovingTimeout == null)
+                            {
+                                Moving = (MovingType)2;
+                            }
+                        }
+                        return false;
+                    case KeyChordEvent key when key.Is(KeyCode.D4):
+                        lock (GameLock)
+                        {
+                            if (MaxMovingTimeout == null)
+                            {
+                                Moving = (MovingType)3;
+                            }
                         }
                         return false;
 
@@ -420,6 +460,7 @@ namespace EditorFramework.Widgets
                         {
                             directionKeyPressTask ??= Task.Run(KeyMoveClearAsync);
                         }
+                        return false;
                     }
                 }
                 else if (Moving == MovingType.Jump2)
@@ -465,6 +506,7 @@ namespace EditorFramework.Widgets
                         Environment.Exit(1);
                         return false;
                     case KeyChordEvent key when key.Is(KeyCode.Space):
+                        MusicCts.Cancel();
                         DeleteSelf();
                         return false;
                 }
@@ -477,6 +519,7 @@ namespace EditorFramework.Widgets
                         Environment.Exit(1);
                         return false;
                     case KeyChordEvent key when key.Is(KeyCode.Space):
+                        MusicCts.Cancel();
                         DeleteSelf();
                         return false;
                 }
@@ -522,6 +565,20 @@ namespace EditorFramework.Widgets
             if (GameResult == GameResultType.Playing)
             {
                 Score += ClearShadow(Position, ShadowClearRadius);
+                for (long dx = Position.X - 3; dx <= Position.X + 3; ++dx)
+                {
+                    for (long dy = Position.Y - 3; dy <= Position.Y + 3; ++dy)
+                    {
+                        if (CanMoveTo(dx, dy))
+                        {
+                            if (Grid[dx, dy] == null)
+                            {
+                                Grid[dx, dy] = ShadowValue(dx, dy);
+                                Score++;
+                            }
+                        }
+                    }
+                }
             }
         }
 
@@ -556,7 +613,7 @@ namespace EditorFramework.Widgets
                         {
                             true => false,
                             false => true,
-                            null => false,
+                            null => null,
                         };
                     }
                 }
