@@ -386,6 +386,52 @@ namespace SDL2Interface
             {
                 return;
             }
+
+            if (win.GameResult == SimpleGameWindow.GameResultType.HelpScreen)
+            {
+                SDL_Sharp.Rect line = Convert(lay.Position);
+                SDL.SetRenderDrawColor(renderer, 0, 0, 0, 255);
+                SDL.RenderFillRect(renderer, ref line);
+
+                textRenderer.Scale(2.0);
+                int ypos = line.Y + 10;
+                foreach (string message in new string[]{
+                    "To move, use arrows.",
+                    "Press space to convert all green cells to negative (1 -> 0, 0 -> 1).",
+                    "Then you are near to edge, cells will uncover",
+                    "Uncover more place to get score.",
+                    "Your moving type will change sometimes [see top left corner], or,",
+                    "on easiead hard you can select moving types using 1..4 digits",
+                    "",
+                    "Select hard:"
+                })
+                {
+                    textRenderer.DrawTextLine((int)(line.X + line.Width * 0.5 - textRenderer.FontStep * message.Length * 0.5), ypos, message, 0, new(255, 255, 255, 255));
+                    ypos += textRenderer.FontLineStep;
+                }
+                textRenderer.Scale(0.5);
+                textRenderer.Scale(1.25);
+                // draw selection of hardness
+                for (int i = 0; i <= (int)SimpleGameWindow.GameHardnessType.LifeMaster; ++i)
+                {
+                    if (i == (int)win.GameHardness)
+                    {
+                        string message = $"<<{(SimpleGameWindow.GameHardnessType)i}>>";
+                        textRenderer.DrawTextLine((int)(line.X + line.Width * 0.5 - textRenderer.FontStep * message.Length * 0.5), ypos, message, 0, new(255, 255, 0, 255));
+                        string message2 = $" - max score: {win.MaxScore}";
+                        textRenderer.DrawTextLine((int)(line.X + line.Width * 0.5 + textRenderer.FontStep * message.Length * 0.5 + 10), ypos, message2, 0, new(255, 255, 0, 255));
+                    }
+                    else
+                    {
+                        string message = $"{(SimpleGameWindow.GameHardnessType)i}";
+                        textRenderer.DrawTextLine((int)(line.X + line.Width * 0.5 - textRenderer.FontStep * message.Length * 0.5), ypos, message, 0, new(255, 255, 255, 255));
+                    }
+                    ypos += textRenderer.FontLineStep;
+                }
+                textRenderer.Scale(0.8);
+                return;
+            }
+
             Vector2 cam = lay.CameraPosition; // position of center
 
             float cellSize = lay.CellSize;
@@ -539,7 +585,7 @@ namespace SDL2Interface
             }
             else if (win.GameResult == SimpleGameWindow.GameResultType.Playing)
             {
-                string message = $"Score: {win.Score}";
+                string message = $"Score: {win.Score} / {Math.Max(win.MaxScore, win.Score)}";
                 string message2 = $"Moving: {win.Moving} [{win.MovingTimeout} turns]";
 
                 SDL_Sharp.Rect line = Convert(win.Layout.Position);

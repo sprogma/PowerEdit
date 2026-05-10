@@ -11,6 +11,7 @@ using RegexTokenizer;
 using System;
 using System.Collections.Generic;
 using System.Numerics;
+using System.Runtime.InteropServices;
 using System.Security.Cryptography.Xml;
 using System.Text;
 using TextBuffer;
@@ -189,6 +190,7 @@ namespace EditorFramework.Widgets
 
         public enum GameResultType
         {
+            HelpScreen,
             Playing,
             Loose,
             Win,
@@ -215,11 +217,21 @@ namespace EditorFramework.Widgets
 
         public MovingType Moving = MovingType.King;
 
-        public GameResultType GameResult = GameResultType.Playing;
+        public GameResultType GameResult = GameResultType.HelpScreen;
 
         public Dictionary<(long, long), long> Towers = [];
 
-        public GameHardnessType GameHardness = GameHardnessType.Nightmare;
+        public GameHardnessType GameHardness { 
+            get
+            {
+                return field;
+            }
+            set 
+            {
+                field = value;
+                LoadMaxScore();
+            }
+        } = GameHardnessType.Nightmare;
 
         public long? MaxMovingTimeout => GameHardness switch
         {
@@ -259,6 +271,8 @@ namespace EditorFramework.Widgets
             _ => 0,
         };
 
+        public long MaxScore;
+
         public bool ShowPredictions => GameHardness <= GameHardnessType.Nightmare;
 
         public SimpleGameWindow(IApplication app, ILayoutManager layout) : base(app, layout)
@@ -269,6 +283,30 @@ namespace EditorFramework.Widgets
             // clear starting circle
             ClearShadow(Position, ShadowClearRadius + 5, true);
             MovingTimeout = MaxMovingTimeout;
+
+            LoadMaxScore();
+        }
+
+        private readonly Dictionary<int, long> ScoreCache = [];
+
+        void LoadMaxScore()
+        {
+            if (ScoreCache.TryGetValue((int)GameHardness, out long cachedScore))
+            {
+                MaxScore = cachedScore;
+                return; 
+            }
+            string fullPath = Path.Combine(Config.Directory, $"life.{GameHardness}.highscore");
+            if (File.Exists(fullPath))
+            {
+                string content = File.ReadAllText(fullPath);
+                _ = long.TryParse(content, out MaxScore);
+            }
+            else
+            {
+                MaxScore = 0;
+            }
+            ScoreCache[(int)GameHardness] = MaxScore;
         }
 
 
@@ -298,6 +336,33 @@ namespace EditorFramework.Widgets
         public override bool HandleEvent(EventBase e)
         {
 
+            if (GameResult == GameResultType.HelpScreen)
+            {
+                switch (e)
+                {
+                    case QuitEvent:
+                        Environment.Exit(1);
+                        return false;
+                    case KeyChordEvent key when key.Is(KeyCode.Space) || key.Is(KeyCode.Enter):
+                        lock (GameLock)
+                        {
+                            GameResult = GameResultType.Playing;
+                        }
+                        return false;
+                    case KeyChordEvent key when key.Is(KeyCode.Up):
+                        lock (GameLock)
+                        {
+                            GameHardness = (GameHardnessType)Math.Max(0, (int)GameHardness - 1);
+                        }
+                        return false;
+                    case KeyChordEvent key when key.Is(KeyCode.Down):
+                        lock (GameLock)
+                        {
+                            GameHardness = (GameHardnessType)Math.Min((int)GameHardnessType.LifeMaster, (int)GameHardness + 1);
+                        }
+                        return false;
+                }
+            }
             if (GameResult == GameResultType.Playing)
             {
                 switch (e)
@@ -437,30 +502,38 @@ namespace EditorFramework.Widgets
                 {
                     lock (GameLock)
                     {
+                        bool was = false;
                         switch (e)
                         {
                             case KeyChordEvent key when key.Is(KeyCode.Left) && nextPosition.X == Position.X:
                                 nextPosition.X--;
+                                was = true;
                                 break;
                             case KeyChordEvent key when key.Is(KeyCode.Right) && nextPosition.X == Position.X:
                                 nextPosition.X++;
+                                was = true;
                                 break;
                             case KeyChordEvent key when key.Is(KeyCode.Up) && nextPosition.Y == Position.Y:
                                 nextPosition.Y--;
+                                was = true;
                                 break;
                             case KeyChordEvent key when key.Is(KeyCode.Down) && nextPosition.Y == Position.Y:
                                 nextPosition.Y++;
+                                was = true;
                                 break;
                         }
-                        if (nextPosition.X != Position.X && nextPosition.Y != Position.Y)
+                        if (was)
                         {
-                            GameStep(nextPosition);
+                            if (nextPosition.X != Position.X && nextPosition.Y != Position.Y)
+                            {
+                                GameStep(nextPosition);
+                            }
+                            else
+                            {
+                                directionKeyPressTask ??= Task.Run(KeyMoveClearAsync);
+                            }
+                            return false;
                         }
-                        else
-                        {
-                            directionKeyPressTask ??= Task.Run(KeyMoveClearAsync);
-                        }
-                        return false;
                     }
                 }
                 else if (Moving == MovingType.Jump2)
@@ -506,7 +579,6 @@ namespace EditorFramework.Widgets
                         Environment.Exit(1);
                         return false;
                     case KeyChordEvent key when key.Is(KeyCode.Space):
-                        MusicCts.Cancel();
                         DeleteSelf();
                         return false;
                 }
@@ -519,7 +591,6 @@ namespace EditorFramework.Widgets
                         Environment.Exit(1);
                         return false;
                     case KeyChordEvent key when key.Is(KeyCode.Space):
-                        MusicCts.Cancel();
                         DeleteSelf();
                         return false;
                 }
@@ -586,6 +657,10 @@ namespace EditorFramework.Widgets
         {
             if (Grid[Position.X, Position.Y] == true)
             {
+                // save max score
+                MaxScore = Math.Max(MaxScore, Score);
+                Directory.CreateDirectory(Config.Directory);
+                File.WriteAllText(Path.Combine(Config.Directory, $"life.{GameHardness}.highscore"), MaxScore.ToString());
                 // loose
                 GameResult = GameResultType.Loose;
             }
