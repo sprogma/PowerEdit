@@ -355,6 +355,7 @@ namespace ConsoleInterface
             "Uncover more place to get score.",
             "Your moving type will change sometimes [see top left corner], or,",
             "on easiead hard you can select moving types using 1..4 digits",
+            "rules of game are available here: https://en.wikipedia.org/wiki/Conway%27s_Game_of_Life",
             "",
             "Select hard:"
                 };
