@@ -310,14 +310,14 @@ namespace EditorFramework.Widgets
         }
 
 
-        async Task KeyMovePressAsync()
+        async Task KeyMovePressAsync(Vector2Int localNextPosition)
         {
             await Task.Delay(100); // 100ms to second key press
             lock (GameLock)
             {
-                if (nextPosition != Position)
+                if (localNextPosition != Position)
                 {
-                    GameStep(nextPosition);
+                    GameStep(localNextPosition);
                 }
                 directionKeyPressTask = null;
             }
@@ -426,7 +426,7 @@ namespace EditorFramework.Widgets
                                     GameStep(nextPosition);
                                 }
                                 nextPosition.X--;
-                                directionKeyPressTask ??= Task.Run(KeyMovePressAsync);
+                                directionKeyPressTask ??= Task.Run(() => KeyMovePressAsync(nextPosition));
                             }
                             return false;
                         case KeyChordEvent key when key.Is(KeyCode.Right):
@@ -437,7 +437,7 @@ namespace EditorFramework.Widgets
                                     GameStep(nextPosition);
                                 }
                                 nextPosition.X++;
-                                directionKeyPressTask ??= Task.Run(KeyMovePressAsync);
+                                directionKeyPressTask ??= Task.Run(() => KeyMovePressAsync(nextPosition));
                             }
                             return false;
                         case KeyChordEvent key when key.Is(KeyCode.Up):
@@ -448,7 +448,7 @@ namespace EditorFramework.Widgets
                                     GameStep(nextPosition);
                                 }
                                 nextPosition.Y--;
-                                directionKeyPressTask ??= Task.Run(KeyMovePressAsync);
+                                directionKeyPressTask ??= Task.Run(() => KeyMovePressAsync(nextPosition));
                             }
                             return false;
                         case KeyChordEvent key when key.Is(KeyCode.Down):
@@ -459,7 +459,7 @@ namespace EditorFramework.Widgets
                                     GameStep(nextPosition);
                                 }
                                 nextPosition.Y++;
-                                directionKeyPressTask ??= Task.Run(KeyMovePressAsync);
+                                directionKeyPressTask ??= Task.Run(() => KeyMovePressAsync(nextPosition));
                             }
                             return false;
                     }

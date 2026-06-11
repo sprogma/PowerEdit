@@ -388,7 +388,7 @@ namespace ConsoleInterface
                 return;
             }
 
-            // ---------- Game grid (Playing / Win / Loose) ----------
+            // ---------- Game grid ----------
             (long X, long Y) cam = lay.CameraPosition;
             const int cellW = 4;
             const int cellH = 2;
