@@ -6,6 +6,7 @@ using EditorFramework.ApplicationApi;
 using EditorFramework.Events;
 using EditorFramework.Layout;
 using Microsoft.Extensions.ObjectPool;
+using RegexTokenizer;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -83,7 +84,7 @@ namespace EditorFramework.Widgets
         }
 
         public PowerEditWindow(IApplication app, ILayoutManager layout, EditorServer server, EditorCursor usingCursor, string editType) : 
-                               base(app, layout, new EditorBuffer(server, server.CommandProvider.Tokenizer, null, server.CommandProvider.LanguageId, new PersistentCTextBuffer()).Cursor)
+                               base(app, layout, new EditorBuffer(server, BaseTokenizer.CreateTokenizer(server.CommandProvider.LanguageId), null, server.CommandProvider.LanguageId, new PersistentCTextBuffer()).Cursor)
         {
             (long begin, long end, string text) = server.CommandProvider.ExampleScript(editType);
             Current = text;

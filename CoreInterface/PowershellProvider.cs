@@ -14,8 +14,6 @@ namespace PowershellCommandProvider
 {
     public class PowershellProvider : CommandProviderInterface.ICommandProvider
     {
-        public BaseTokenizer Tokenizer => new PowershellTokenizer();
-
         public string? LanguageId => "powershell";
 
         internal RunspacePool? runSpacePool;

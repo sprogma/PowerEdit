@@ -16,7 +16,6 @@ namespace CommandProviderInterface
     public interface ICommandProvider
     {
         public (long, long, string) ExampleScript(string editType);
-        public BaseTokenizer Tokenizer { get; }
         string? LanguageId { get; }
         public (IEnumerable<object>?, string?) Execute(string command, object[] args);
         //public IProviderRunspace CreateRunspace();

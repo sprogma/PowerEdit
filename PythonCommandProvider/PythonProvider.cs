@@ -16,7 +16,6 @@ namespace PythonCommandProvider
 
     public class PythonProvider : CommandProviderInterface.ICommandProvider
     {
-        public BaseTokenizer Tokenizer => new PythonTokenizer();
         public string? LanguageId => "python";
 
         public PythonProvider()

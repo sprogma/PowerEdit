@@ -1,0 +1,199 @@
+﻿using System.Linq;
+using System.Runtime.CompilerServices;
+using System.Text.RegularExpressions;
+
+namespace RegexTokenizer.Languages;
+
+[Language(["c", "cpp"])]
+public partial class CTokenizer : BaseTokenizer
+{
+    public override List<Token> ParseContent(string content)
+    {
+        List<Token> result = [];
+        /* 1. first parse comments and strings using loop */
+        int pos = 0;
+        while (pos < content.Length)
+        {
+            int end;
+            if (content.StartsWith(pos, "//"))
+            {
+                end = content.SafeIndexOf('\n', pos);
+                if (end == -1) { end = content.Length; }
+
+                while (( end >= 1 &&
+                         content[end - 1] == '\\' ) ||
+                       ( end >= 2 &&
+                         content[end - 1] == '\r' &&
+                         content[end - 2] == '\\' ))
+                {
+                    end = content.SafeIndexOf('\n', end + 1);
+                    if (end == -1) { end = content.Length; break; }
+                }
+                result.Add(new Token(TokenType.Comment, pos, end));
+                pos = end + 1;
+            }
+            else if (content.StartsWith(pos, "/*"))
+            {
+                end = content.SafeIndexOf("*/", pos + 2);
+                if (end == -1) { end = content.Length; }
+
+                result.Add(new Token(TokenType.MultilineComment, pos, Math.Min(end + 1, content.Length)));
+                pos = end + 2;
+            }
+            else if (content.StartsWith(pos, "'"))
+            {
+                end = content.SafeIndexOf('\'', pos + 1);
+                if (end == -1) { end = content.Length; }
+
+                while (end >= 1 &&
+                       content[end - 1] == '\\')
+                {
+                    end = content.SafeIndexOf('\'', end + 1);
+                    if (end == -1) { end = content.Length; break; }
+                }
+
+                result.Add(new Token(TokenType.Char, pos, end));
+                pos = end + 1;
+            }
+            else if (content.StartsWith(pos, "\""))
+            {
+                end = content.SafeIndexOf('"', pos + 1);
+                if (end == -1) { end = content.Length; }
+
+                while (end >= 1 &&
+                       content[end - 1] == '\\')
+                {
+                    end = content.SafeIndexOf('"', end + 1);
+                    if (end == -1) { end = content.Length; break; }
+                }
+
+                result.Add(new Token(TokenType.String, pos, end));
+                pos = end + 1;
+            }
+            else if (content.StartsWith(pos, "R\""))
+            {
+                string beginString = content.Substring(pos, Math.Min(content.Length - pos, 64));
+                Match match = RStringRegex().Match(beginString);
+                if (match.Success == false)
+                {
+                    pos += 2;
+                }
+                else
+                {
+                    string name = match.Groups[1].Value;
+
+                    end = content.SafeIndexOf($"){name}\"", pos + 2 + name.Length + 1);
+                    if (end == -1) { end = content.Length; }
+
+                    result.Add(new Token(TokenType.RawString, pos, Math.Min(end + 1 + name.Length + 1, content.Length)));
+                    pos = end + 1 + name.Length + 1 + 1;
+                }
+            }
+            else
+            {
+                pos++;
+            }
+        }
+
+
+        /* 2. parse all rest lines using regular expressions */
+        List<Token> regexResult = [];
+        pos = 0;
+        while (pos < content.Length)
+        {
+            int end = content.SafeIndexOf('\n', pos + 1);
+            if (end == -1)
+            {
+                end = content.Length;
+            }
+
+            string lineSlice = content.Substring(pos, end - pos);
+            string line = lineSlice.ToString();
+
+            MatchCollection res = OtherComponentsRegex().Matches(line);
+            foreach (Match m in res)
+            {
+                if (m.Groups["key"].Success)
+                {
+                    regexResult.Add(new Token(TokenType.Keyword, pos + m.Index, pos + m.Index + m.Length - 1));
+                }
+                if (m.Groups["type"].Success)
+                {
+                    regexResult.Add(new Token(TokenType.Class, pos + m.Index, pos + m.Index + m.Length - 1));
+                }
+                if (m.Groups["func"].Success)
+                {
+                    regexResult.Add(new Token(TokenType.Function, pos + m.Index, pos + m.Index + m.Length - 1));
+                }
+                if (m.Groups["var"].Success)
+                {
+                    if (m.Value.EndsWith("_t"))
+                    {   
+                        regexResult.Add(new Token(TokenType.Class, pos + m.Index, pos + m.Index + m.Length - 1));
+                    }
+                    else
+                    {
+                        regexResult.Add(new Token(TokenType.Variable, pos + m.Index, pos + m.Index + m.Length - 1));
+                    }
+                }
+                if (m.Groups["float"].Success)
+                {
+                    regexResult.Add(new Token(TokenType.FloatLiteral, pos + m.Index, pos + m.Index + m.Length - 1));
+                }
+                if (m.Groups["int"].Success)
+                {
+                    regexResult.Add(new Token(TokenType.IntegerLiteral, pos + m.Index, pos + m.Index + m.Length - 1));
+                }
+                if (m.Groups["operator"].Success)
+                {
+                    regexResult.Add(new Token(TokenType.Operator, pos + m.Index, pos + m.Index + m.Length - 1));
+                }
+            }
+
+            pos = end;
+        }
+
+        {
+            long lastResult = 0;
+            long regexPos = 0;
+
+            List<Token> filtered = [];
+
+            while (lastResult < result.Count && regexPos < regexResult.Count)
+            {
+                if (regexResult[(int)regexPos].begin > result[(int)lastResult].end)
+                {
+                    lastResult++;
+                }
+                /* assert (regexResult[(int)regexPos].begin < result[(int)lastResult].end) */
+                else if (regexResult[(int)regexPos].end < result[(int)lastResult].begin)
+                {
+                    filtered.Add(regexResult[(int)regexPos]);
+                    regexPos++;
+                }
+                else
+                {
+                    regexPos++;
+                }
+            }
+            while (regexPos < regexResult.Count)
+            {
+                filtered.Add(regexResult[(int)regexPos]);
+                regexPos++;
+            }
+
+            result.AddRange(filtered);
+        }
+
+        result.Sort((x, y) => x.begin.CompareTo(y.begin));
+
+        return UpdateTokensAsUTF8(content, result);
+    }
+
+    [GeneratedRegex(@"^R""([^(]*)\(")]
+    private static partial Regex RStringRegex();
+
+    [GeneratedRegex(@"(?<key>(#\s*(define|else|undef|ifn?(def)?|endif|elif|include|pragma|error|warning))|\b(if|else|for|while|do|goto|return|continue|break|typedef|struct|enum|union|sizeof|volatile|__volatile__|asm|__asm__|inline|__inline__|register|__register__|restrict|static|extern|const)\b)|(?<func>\b(\w|[_$])(\w|\d|[_$])*(?=\s*\())|(?<type>((?<=\b(struct|enum|union|typedef)\s+)(\w|[_$])(\w|\d|[_$])*\b|\b([_$\w-[0-9]])(\w|\d|[_$])*(?=\s+[_$\w-[0-9]])))|(?<var>\b[_$\w-[0-9]](\w|[_$])*\b)|(?<float>(\d*\.\d+|\d+\.\d*)([eE][+\-]\d+)?([lL]|[fF])?)|(?<int>(\d+|0[xX][0-9a-fA-F']+|0b[01]+|0o[0-7]+)([zZ]|[uU][lL][lL]|[uU][lL]|[uU]|([lL]?)([lL]?)([uU]?))?)|(?<operator>[#!,.\-+*/?;:|&~<=>(){}\[\]])")]
+
+    private static partial Regex OtherComponentsRegex();
+}
