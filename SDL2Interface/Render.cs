@@ -84,7 +84,7 @@ namespace SDL2Interface
         public override void ResizeInternal(BaseWindow window, EditorFramework.Layout.Rect NewSize)
         {
             base.ResizeInternal(window, NewSize);
-            
+
             long line = (Render.textRenderer.Ready ? Render.textRenderer.FontLineStep : 0);
 
 
@@ -332,10 +332,10 @@ namespace SDL2Interface
                             if (f.find.resultBuffer != f.find.usingCursor.Buffer) // if found in another file
                             {
                                 string message = $"Found in file <{f.find.resultFile?.filename ?? "no name"}>";
-                                textRenderer.DrawTextLine((int)(f.find.Layout.Position.Ax + textRenderer.FontStep * Math.Min(25, 25 - (message.Length - f.find.Layout.Position.W / textRenderer.FontStep))), 
-                                                          (int)(f.find.Layout.Position.By + 4), 
-                                                          message, 
-                                                          0, 
+                                textRenderer.DrawTextLine((int)(f.find.Layout.Position.Ax + textRenderer.FontStep * Math.Min(25, 25 - (message.Length - f.find.Layout.Position.W / textRenderer.FontStep))),
+                                                          (int)(f.find.Layout.Position.By + 4),
+                                                          message,
+                                                          0,
                                                           new(255, 255, 150, 255));
                             }
                             else
@@ -379,7 +379,7 @@ namespace SDL2Interface
             }
         }
 
-       
+
         private void DrawSimpleGameWindow(SimpleGameWindow win)
         {
             if (win.Layout is not SimpleGameLayout lay)
@@ -445,16 +445,24 @@ namespace SDL2Interface
                 for (long y = (long)cam.Y - halfHeight; y <= (long)cam.Y + halfHeight; y++)
                 {
                     Vector2 cellCenter = (new Vector2(x, y) - cam) * cellSize + new Vector2(lay.Position.W, lay.Position.H) * 0.5f;
-                    SDL_Sharp.Rect cellPosition = new((int)(cellCenter.X - cellSize), (int)(cellCenter.Y - cellSize), (int)(cellSize+1.0f), (int)(cellSize+1.0f));
+                    SDL_Sharp.Rect cellPosition = new((int)(cellCenter.X - cellSize), (int)(cellCenter.Y - cellSize), (int)(cellSize + 1.0f), (int)(cellSize + 1.0f));
 
                     bool? cell = win.Grid[x, y];
-                    
-                    if (win.ViewRadius != null && (x - win.Position.X) * (x - win.Position.X) + (y - win.Position.Y) * (y - win.Position.Y) > win.ViewRadius * win.ViewRadius)
+
+                    bool canMoveHere = win.CanMoveTo(x, y);
+
+                    SDL_Sharp.Color cellColor;
+
+                    if (win.ViewRadius is not null && (x - win.Position.X) * (x - win.Position.X) + (y - win.Position.Y) * (y - win.Position.Y) > win.ViewRadius * win.ViewRadius)
                     {
-                        SDL_Sharp.Color cellColor = new();
-                        cellColor = new(50, 80, 30, 255);
-                        SDL.SetRenderDrawColor(renderer, cellColor.R, cellColor.G, cellColor.B, cellColor.A);
-                        SDL.RenderFillRect(renderer, ref cellPosition);
+                        if (cell is not null)
+                        {
+                            cellColor = new(50, 80, 30, 255);
+                        }
+                        else
+                        {
+                            cellColor = new(10, 10, 30, 255);
+                        }
                     }
                     else
                     {
@@ -489,10 +497,6 @@ namespace SDL2Interface
                             }
                         }
 
-                        bool canMoveHere = win.CanMoveTo(x, y);
-
-                        SDL_Sharp.Color cellColor = new();
-
                         if (cell == true)
                         {
                             cellColor = new(255, 0, 0, 255);
@@ -512,25 +516,25 @@ namespace SDL2Interface
                         {
                             cellColor = new(10, 10, 30, 255);
                         }
+                    }
 
-                        // if we can go to this cell, draw it with green border
-                        if (canMoveHere)
-                        {
-                            int frameWidth = (int)Math.Max(1, cellSize * 0.08);
-                            SDL.SetRenderDrawColor(renderer, cellColor.R, cellColor.G, cellColor.B, cellColor.A);
-                            SDL.RenderFillRect(renderer, ref cellPosition);
-                            cellPosition.X += frameWidth; cellPosition.Y += frameWidth; cellPosition.Width -= 2 * frameWidth; cellPosition.Height -= 2 * frameWidth;
-                            SDL.SetRenderDrawColor(renderer, 40, 120, 40, 255);
-                            SDL.RenderFillRect(renderer, ref cellPosition);
-                            cellPosition.X += frameWidth; cellPosition.Y += frameWidth; cellPosition.Width -= 2 * frameWidth; cellPosition.Height -= 2 * frameWidth;
-                            SDL.SetRenderDrawColor(renderer, cellColor.R, cellColor.G, cellColor.B, cellColor.A);
-                            SDL.RenderFillRect(renderer, ref cellPosition);
-                        }
-                        else
-                        {
-                            SDL.SetRenderDrawColor(renderer, cellColor.R, cellColor.G, cellColor.B, cellColor.A);
-                            SDL.RenderFillRect(renderer, ref cellPosition);
-                        }
+                    // if we can go to this cell, draw it with green border
+                    if (canMoveHere)
+                    {
+                        int frameWidth = (int)Math.Max(1, cellSize * 0.08);
+                        SDL.SetRenderDrawColor(renderer, cellColor.R, cellColor.G, cellColor.B, cellColor.A);
+                        SDL.RenderFillRect(renderer, ref cellPosition);
+                        cellPosition.X += frameWidth; cellPosition.Y += frameWidth; cellPosition.Width -= 2 * frameWidth; cellPosition.Height -= 2 * frameWidth;
+                        SDL.SetRenderDrawColor(renderer, 40, 120, 40, 255);
+                        SDL.RenderFillRect(renderer, ref cellPosition);
+                        cellPosition.X += frameWidth; cellPosition.Y += frameWidth; cellPosition.Width -= 2 * frameWidth; cellPosition.Height -= 2 * frameWidth;
+                        SDL.SetRenderDrawColor(renderer, cellColor.R, cellColor.G, cellColor.B, cellColor.A);
+                        SDL.RenderFillRect(renderer, ref cellPosition);
+                    }
+                    else
+                    {
+                        SDL.SetRenderDrawColor(renderer, cellColor.R, cellColor.G, cellColor.B, cellColor.A);
+                        SDL.RenderFillRect(renderer, ref cellPosition);
                     }
                 }
             }
@@ -979,8 +983,8 @@ namespace SDL2Interface
                         SDL.RenderDrawRect(renderer, ref rect);
                         rect.X++;
                         rect.Y++;
-                        rect.Width-=2;
-                        rect.Height-=2;
+                        rect.Width -= 2;
+                        rect.Height -= 2;
                     }
                 }
                 pos += 0.5f * new Vector2(w, h);

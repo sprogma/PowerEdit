@@ -6,15 +6,13 @@
 
 		<PublishReadyToRunComposite>true</PublishReadyToRunComposite>
 
-		<PublishTrimmed>true</PublishTrimmed>
-		
-		<TrimMode>link</TrimMode>
+		<AnalysisLevel>latest-all</AnalysisLevel>
 	</PropertyGroup>
 	<ItemGroup>
 		<TrimmerRootAssembly Include="System.Management.Automation" />
 		<TrimmerRootAssembly Include="Microsoft.PowerShell.Commands.Management" />
 		<TrimmerRootAssembly Include="Microsoft.PowerShell.Commands.Utility" />
-		
+
 		<TrimmerRootAssembly Include="Newtonsoft.Json" />
 		<TrimmerRootAssembly Include="System.Text.Json" />
 
@@ -22,5 +20,11 @@
 		<TrimmerRootAssembly Include="Microsoft.CodeAnalysis" />
 		<TrimmerRootAssembly Include="Microsoft.CodeAnalysis.CSharp" />
 		-->
+
+		<ProjectReference Include="$(MSBuildThisFileDirectory)RoslynAnalysers\RoslynAnalysers.csproj"
+						  OutputItemType="Analyzer"
+						  ReferenceOutputAssembly="false"
+						  Condition="'$(MSBuildProjectName)' != 'RoslynAnalysers'" />
+
 	</ItemGroup>
 </Project>

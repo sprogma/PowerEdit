@@ -16,7 +16,7 @@ namespace RegexTokenizer
         public static int SafeIndexOf(this string str, string value, int startIndex)
         {
             if (startIndex > str.Length) return -1;
-            return str.IndexOf(value, startIndex);
+            return str.IndexOf(value, startIndex, StringComparison.Ordinal);
         }
         public static int SafeIndexOf(this string str, char value, int startIndex)
         {
